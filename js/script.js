@@ -1,15 +1,16 @@
 /*global FileReader */
 // (00) Функция разбивает строку в массив по символам EOL и удаляет пустые элементы.
-//      Регэксп на случай если файл сохранен с использованием только \n или \r, обычно используется \r\n.
-// (01) Функция чистит строки в массиве от пробелов в начале и в конце, удаляет символы
-//      в неверной кодировке.
+// (01) Функция чистит строки в массиве от пробелов в начале и в конце и удаляет символы,
+//      которые не удалось преобразовать в Юникод.
+
 (function () {
 	'use strict';
 		
 	var
-		reader  = new FileReader(),
-		input   = document.getElementById('file'),
-		mainArr = [];
+		reader    = new FileReader(),
+		input     = document.getElementById('file'),
+		tempArray = [],
+		content   = {};
 		
 	function removeUnwantedSymbols(array) { // (01)
 		array.forEach(function (str, index) {
@@ -32,10 +33,15 @@
 	});
 	reader.onload = function () { // (00)
 		document.getElementById('firstStep').className = 'h1-success';
-		mainArr = this.result.split(/\r\n|\n|\r/).filter(function (str) {
+		tempArray = this.result.split(/\r\n|\n|\r/).filter(function (str) {
 			return str;
 		});
-		mainArr = removeUnwantedSymbols(mainArr);
-		document.write('<pre>' + mainArr.join('</br>') + '</pre>');
+		//tempArray = removeUnwantedSymbols(tempArray);
+		document.write('<pre>' + tempArray.join('</br>') + '</pre>');
+		
+		tempArray.forEach(function (str) {
+			
+		});
+		
 	};
 }());
