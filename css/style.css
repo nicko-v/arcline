@@ -1,74 +1,73 @@
-/*      AT RULES        */
 @font-face {
-    font-family: 'Clear Sans';
-    src: local('Clear Sans'),
-         url('../fonts/clearsans/ttf/clearsans-regular.ttf');
-    font-weight: normal;
-    font-style: normal;
+	font-family: 'Clear Sans';
+	src: url('../fonts/clearsans/ttf/clearsans-regular.ttf');
+	font-weight: normal;
+	font-style: normal;
 }
 @font-face {
-    font-family: 'Clear Sans';
-    src: local('Clear Sans'),
-         url('../fonts/clearsans/ttf/clearsans-bold.ttf');
-    font-weight: bold;
-    font-style: normal;
+	font-family: 'Clear Sans';
+	src: url('../fonts/clearsans/ttf/clearsans-bold.ttf');
+	font-weight: bold;
+	font-style: normal;
 }
 @font-face {
-    font-family: 'Clear Sans';
-    src: local('Clear Sans'),
-         url('../fonts/clearsans/ttf/clearsans-italic.ttf');
-    font-weight: normal;
-    font-style: italic;
+	font-family: 'Clear Sans';
+	src: url('../fonts/clearsans/ttf/clearsans-italic.ttf');
+	font-weight: normal;
+	font-style: italic;
 }
 
-/*      TAGS        */
 body {
-    display: flex;
-    justify-content: center;
-    background-color: #285396;
-    font: 10px 'Clear Sans';
-    color: #fff;
+	display: flex;
+	justify-content: center;
+	background-color: #364050;
+	font: 10px 'Clear Sans';
+	color: #fff;
 }
 h1, h2 {
-    font-weight: normal;
+	font-weight: normal;
 }
 
-/*      CLASSES        */
 .h1-success::after {
-    content: ' \2714';
-    color: #16C116;
-    letter-spacing: 2rem;
+	content: '\2714';
+	color: #16C116;
+	margin-left: 2rem;
+}
+.h1-error::after {
+	content: '\2718';
+	color: #C1111F;
+	margin-left: 2rem;
 }
 .step {
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px dashed white;
-    padding-top: 1rem;
+	display: flex;
+	justify-content: space-between;
+	border-top: 1px dashed white;
+	padding-top: 1rem;
 }
 .step-actions {
-    width: 70%;
-    display: flex;
-    align-items: center;
+	width: 70%;
+	display: flex;
+	align-items: center;
 }
 .step-info {
-    display: flex;
-    align-items: center;
-    width: 30%;
-    padding: 0.1rem 0.7rem;
-    border-radius: 1rem;
-    color: #bbb;
-    font-style: italic;
-    background-color: #244B87;
-    box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
+	display: flex;
+	align-items: center;
+	width: 30%;
+	padding: 0.1rem 0.7rem;
+	border-radius: 1rem;
+	color: #bbb;
+	font-style: italic;
+	background-color: #303948;
+	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
 }
 .step-wrapper {
-    display: flex;
-    flex-direction: column;
-    padding: 1rem 0;
-    margin-bottom: 2rem;
+	display: flex;
+	flex-direction: column;
+	padding: 1rem 0;
+	margin-bottom: 2rem;
 }
 .wrapper {
-    width: 80%;
-    display: flex;
-    flex-direction: column;
+	width: 80%;
+	display: flex;
+	flex-direction: column;
 }
