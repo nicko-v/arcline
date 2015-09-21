@@ -46,22 +46,44 @@
 		}
 	});
 	reader.onload = function () {
-		tempArray = this.result.split(/\r\n|\n|\r/).filter(function (str) { // (01)
-			return str;
-		});
+		tempArray = this.result.split('').reduce(function (result, symb) { // (01)
+			switch (symb) {
+			case '\n':
+			case '\r':
+				if (result[result.length - 1] !== '|') {
+					return result + '|';
+				} else {
+					return result;
+				}
+			case '(':
+				if (result[result.length - 1] !== '\"') {
+					return result + '|(';
+				} else {
+					return result + '(';
+				}
+			case ' ':
+				if (result[result.length - 1] !== ' ') {
+					return result + ' ';
+				} else {
+					return result;
+				}
+			default:
+				return result + symb;
+			}
+		}, '').split('|');
 		if (tempArray[0].indexOf('ACCEL_ASCII') === -1) {
 			document.getElementById('firstStep').className = 'h1-error';
 			window.alert('Выбран некорректный файл.\n\nОткройте .pcb в P-CAD и выполните следующее:\n  Save as... -> Save as type: ASCII Files');
 			return;
 		}
 		document.getElementById('firstStep').className = 'h1-success';
-		removeSpaces(tempArray); // (02)
+		//removeSpaces(tempArray); // (02)
 		document.write('<pre>' + tempArray.join('</br>') + '</pre>');
 		
-		content[tempArray[0]] = createList(tempArray, content);
-		for (var i in content) {
-			console.log('key: ' + i + ' value: ' + content[i])
-		}
-		console.log(content);
+//		createList(tempArray, content);
+//		for (var i in content) {
+//			console.log('key: ' + i + ' value: ' + content[i])
+//		}
+//		console.log(content);
 	};
 }());
