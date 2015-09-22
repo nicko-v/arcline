@@ -61,7 +61,7 @@ h1, h2 {
 	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
 }
 .step-wrapper {
-	display: flex;
+	display: none;
 	flex-direction: column;
 	padding: 1rem 0;
 	margin-bottom: 2rem;

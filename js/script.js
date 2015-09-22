@@ -4,8 +4,8 @@
 //      Возвращает 0 или 1 в зависимости от установленного статуса, что позволяет
 //      прервать выполнение скрипта в случае ошибки.
 // (02) Чистит полученную строку (файл) от лишних пробелов и символов EOL, добавляет
-//      в строку символы, по которым ее можно будет разбить на блоки.
-//      Используемые коды символов: 10: '\n', 13: '\r', 32: ' ', 34: '"', 124: '|'.
+//      в строку символы, по которым ее можно будет разбить на блоки. Используемые
+//      коды символов: 10: '\n', 13: '\r', 32: ' ', 34: '"', 40: '(', 41: ')', 124: '|'.
 
 (function () {
 	'use strict';
@@ -35,7 +35,7 @@
 			'10': {get: function () { return ''; }},
 			'13': {get: function () { return ''; }},
 			'40': {get: function () { return ([34, 124].indexOf(str.charCodeAt(i - 1)) + 1) ? '(' : '|('; }},
-			'32': {get: function () { return ([10, 13, 32, 124].indexOf(str.charCodeAt(i - 1)) + 1 || [10, 13].indexOf(str.charCodeAt(i + 1)) + 1) ? '' : ' '; }},
+			'32': {get: function () { return ([10, 13, 32, 124].indexOf(str.charCodeAt(i - 1)) + 1 || [10, 13, 40, 41].indexOf(str.charCodeAt(i + 1)) + 1) ? '' : ' '; }},
 			def:  {get: function () { return str[i]; }}
 		});
 		for (i = 0; i < str.length; i += 1) {
@@ -69,6 +69,7 @@
 	reader.onload = function () {
 		tempArray = handleString(this.result).split('|');
 		if (!setStepStatus(tempArray[0].indexOf('ACCEL_ASCII'), 'firstStep')) { return; }
-		document.write('<pre>' + tempArray.join('<br>') + '</pre>');
+		document.getElementById('step2').style.display = 'flex';
+		//document.write('<pre>' + tempArray.join('<br>') + '</pre>');
 	};
 }());
