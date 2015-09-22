@@ -335,4 +335,14 @@ window.alert(buffer());
     window.alert(sumArgs(1, 2, 3));
 }());
 */
-// 
+// Benchmarking.
+// 22.9.15
+/*
+	function bench(func) {
+		var date = new Date(), i;
+		for (i = 0; i < 100; i += 1) {
+			func(content);
+		}
+		return new Date() - date;
+	}
+*/
