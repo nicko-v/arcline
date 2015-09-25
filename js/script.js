@@ -62,9 +62,9 @@
 			return result;
 		}
 		function buildList(array) { // (03)
-			var obj = {}, currLevel = obj;
+			var obj = {'ACCEL_ASCII \"C:\\a.pcb\"': null}, currLevel = obj;
 			function AddLevel() {
-				this.prev = currLevel;
+				Object.defineProperty(this, 'parent', {value: currLevel, enumerable: false});
 			}
 			array.forEach(function (str) {
 				var c = 0, s = str.length - 1, i;
@@ -77,34 +77,38 @@
 					}
 					if (c > 1) {
 						for (i = 1; i < c; i += 1) {
-							currLevel = currLevel.prev;
+							currLevel = currLevel.parent;
 						}
 					}
 				} else if (str[0] === '(' && str[str.length - 1] !== ')') {
+					while (currLevel.hasOwnProperty(str)) { str += ' '; } // Костыль :(
 					currLevel[str] = new AddLevel();
 					currLevel = currLevel[str];
 				}
 			});
 			if (Object.keys(obj).length < 3) { showError(2, 'firstStep'); }
-			return obj;
-		}
-		function buildArray(list) {
-			var array = [], key, walker;
-			for (key in list) {
-				if (list.hasOwnProperty(key)) {
-					if (key) {
-						array.push(key);
-						list = list[key];
-					} else {
-						array.push(key);
+			Object.defineProperty(obj, 'convertToArray', {
+				value: function () {
+					var array = [];
+					function walker(object) {
+						var key;
+						for (key in object) {
+							if (object.hasOwnProperty(key)) {
+								if (object[key]) { array.push(key.trim()); walker(object[key]); } else { array.push(key); }
+							}
+						}
 					}
+					walker(obj);
+					return array;
 				}
-			}
+			});
+			return obj;
 		}
 		
 		content = buildList(handleString(this.result).split('$'));
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
-		console.log(buildArray(content));
+		window.console.log(content);
+		document.write('<pre>' + content.convertToArray().join('</br>') + '</pre>');
 	};
 }());
