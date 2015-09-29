@@ -21,7 +21,8 @@
 		
 		function showError(n, step) { // (01)
 			var errors = ['Выбран некорректный файл.\n\nОткройте .pcb в P-CAD и выполните следующее:\n  File -> Save as... -> Save as type: ASCII Files.',
-										'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
+										'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
+										'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
 			if (n > -1) {
 				document.getElementById(step).className = 'h1-error';
 				window.alert(errors[n]);
@@ -76,22 +77,45 @@
 					}
 				}
 			});
-			obj.asArray = function () {
-				var array = [];
-				function walker(object) {
-					var i;
-					for (i = 0; i <= Object.keys(object).length - 1; i += 1) {
-						if (typeof object[i] === 'object') {
-							array.push(object[i].header);
-							walker(object[i]);
-						} else {
-							array.push(object[i]);
+			Object.defineProperties(obj, {
+				asArray: {
+					value: function () {
+						var array = [];
+						function walker(object) {
+							var i;
+							for (i = 0; i <= Object.keys(object).length - 1; i += 1) {
+								if (typeof object[i] === 'object') {
+									array.push(object[i].header);
+									walker(object[i]);
+								} else {
+									array.push(object[i]);
+								}
+							}
+						}
+						walker(obj);
+						return array;
+					}
+				},
+				pads: {
+					get: function () {
+						
+					}
+				},
+				vias: {
+					get: function () {
+						var result, workingBranch, i;
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (this['4'][i].header === '(multiLayer') { workingBranch = this['4'][i]; break; }
+						}
+						if (!workingBranch) { showError(2, 'firstStep'); return; }
+						for (i = 0; i < Object.keys(workingBranch).length; i += 1) {
+							if (workingBranch[i].indexOf('(via (viaStyleRef') > -1) {
+								result[workingBranch.match(/".+?"/)[0].] = workingBranch[i].;
+							}
 						}
 					}
 				}
-				walker(obj);
-				return array;
-			};
+			});
 			if (Object.keys(obj).length < 5) { showError(1, 'firstStep'); return; }
 			return obj;
 		}
@@ -99,7 +123,7 @@
 		content = handleInput(this.result);
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
-		document.write('<pre>' + content.asArray().join('</br>') + '</pre>');
-		console.log(content);
+		window.console.log(content);
+		window.console.log(content.vias);
 	};
 }());
