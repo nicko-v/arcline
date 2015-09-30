@@ -2,8 +2,9 @@
 // (01) Устанавливает галку/крест в заголовке текущего шага в зависимости от полученного
 //      статуса текущей операции. Может вывести сообщение об ошибке если передан его номер.
 // (02) Обрабатывает файл: разбивает на строки, обрезает пробелы в начале и в конце, совмещает
-//      отдельные скобки с ближайшей строкой, затем создает объект древовидной структуры.
-//      Метод asArray() собирает объект в массив.
+//      отдельные скобки с ближайшей строкой, затем создает объект древовидной структуры
+//      с методами: asArray() собирает объект в массив, vias() и pads() возвращают список
+//      переходных точек и КП с названиями, координатами и размерами.
 
 (function () {
 	'use strict';
@@ -97,22 +98,56 @@
 					}
 				},
 				pads: {
-					get: function () {
+					value: function () {
 						
 					}
 				},
 				vias: {
-					get: function () {
-						var result, workingBranch, i;
-						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-							if (this['4'][i].header === '(multiLayer') { workingBranch = this['4'][i]; break; }
-						}
-						if (!workingBranch) { showError(2, 'firstStep'); return; }
-						for (i = 0; i < Object.keys(workingBranch).length; i += 1) {
-							if (workingBranch[i].indexOf('(via (viaStyleRef') > -1) {
-								result[workingBranch.match(/".+?"/)[0].] = workingBranch[i].;
+					value: function () {
+						var result = {}, viasList, viaProps, name, value, i, j;
+						
+						function parseString(type, string) {
+							var reg = new RegExp('\\(' + type + ' .+?(?=\\))', 'g'), values, i;
+							switch (type) {
+							case 'viaStyleRef':
+								return string.match(reg)[0].slice(type.length + 2);
+							case 'pt':
+							case 'holeDiam':
+							case 'shapeWidth':
+								values = string.match(reg);
+								for (i = 0; i < values.length; i += 1) {
+									if (values[i].slice(type.length + 2)) {
+										return values[i].slice(type.length + 2);
+									}
+								}
+								break;
 							}
 						}
+						
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (this['4'][i].header === '(multiLayer') {
+								viasList = this['4'][i];
+								break;
+							}
+						}
+						if (!viasList) { showError(2, 'firstStep'); return; }
+						for (i = 0; i < Object.keys(viasList).length; i += 1) {
+							if (typeof viasList[i] === 'string' && viasList[i].indexOf('(via (viaStyleRef') > -1) {
+								name = parseString('viaStyleRef', viasList[i]);
+								value = parseString('pt', viasList[i]);
+								if (!result[name]) {
+									for (j = 0; j < Object.keys(this['2']).length; j += 1) {
+										if (this['2'][j].header === '(viaStyleDef ' + name) {
+											viaProps = this['2'][j];
+											break;
+										}
+									}
+									result[name] = [[parseString('holeDiam', Object.keys(viaProps).join(','))]];
+								}
+								result[name].push(value);
+							}
+						}
+						return result;
 					}
 				}
 			});
@@ -124,6 +159,6 @@
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
 		window.console.log(content);
-		window.console.log(content.vias);
+		window.console.log(content.vias());
 	};
 }());
