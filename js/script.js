@@ -79,8 +79,30 @@
 				}
 			});
 			Object.defineProperties(obj, {
+				parser: {
+					value: function (type, string) {
+						var reg = new RegExp('\\(' + type + ' .+?(?=\\)(?!")|$)', 'g'), values, i;
+						switch (type) {
+						case 'viaStyleRef':
+						case 'padStyleRef':
+						case 'padStyleDef':
+							return string.match(reg)[0].slice(type.length + 2);
+						case 'pt':
+						case 'holeDiam':
+						case 'shapeWidth':
+						case 'shapeHeight':
+							values = string.match(reg);
+							for (i = 0; i < values.length; i += 1) {
+								if (values[i].slice(type.length + 2)) {
+									return values[i].slice(type.length + 2);
+								}
+							}
+							break;
+						}
+					}
+				},
 				asArray: {
-					value: function () {
+					value: function (a) {
 						var array = [];
 						function walker(object) {
 							var i;
@@ -93,60 +115,76 @@
 								}
 							}
 						}
-						walker(obj);
+						walker(a || this);
 						return array;
 					}
 				},
 				pads: {
 					value: function () {
-						
-					}
-				},
-				vias: {
-					value: function () {
-						var result = {}, viasList, viaProps, name, value, i, j;
-						
-						function parseString(type, string) {
-							var reg = new RegExp('\\(' + type + ' .+?(?=\\))', 'g'), values, i;
-							switch (type) {
-							case 'viaStyleRef':
-								return string.match(reg)[0].slice(type.length + 2);
-							case 'pt':
-							case 'holeDiam':
-							case 'shapeWidth':
-								values = string.match(reg);
-								for (i = 0; i < values.length; i += 1) {
-									if (values[i].slice(type.length + 2)) {
-										return values[i].slice(type.length + 2);
-									}
-								}
-								break;
-							}
-						}
-						
+						var result = {}, thru = {vias: {}, pads: {}}, planar = {}, currPath = {}, name, hole, width, height, coords, i, j, key;
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
 							if (this['4'][i].header === '(multiLayer') {
-								viasList = this['4'][i];
+								currPath = this['4'][i];
 								break;
 							}
 						}
-						if (!viasList) { showError(2, 'firstStep'); return; }
-						for (i = 0; i < Object.keys(viasList).length; i += 1) {
-							if (typeof viasList[i] === 'string' && viasList[i].indexOf('(via (viaStyleRef') > -1) {
-								name = parseString('viaStyleRef', viasList[i]);
-								value = parseString('pt', viasList[i]);
-								if (!result[name]) {
-									for (j = 0; j < Object.keys(this['2']).length; j += 1) {
-										if (this['2'][j].header === '(viaStyleDef ' + name) {
-											viaProps = this['2'][j];
-											break;
-										}
+						for (i = 0; i < Object.keys(currPath).length; i += 1) {
+							if (typeof currPath[i] === 'string') {
+								if (currPath[i].indexOf('(viaStyleRef') > -1) {
+									name = this.parser('viaStyleRef', currPath[i]);
+									coords = this.parser('pt', currPath[i]);
+									if (thru.vias[name]) {
+										thru.vias[name].push(coords);
+									} else {
+										thru.vias[name] = [null, coords];
 									}
-									result[name] = [[parseString('holeDiam', Object.keys(viaProps).join(','))]];
+								} else if (currPath[i].indexOf('(padStyleRef') > -1) {
+									name = this.parser('padStyleRef', currPath[i]);
+									coords = this.parser('pt', currPath[i]);
+									if (thru.pads[name]) {
+										thru.pads[name].push(coords);
+									} else {
+										thru.pads[name] = [null, coords];
+									}
 								}
-								result[name].push(value);
 							}
 						}
+						for (key in thru.vias) {
+							if (thru.vias.hasOwnProperty(key)) {
+								for (i = 0; i < Object.keys(this['2']).length; i += 1) {
+									if (this['2'][i].header === '(viaStyleDef ' + key) {
+										for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+											thru.vias[key][0] = [this.parser('holeDiam', this.asArray(this['2'][i]).join(',')),
+																					 this.parser('shapeWidth', this.asArray(this['2'][i]).join(','))];
+										}
+										break;
+									}
+								}
+							}
+						}
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
+							if (this['2'][i].header.indexOf('(padStyleDef') > -1) {
+								name = this.parser('padStyleDef', this['2'][i].header);
+								hole = this.parser('holeDiam', this.asArray(this['2'][i]).join(','));
+								width = this.parser('shapeWidth', this.asArray(this['2'][i]).join(','));
+								height = this.parser('shapeHeight', this.asArray(this['2'][i]).join(','));
+							}
+							if (!thru.pads[name]) {
+								if (hole > 0) {
+									thru.pads[name] = [hole, width, height];
+								} else {
+									planar[name] = [width, height];
+								}
+							} else {
+								if (hole > 0) {
+									thru.pads[name][0] = [hole, width, height];
+								} else {
+									planar[name][0] = [width, height];
+								}
+							}
+						}
+						result.thru = thru;
+						result.planar = planar;
 						return result;
 					}
 				}
@@ -159,6 +197,6 @@
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
 		window.console.log(content);
-		window.console.log(content.vias());
+		window.console.log(content.pads());
 	};
 }());
