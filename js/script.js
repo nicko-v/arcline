@@ -3,8 +3,11 @@
 //      статуса текущей операции. Может вывести сообщение об ошибке если передан его номер.
 // (02) Обрабатывает файл: разбивает на строки, обрезает пробелы в начале и в конце, совмещает
 //      отдельные скобки с ближайшей строкой, затем создает объект древовидной структуры
-//      с методами: asArray() собирает объект в массив, vias() и pads() возвращают список
-//      переходных точек и КП с названиями, координатами и размерами.
+//      с методами: asArray() собирает объект в массив, getPads() возвращает список КП.
+// (03) Цикл парсит блок "pcbDesign - multiLayer" на координаты переходных отверстий,
+//      отдельных контактных площадок и информацию о компонентах.
+// (04) Цикл парсит блоки "library - padStyleDef" и "library - viaStyleDef" на размеры
+//      площадок и диаметры их отверстий.
 
 (function () {
 	'use strict';
@@ -84,14 +87,24 @@
 						var reg = new RegExp('\\(' + type + ' .+?(?=\\)(?!")|$)', 'g'), values, i;
 						switch (type) {
 						case 'viaStyleRef':
+						case 'viaStyleDef':
 						case 'padStyleRef':
 						case 'padStyleDef':
-							return string.match(reg)[0].slice(type.length + 2);
+						case 'patternRef':
+						case 'viaShapeType':
+						case 'padShapeType':
+						case 'refDesRef':
+						case 'rotation':
+						case 'isFlipped':
+						case 'patternGraphicsNameRef':
+							values = string.match(reg);
+							return (values) ? string.match(reg)[0].slice(type.length + 2) : null;
 						case 'pt':
 						case 'holeDiam':
 						case 'shapeWidth':
 						case 'shapeHeight':
 							values = string.match(reg);
+							if (!values) { return null; }
 							for (i = 0; i < values.length; i += 1) {
 								if (values[i].slice(type.length + 2)) {
 									return values[i].slice(type.length + 2);
@@ -101,12 +114,25 @@
 						}
 					}
 				},
+				finder: {
+					value: function (array, object) {
+						var i = 0, result;
+						result = array.reduce(function (currObj, elem, index) {
+							for (i = 0; i < Object.keys(currObj).length; i += 1) {
+								if (typeof currObj[i] === 'object' && currObj[i].header.indexOf(array[index]) > -1) {
+									return currObj[i];
+								}
+							}
+						}, object);
+						return result;
+					}
+				},
 				asArray: {
 					value: function (a) {
 						var array = [];
 						function walker(object) {
 							var i;
-							for (i = 0; i <= Object.keys(object).length - 1; i += 1) {
+							for (i = 0; i < Object.keys(object).length; i += 1) {
 								if (typeof object[i] === 'object') {
 									array.push(object[i].header);
 									walker(object[i]);
@@ -119,72 +145,66 @@
 						return array;
 					}
 				},
-				pads: {
+				getPads: {
 					value: function () {
-						var result = {}, thru = {vias: {}, pads: {}}, planar = {}, currPath = {}, name, hole, width, height, coords, i, j, key;
+						var result = {}, pads = {}, vias = {}, comp = {}, currPath, name, type, i, j, k, l;
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
 							if (this['4'][i].header === '(multiLayer') {
 								currPath = this['4'][i];
 								break;
 							}
 						}
-						for (i = 0; i < Object.keys(currPath).length; i += 1) {
+						for (i = 0; i < Object.keys(currPath).length; i += 1) { // (03)
 							if (typeof currPath[i] === 'string') {
-								if (currPath[i].indexOf('(viaStyleRef') > -1) {
-									name = this.parser('viaStyleRef', currPath[i]);
-									coords = this.parser('pt', currPath[i]);
-									if (thru.vias[name]) {
-										thru.vias[name].push(coords);
-									} else {
-										thru.vias[name] = [null, coords];
-									}
-								} else if (currPath[i].indexOf('(padStyleRef') > -1) {
-									name = this.parser('padStyleRef', currPath[i]);
-									coords = this.parser('pt', currPath[i]);
-									if (thru.pads[name]) {
-										thru.pads[name].push(coords);
-									} else {
-										thru.pads[name] = [null, coords];
-									}
-								}
-							}
-						}
-						for (key in thru.vias) {
-							if (thru.vias.hasOwnProperty(key)) {
-								for (i = 0; i < Object.keys(this['2']).length; i += 1) {
-									if (this['2'][i].header === '(viaStyleDef ' + key) {
-										for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
-											thru.vias[key][0] = [this.parser('holeDiam', this.asArray(this['2'][i]).join(',')),
-																					 this.parser('shapeWidth', this.asArray(this['2'][i]).join(','))];
-										}
-										break;
-									}
-								}
-							}
-						}
-						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
-							if (this['2'][i].header.indexOf('(padStyleDef') > -1) {
-								name = this.parser('padStyleDef', this['2'][i].header);
-								hole = this.parser('holeDiam', this.asArray(this['2'][i]).join(','));
-								width = this.parser('shapeWidth', this.asArray(this['2'][i]).join(','));
-								height = this.parser('shapeHeight', this.asArray(this['2'][i]).join(','));
-							}
-							if (!thru.pads[name]) {
-								if (hole > 0) {
-									thru.pads[name] = [hole, width, height];
-								} else {
-									planar[name] = [width, height];
+								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
+										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
+										'padStyleRef' : 0;
+								switch (type) {
+								case 'viaStyleRef':
+									name = this.parser(type, currPath[i]);
+									if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
+									vias[name].coords.push(this.parser('pt', currPath[i]));
+									break;
+								case 'padStyleRef':
+									name = this.parser(type, currPath[i]);
+									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
+									pads[name].coords.push(this.parser('pt', currPath[i]));
+									break;
 								}
 							} else {
-								if (hole > 0) {
-									thru.pads[name][0] = [hole, width, height];
-								} else {
-									planar[name][0] = [width, height];
+								if (currPath[i].header.indexOf('(pattern') > -1) {
+									name = this.parser('refDesRef', currPath[i].header);
+									if (!comp[name]) { comp[name] = {}; }
+									comp[name].pattern = this.parser('patternRef', currPath[i].header);
+									comp[name].zero = this.parser('pt', currPath[i].header);
+									comp[name].rotation = +this.parser('rotation', currPath[i].header);
+									comp[name].flipped = (this.parser('isFlipped', currPath[i].header) === 'True') ? true : false;
+									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
+											this.parser('patternGraphicsNameRef', currPath[i].header) :
+											this.parser('patternGraphicsNameRef', currPath[i]['0']);
 								}
 							}
 						}
-						result.thru = thru;
-						result.planar = planar;
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (04)
+							type = (this['2'][i].header.indexOf('(viaStyleDef') + 1) ?
+									'via' : (this['2'][i].header.indexOf('(padStyleDef') + 1) ?
+									'pad' : 0;
+							if (type) {
+								name = this.parser(type + 'StyleDef', this['2'][i].header);
+								currPath = (type === 'via') ? vias : pads;
+								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
+								currPath[name].hole = this.parser('holeDiam', this.asArray(this['2'][i]).join(','));
+								currPath[name].shape = this.parser(type + 'ShapeType', this.asArray(this['2'][i]).join(','));
+								currPath[name].width = this.parser('shapeWidth', this.asArray(this['2'][i]).join(','));
+								currPath[name].height = this.parser('shapeHeight', this.asArray(this['2'][i]).join(','));
+							}
+						}
+						for (i = 0; i < Object.keys(comp).length; i += 1) {
+							
+						}
+						result.vias = vias;
+						result.pads = pads;
+						result.comp = comp;
 						return result;
 					}
 				}
@@ -197,6 +217,6 @@
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
 		window.console.log(content);
-		window.console.log(content.pads());
+		window.console.log(content.getPads());
 	};
 }());
