@@ -1,20 +1,30 @@
 /*global FileReader */
-// (01) Устанавливает галку/крест в заголовке текущего шага в зависимости от полученного
+// (01) Открывает или закрывает блок справки при нажатии кнопки наверху страницы.
+// (02) Устанавливает галку/крест в заголовке текущего шага в зависимости от полученного
 //      статуса текущей операции. Может вывести сообщение об ошибке если передан его номер.
-// (02) Обрабатывает файл: разбивает на строки, обрезает пробелы в начале и в конце, совмещает
+// (03) Обрабатывает файл: разбивает на строки, обрезает пробелы в начале и в конце, совмещает
 //      отдельные скобки с ближайшей строкой, затем создает объект древовидной структуры
 //      с методами: asArray() собирает объект в массив, getPads() возвращает список КП.
-// (03) Цикл парсит блок "pcbDesign - multiLayer" на координаты переходных отверстий,
+// (04) Цикл парсит блок "pcbDesign - multiLayer" на координаты переходных отверстий,
 //      отдельных контактных площадок и информацию о компонентах.
-// (04) Цикл парсит блоки "library - padStyleDef" и "library - viaStyleDef" на размеры
+// (05) Цикл парсит блоки "library - padStyleDef" и "library - viaStyleDef" на размеры
 //      площадок и диаметры их отверстий.
 
 (function () {
 	'use strict';
 	var
-		input  = document.getElementById('file'),
-		reader = new FileReader();
+		helpBtn	= document.getElementById('helpButton'),
+		input		= document.getElementById('file'),
+		reader	= new FileReader();
 	
+	helpBtn.addEventListener('click', function () { // (01)
+		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
+		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
+			helpWrapper.style.maxHeight = window.getComputedStyle(document.getElementById('calcHeight')).height;
+		} else {
+			helpWrapper.style.maxHeight = '0px';
+		}
+	});
 	input.addEventListener('change', function () {
 		if (this.files[0]) {
 			reader.readAsText(this.files[0], 'cp1251');
@@ -23,7 +33,7 @@
 	reader.onload = function () {
 		var error = 0, content;
 		
-		function showError(n, step) { // (01)
+		function showError(n, step) { // (02)
 			var errors = ['Выбран некорректный файл.\n\nОткройте .pcb в P-CAD и выполните следующее:\n  File -> Save as... -> Save as type: ASCII Files.',
 										'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
 										'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
@@ -35,7 +45,7 @@
 				document.getElementById(step).className = 'h1-success';
 			}
 		}
-		function handleInput(string) { // (02)
+		function handleInput(string) { // (03)
 			var arr, obj = {}, currLevel = obj;
 			
 			function Branch(string) {
@@ -136,13 +146,22 @@
 						}
 						function finder(array, object) {
 							var i = 0, result;
-							result = array.reduce(function (currObj, elem, index) {
-								for (i = 0; i < Object.keys(currObj).length; i += 1) {
-									if (typeof currObj[i] === 'object' && currObj[i].header.indexOf(array[index]) > -1) {
-										return currObj[i];
+							function find(obj) {
+								var j;
+								for (j = 0; j < Object.keys(obj).length; j += 1) {
+									if (typeof obj[j] === 'object' && obj[j].header === array[i]) {
+										i += 1;
+										return find(obj[j]);
+									} else if (j === Object.keys(obj).length - 1) {
+										i -= 1;
+										return find(obj.parent);
+									} else if (i === array.length - 1) {
+										return obj;
 									}
 								}
-							}, object);
+								return;
+							}
+							result = find(object);
 							return result;
 						}
 						
@@ -152,7 +171,7 @@
 								break;
 							}
 						}
-						for (i = 0; i < Object.keys(currPath).length; i += 1) { // (03)
+						for (i = 0; i < Object.keys(currPath).length; i += 1) { // (04)
 							if (typeof currPath[i] === 'string') {
 								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
 										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
@@ -183,7 +202,7 @@
 								}
 							}
 						}
-						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (04)
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (05)
 							type = (this['2'][i].header.indexOf('(viaStyleDef') + 1) ?
 									'via' : (this['2'][i].header.indexOf('(padStyleDef') + 1) ?
 									'pad' : 0;
@@ -197,9 +216,10 @@
 								currPath[name].height = parser('shapeHeight', this.asArray(this['2'][i]).join(','));
 							}
 						}
-						for (i = 0; i < Object.keys(comp).length; i += 1) {
-							
-						}
+//						for (i = 0; i < Object.keys(comp).length; i += 1) {
+//							
+//						}
+						window.console.log(finder(['(patternDefExtended "MOUNT_HOLE_1"', '(patternGraphicsDef', '(patternGraphicsNameDef "2.8mm")'], this['2']));
 						result.vias = vias;
 						result.pads = pads;
 						result.comp = comp;
