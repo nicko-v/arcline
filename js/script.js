@@ -9,15 +9,21 @@
 //      отдельных контактных площадок и информацию о компонентах.
 // (05) Цикл парсит блоки "library - padStyleDef" и "library - viaStyleDef" на размеры
 //      площадок и диаметры их отверстий.
+// (06) Ищет какое-либо свойство (заголовок) в объекте по указанному пути. Принимает объект для
+//      поиска и массив, элементы которого - последовательный путь к свойству, являющемуся
+//      последним элементом массива.
+//      Например: ['(library "Library_1"', '(padStyleDef "(Default)"', '(holeDiam 0.9652)']
+//      найдет объект '(padStyleDef "(Default)"'. В случае, если свойства не уникальны,
+//      вернет первый объект, подходящий под указанный путь.
 
 (function () {
 	'use strict';
 	var
-		helpBtn	= document.getElementById('helpButton'),
-		input		= document.getElementById('file'),
-		reader	= new FileReader();
+		helpButton	= document.getElementById('helpButton'),
+		input				= document.getElementById('file'),
+		reader			= new FileReader();
 	
-	helpBtn.addEventListener('click', function () { // (01)
+	helpButton.addEventListener('click', function () { // (01)
 		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
 			helpWrapper.style.maxHeight = window.getComputedStyle(document.getElementById('calcHeight')).height;
@@ -144,25 +150,25 @@
 								break;
 							}
 						}
-						function finder(array, object) {
-							var i = 0, result;
-							function find(obj) {
+						function finder(array, object) { // (06)
+							var i = 0, nextBranch;
+							function find(obj, start) {
 								var j;
-								for (j = 0; j < Object.keys(obj).length; j += 1) {
+								for (j = start; j < Object.keys(obj).length; j += 1) {
 									if (typeof obj[j] === 'object' && obj[j].header === array[i]) {
 										i += 1;
-										return find(obj[j]);
+										nextBranch = j + 1;
+										return find(obj[j], 0);
 									} else if (j === Object.keys(obj).length - 1) {
 										i -= 1;
-										return find(obj.parent);
-									} else if (i === array.length - 1) {
+										return find(obj.parent, nextBranch);
+									} else if (i === array.length - 1 && obj[j] === array[i]) {
 										return obj;
 									}
 								}
 								return;
 							}
-							result = find(object);
-							return result;
+							return find(object, 0);
 						}
 						
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
@@ -237,4 +243,4 @@
 		window.console.log(content);
 		window.console.log(content.getPads());
 	};
-}()); 
+}());
