@@ -237,4 +237,4 @@
 		window.console.log(content);
 		window.console.log(content.getPads());
 	};
-}());
+}()); 
