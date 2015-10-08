@@ -45,6 +45,10 @@ li {
 	margin: 2rem;
 }
 
+#file {
+	font-size: 1.6rem;
+}
+
 .h1-success::after {
 	content: '\2714';
 	color: #16C116;
