@@ -1,4 +1,5 @@
 /*global FileReader */
+// Пояснения:
 // (01) Открывает или закрывает блок справки при нажатии кнопки наверху страницы.
 // (02) Устанавливает галку/крест в заголовке текущего шага в зависимости от полученного
 //      статуса текущей операции. Может вывести сообщение об ошибке если передан его номер.
@@ -15,6 +16,10 @@
 //      Например: ['(library "Library_1"', '(padStyleDef "(Default)"', '(holeDiam 0.9652)']
 //      найдет объект '(padStyleDef "(Default)"'. В случае, если свойства не уникальны,
 //      вернет первый объект, подходящий под указанный путь.
+//
+// TODO:
+// (01) Переработать и упростить код, парсящий файл на информацию о КП.
+// (02) Сделать нормальную обработку ошибок через try...catch.
 
 (function () {
 	'use strict';
@@ -118,36 +123,35 @@
 				},
 				getPads: {
 					value: function () {
-						var result = {}, pads = {}, vias = {}, comp = {}, currPath, name, type, i, j, k, l;
+						var result = {}, pads = {}, vias = {}, comp = {}, currPath, name, type, prop, width, height, i, j;
 						
 						function parser(type, string) {
-							var reg = new RegExp('\\(' + type + ' .+?(?=\\)(?!")|$)', 'g'), values, i;
+							var
+								reg = new RegExp('\\(' + type + ' .+?(?=\\)(?!")|$)', 'g'),
+								values = string.match(reg), i;
+							
 							switch (type) {
+							case 'padStyleRef':
 							case 'viaStyleRef':
 							case 'viaStyleDef':
-							case 'padStyleRef':
 							case 'padStyleDef':
 							case 'patternRef':
 							case 'viaShapeType':
 							case 'padShapeType':
 							case 'refDesRef':
-							case 'rotation':
-							case 'isFlipped':
 							case 'patternGraphicsNameRef':
-								values = string.match(reg);
-								return (values) ? string.match(reg)[0].slice(type.length + 2) : null;
-							case 'pt':
+								return (values) ? values[0].slice(type.length + 2) : null;
+							case 'rotation':
 							case 'holeDiam':
 							case 'shapeWidth':
 							case 'shapeHeight':
-								values = string.match(reg);
-								if (!values) { return null; }
-								for (i = 0; i < values.length; i += 1) {
-									if (values[i].slice(type.length + 2)) {
-										return values[i].slice(type.length + 2);
-									}
-								}
-								break;
+								return (values) ? +values[0].slice(type.length + 2) : null;
+							case 'pt':
+								if (values) {
+									return (string.indexOf('isFlipped True') === -1) ?
+													values[0].slice(type.length + 2) :
+													'flipped ' + values[0].slice(type.length + 2);
+								} else { return null; }
 							}
 						}
 						function finder(array, object) { // (06)
@@ -201,7 +205,6 @@
 									comp[name].pattern = parser('patternRef', currPath[i].header);
 									comp[name].zero = parser('pt', currPath[i].header);
 									comp[name].rotation = +parser('rotation', currPath[i].header);
-									comp[name].flipped = (parser('isFlipped', currPath[i].header) === 'True') ? true : false;
 									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
 											parser('patternGraphicsNameRef', currPath[i].header) :
 											parser('patternGraphicsNameRef', currPath[i]['0']);
@@ -216,16 +219,42 @@
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
 								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
-								currPath[name].hole = parser('holeDiam', this.asArray(this['2'][i]).join(','));
-								currPath[name].shape = parser(type + 'ShapeType', this.asArray(this['2'][i]).join(','));
-								currPath[name].width = parser('shapeWidth', this.asArray(this['2'][i]).join(','));
-								currPath[name].height = parser('shapeHeight', this.asArray(this['2'][i]).join(','));
+								currPath[name].side = 'thru';
+								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+									if (typeof this['2'][i][j] === 'string') {
+										prop = (this['2'][i][j].indexOf('holeDiam') + 1) ?
+														'hole' : (this['2'][i][j].indexOf('layerNumRef 1') + 1) ?
+														'layer1' : (this['2'][i][j].indexOf('layerNumRef 2') + 1) ?
+														'layer2' : null;
+										switch (prop) {
+										case 'hole':
+											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
+											break;
+										case 'layer1':
+											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]);
+											currPath[name].width = parser('shapeWidth', this['2'][i][j]);
+											currPath[name].height = parser('shapeHeight', this['2'][i][j]);
+											break;
+										case 'layer2':
+											width = parser('shapeWidth', this['2'][i][j]);
+											height = parser('shapeHeight', this['2'][i][j]);
+											if (width && !currPath[name].width) {
+												currPath[name].side = 'bot';
+												currPath[name].width = width;
+												currPath[name].height = height;
+											} else if (!width) {
+												currPath[name].side = 'top';
+											}
+											break;
+										}
+									}
+								}
 							}
+							type = null;
 						}
 //						for (i = 0; i < Object.keys(comp).length; i += 1) {
 //							
 //						}
-						window.console.log(finder(['(patternDefExtended "MOUNT_HOLE_1"', '(patternGraphicsDef', '(patternGraphicsNameDef "2.8mm")'], this['2']));
 						result.vias = vias;
 						result.pads = pads;
 						result.comp = comp;
