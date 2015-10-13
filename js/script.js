@@ -9,16 +9,26 @@
 // (04) Цикл парсит блок "pcbDesign - multiLayer" на координаты переходных отверстий,
 //      отдельных контактных площадок и информацию о компонентах.
 // (05) Цикл парсит блоки "library - padStyleDef" и "library - viaStyleDef" на размеры
-//      площадок и диаметры их отверстий.
+//      площадок, диаметры их отверстий и расположение (top/bot/thru).
 // (06) Ищет какое-либо свойство (заголовок) в объекте по указанному пути. Принимает объект для
 //      поиска и массив, элементы которого - последовательный путь к свойству, являющемуся
 //      последним элементом массива.
 //      Например: ['(library "Library_1"', '(padStyleDef "(Default)"', '(holeDiam 0.9652)']
 //      найдет объект '(padStyleDef "(Default)"'. В случае, если свойства не уникальны,
 //      вернет первый объект, подходящий под указанный путь.
+// (07) Для составленного ранее списка компонентов ищет сопоставления по их названиям в
+//      блоке '(library "Library_1" -> (patternDefExtended "name"' и вытягивает оттуда
+//      координаты смещений КП относительно нуля (точка привязки) компонента и углы поворота КП.
+// (08) Считает окончательные координаты КП из списка компонентов с учетом смещения
+//      от точки привязки и поворота. Записывает в объект pads в виде "x y слой поворот".
+// (09) Добавляет запись о новом слое с переданным названием. Устанавливает слою
+//      первый свободный номер. Если слой существует - содержимое стирается.
 //
-// TODO:[] Переработать и упростить код, парсящий файл на информацию о КП.
-// TODO:[] Сделать нормальную обработку ошибок через try...catch.
+// TODO: [] Переработать и упростить код, парсящий файл на информацию о КП.
+// TODO: [] Сделать нормальную обработку ошибок через try...catch.
+// NOTE: [] В блоке layerContents нет ни одной строки при создании, значит нет и закрывающей скобки.
+//          Следует не забыть добавить лишнюю скобку самому последнему элементу, который
+//          будет туда вписан.
 
 (function () {
 	'use strict';
@@ -27,6 +37,17 @@
 		input				= document.getElementById('file'),
 		reader			= new FileReader();
 	
+	Object.defineProperty(Object.prototype, 'shiftProperties', {
+		value: function (from, step) {
+			var i;
+			if (Object.keys(this).length > 0) {
+				for (i = Object.keys(this).length - 1; i >= from; i -= 1) {
+					this[i + step] = this[i];
+					delete this[i];
+				}
+			}
+		}
+	});
 	helpButton.addEventListener('click', function () { // (01)
 		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
@@ -108,11 +129,13 @@
 						function walker(object) {
 							var i;
 							for (i = 0; i < Object.keys(object).length; i += 1) {
-								if (typeof object[i] === 'object') {
-									array.push(object[i].header);
-									walker(object[i]);
-								} else {
-									array.push(object[i]);
+								if (object.hasOwnProperty(i)) {
+									if (typeof object[i] === 'object') {
+										array.push(object[i].header);
+										walker(object[i]);
+									} else {
+										array.push(object[i]);
+									}
 								}
 							}
 						}
@@ -123,7 +146,8 @@
 				getPads: {
 					value: function () {
 						var comp = {}, cosA, currPath, height, i, j, key, name, pads = {},
-							prop, shiftX, shiftY, type, result = {}, sinA, vias = {}, width, x, y, zero;
+							prop, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
+							width, x, y, zero;
 						
 						function parser(type, string) {
 							var values, i,
@@ -221,8 +245,8 @@
 							}
 						}
 						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (05)
-							type = (this['2'][i].header.indexOf('(viaStyleDef') + 1) ?
-									'via' : (this['2'][i].header.indexOf('(padStyleDef') + 1) ?
+							type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
+									'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
 									'pad' : 0;
 							if (type) {
 								name = parser(type + 'StyleDef', this['2'][i].header);
@@ -261,7 +285,7 @@
 							}
 							type = null;
 						}
-						for (key in comp) {
+						for (key in comp) { // (07)
 							if (comp.hasOwnProperty(key)) {
 								comp[key].pads = {};
 								currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
@@ -279,7 +303,7 @@
 								}
 							}
 						}
-						for (key in comp) {
+						for (key in comp) { // (08)
 							if (comp.hasOwnProperty(key)) {
 								zero = comp[key].zero.split(' ');
 								for (name in comp[key].pads) {
@@ -287,26 +311,84 @@
 										for (i = 0; i < comp[key].pads[name].length; i += 1) {
 											shiftX = +comp[key].pads[name][i].split(' ')[0];
 											shiftY = +comp[key].pads[name][i].split(' ')[1];
-											cosA = Math.cos(comp[key].rotation * Math.PI / 180);
-											sinA = Math.sin(comp[key].rotation * Math.PI / 180);
-											x = (shiftX * cosA - shiftY * sinA).toFixed(4);
-											y = (shiftY * cosA + shiftX * sinA).toFixed(4);
-											if (zero[2] !== 'flipped') { x = -x; }
-											pads[name].coords.push((+zero[0] + x) + ' ' +
-																						 (+zero[1] + y) + ' ' +
-																						 (+comp[key].pads[name][i].split(' ')[2])
-																						);
+											side = pads[name].side;
+											if (comp[key].rotation) {
+												sinA = Math.sin(comp[key].rotation * Math.PI / 180);
+												cosA = Math.cos(comp[key].rotation * Math.PI / 180);
+												x = (shiftX * cosA - shiftY * sinA);
+												y = (shiftY * cosA + shiftX * sinA);
+											} else {
+												x = shiftX;
+												y = shiftY;
+											}
+											if (zero[2] === 'flipped') {
+												x = -x;
+												side = (pads[name].side === 'top') ?
+														'bot' : (pads[name].side === 'bot') ?
+														'top' : 'thru';
+											}
+											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
+																						 (+zero[1] + y).toFixed(3) + ' ' +
+																						 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
 										}
 									}
 								}
 							}
 						}
-						for (name in pads) {if (pads.hasOwnProperty(name)) {if (!pads[name].coords.length) {delete pads[name]; } } }
-						for (name in vias) {if (vias.hasOwnProperty(name)) {if (!vias[name].coords.length) {delete vias[name]; } } }
+						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
+						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
 						result.vias = vias;
 						result.pads = pads;
-						result.comp = comp;
 						return result;
+					}
+				},
+				addLayer: {
+					value: function (layerName) { // (09)
+						var i, j, layerNum, layers = [];
+						
+						function compareNumeric(a, b) {
+							return a - b;
+						}
+						function getFreeLayerNum(array) {
+							var i, result;
+							for (i = 1; i < array.length; i += 1) {
+								if (!array[i]) { result = i; }
+							}
+							return result || array.length;
+						}
+						
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerDef') + 1) {
+								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) {
+									layerNum = +this['4'][i][0].slice(10, -1);
+								} else {
+									layers[+this['4'][i][0].slice(10, -1)] = true;
+									if (typeof this['4'][i + 1] === 'object' && this['4'][i + 1].header.indexOf('(multiLayer') + 1) {
+										layerNum = getFreeLayerNum(layers);
+										this['4'].shiftProperties(i + 1, 1);
+										this['4'][i + 1] = {};
+										Object.defineProperties(this['4'][i + 1], {
+											header: { value: '(layerDef \"' + layerName + '\"' },
+											0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
+											1:			{ value: '(layerType NonSignal)', enumerable: true },
+											2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
+										});
+										i += 1;
+									}
+								}
+							} else if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerContents') + 1) {
+								this['4'].shiftProperties(i, 1);
+								this['4'][i] = {};
+								Object.defineProperty(this['4'][i], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
+								for (j = i + 1; j < Object.keys(this['4']).length; j += 1) {
+									if (typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) {
+										delete this['4'][j];
+										break;
+									}
+								}
+								break;
+							}
+						}
 					}
 				}
 			});
@@ -317,6 +399,7 @@
 		content = handleInput(this.result);
 		if (error) { return; } else { showError(-1, 'firstStep'); }
 		document.getElementById('step2').style.display = 'flex';
+		content.addLayer('Drill');
 		window.console.log(content);
 		window.console.log(content.getPads());
 	};
