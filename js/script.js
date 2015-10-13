@@ -17,9 +17,8 @@
 //      найдет объект '(padStyleDef "(Default)"'. В случае, если свойства не уникальны,
 //      вернет первый объект, подходящий под указанный путь.
 //
-// TODO:
-// (01) Переработать и упростить код, парсящий файл на информацию о КП.
-// (02) Сделать нормальную обработку ошибок через try...catch.
+// TODO:[] Переработать и упростить код, парсящий файл на информацию о КП.
+// TODO:[] Сделать нормальную обработку ошибок через try...catch.
 
 (function () {
 	'use strict';
@@ -123,35 +122,45 @@
 				},
 				getPads: {
 					value: function () {
-						var result = {}, pads = {}, vias = {}, comp = {}, currPath, name, type, prop, width, height, i, j;
+						var comp = {}, cosA, currPath, height, i, j, key, name, pads = {},
+							prop, shiftX, shiftY, type, result = {}, sinA, vias = {}, width, x, y, zero;
 						
 						function parser(type, string) {
-							var
-								reg = new RegExp('\\(' + type + ' .+?(?=\\)(?!")|$)', 'g'),
-								values = string.match(reg), i;
+							var values, i,
+								// Совпадение до первой закрывающей скобки, т.к. внутри скобок быть не может:
+								regStandardValue = new RegExp('\\(' + type + ' .+?(?=\\))', 'g'),
+								// Совпадение до кавычки, за которой идет закрывающая скобка или конец строки:
+								regName = new RegExp('\\(' + type + ' .+?(?=(\"\\))|\"$)', 'g');
 							
 							switch (type) {
-							case 'padStyleRef':
-							case 'viaStyleRef':
-							case 'viaStyleDef':
-							case 'padStyleDef':
-							case 'patternRef':
 							case 'viaShapeType':
 							case 'padShapeType':
-							case 'refDesRef':
-							case 'patternGraphicsNameRef':
+								values = string.match(regStandardValue);
 								return (values) ? values[0].slice(type.length + 2) : null;
 							case 'rotation':
 							case 'holeDiam':
 							case 'shapeWidth':
 							case 'shapeHeight':
-								return (values) ? +values[0].slice(type.length + 2) : null;
+								values = string.match(regStandardValue);
+								return (values) ? +values[0].slice(type.length + 2) : 0;
 							case 'pt':
+								values = string.match(regStandardValue);
 								if (values) {
 									return (string.indexOf('isFlipped True') === -1) ?
 													values[0].slice(type.length + 2) :
-													'flipped ' + values[0].slice(type.length + 2);
-								} else { return null; }
+													values[0].slice(type.length + 2) + ' flipped';
+								} else {
+									return null;
+								}
+							case 'padStyleRef':
+							case 'padStyleDef':
+							case 'viaStyleRef':
+							case 'viaStyleDef':
+							case 'patternRef':
+							case 'refDesRef':
+							case 'patternGraphicsNameRef':
+								values = string.match(regName);
+								return (values) ? values[0].slice(type.length + 3) : null;
 							}
 						}
 						function finder(array, object) { // (06)
@@ -204,7 +213,7 @@
 									if (!comp[name]) { comp[name] = {}; }
 									comp[name].pattern = parser('patternRef', currPath[i].header);
 									comp[name].zero = parser('pt', currPath[i].header);
-									comp[name].rotation = +parser('rotation', currPath[i].header);
+									comp[name].rotation = parser('rotation', currPath[i].header);
 									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
 											parser('patternGraphicsNameRef', currPath[i].header) :
 											parser('patternGraphicsNameRef', currPath[i]['0']);
@@ -252,9 +261,48 @@
 							}
 							type = null;
 						}
-//						for (i = 0; i < Object.keys(comp).length; i += 1) {
-//							
-//						}
+						for (key in comp) {
+							if (comp.hasOwnProperty(key)) {
+								comp[key].pads = {};
+								currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
+																	 '(patternGraphicsDef',
+																	 '(patternGraphicsNameDef "' + comp[key].graphics + '")'], this['2']);
+								for (i = 0; i < Object.keys(currPath).length; i += 1) {
+									if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
+										for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
+											name = parser('padStyleRef', currPath[i][j]);
+											if (!comp[key].pads[name]) { comp[key].pads[name] = []; }
+											comp[key].pads[name].push(parser('pt', currPath[i][j]) + ' ' + parser('rotation', currPath[i][j]));
+										}
+										break;
+									}
+								}
+							}
+						}
+						for (key in comp) {
+							if (comp.hasOwnProperty(key)) {
+								zero = comp[key].zero.split(' ');
+								for (name in comp[key].pads) {
+									if (comp[key].pads.hasOwnProperty(name)) {
+										for (i = 0; i < comp[key].pads[name].length; i += 1) {
+											shiftX = +comp[key].pads[name][i].split(' ')[0];
+											shiftY = +comp[key].pads[name][i].split(' ')[1];
+											cosA = Math.cos(comp[key].rotation * Math.PI / 180);
+											sinA = Math.sin(comp[key].rotation * Math.PI / 180);
+											x = (shiftX * cosA - shiftY * sinA).toFixed(4);
+											y = (shiftY * cosA + shiftX * sinA).toFixed(4);
+											if (zero[2] !== 'flipped') { x = -x; }
+											pads[name].coords.push((+zero[0] + x) + ' ' +
+																						 (+zero[1] + y) + ' ' +
+																						 (+comp[key].pads[name][i].split(' ')[2])
+																						);
+										}
+									}
+								}
+							}
+						}
+						for (name in pads) {if (pads.hasOwnProperty(name)) {if (!pads[name].coords.length) {delete pads[name]; } } }
+						for (name in vias) {if (vias.hasOwnProperty(name)) {if (!vias[name].coords.length) {delete vias[name]; } } }
 						result.vias = vias;
 						result.pads = pads;
 						result.comp = comp;
