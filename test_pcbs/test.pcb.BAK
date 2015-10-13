@@ -2,7 +2,7 @@ ACCEL_ASCII "C:\Users\Nickolay\Documents\GitHub\drill\test_pcbs\test.pcb"
 
 (asciiHeader 
   (asciiVersion 3 0)
-  (timeStamp 2015 10 12 14 30 26)
+  (timeStamp 2015 10 12 14 25 23)
   (program "P-CAD 2006 PCB" "19.02.9589")
   (copyright "Copyright © 1991-2006 Altium Limited")
   (fileAuthor "")
@@ -284,6 +284,10 @@ ACCEL_ASCII "C:\Users\Nickolay\Documents\GitHub\drill\test_pcbs\test.pcb"
     (compRef "4118.24-2.01_1")
     (originalName "4118.24-2.01")
   )
+  (compInst "2"
+    (compRef "4118.24-2.01_1")
+    (originalName "4118.24-2.01")
+  )
   (compInst "V1"
     (compRef "2C191A_1")
     (originalName "2C191A")
@@ -428,6 +432,13 @@ ACCEL_ASCII "C:\Users\Nickolay\Documents\GitHub\drill\test_pcbs\test.pcb"
         (patternGraphicsNameRef "Primary")
         (attr "RefDes" "1" (pt 10.178 -4.972) (isVisible True) (justify Center) (textStyleRef "(Default)") )
         (attr "Type" "4118.24-2.01" (textStyleRef "(Default)") )
+      )
+    )
+    (pattern (patternRef "4118.24-2.01_1") (refDesRef "2") (pt 293.75 275.0) (rotation 270.0) (isFlipped True)(patternGraphicsNameRef "Primary")
+      (patternGraphicsRef 
+        (patternGraphicsNameRef "Primary")
+        (attr "RefDes" "2" (pt 4.972 -10.178) (rotation 270.0) (isFlipped True) (isVisible True) (justify Center) (textStyleRef "(Default)") )
+        (attr "Type" "4118.24-2.01" (rotation 270.0) (isFlipped True) (textStyleRef "(Default)") )
       )
     )
     (pattern (patternRef "2C191A_1") (refDesRef "V2") (pt 258.75 278.75) (rotation 90.0) (patternGraphicsNameRef "Primary")
