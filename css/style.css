@@ -34,9 +34,6 @@ header {
 	justify-content: space-between;
 	align-items: center;
 	margin: 2rem auto;
-	-ms-user-select: none;
-	-moz-user-select: none;
-	-webkit-user-select: none;
 }
 html {
 	font: 10px 'Clear Sans';
@@ -113,6 +110,36 @@ li {
 	box-shadow: inset 0px 0px 3px 3px rgba(0,0,0,0.1);
 	overflow-y: hidden;
 	transition: all 500ms linear;
+}
+.lock {
+	height: 100%;
+	overflow: hidden;
+}
+.modal {
+	width: 50%;
+	height: 40%;
+	top: 50%;
+	left: 50%;
+	min-width: 500px;
+	min-height: 200px;
+	position: relative;
+	transform: translate(-50%, -50%);
+	background-color: #bbb;
+	border-radius: 15px;
+	border: 7px solid #666;
+}
+.noselect {
+	-ms-user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+.cover {
+	height: 100%;
+	width: 100%;
+	z-index: 999;
+	position: absolute;
+	cursor: default;
+	background: rgba(0,0,0,0.5);
 }
 .step {
 	display: flex;
