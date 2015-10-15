@@ -7,6 +7,34 @@
 		input				= document.getElementById('file'),
 		reader			= new FileReader();
 	
+	function showWindow(type, header, content, buttons) {
+		var
+			htmlTag				= document.getElementsByTagName('html')[0],
+			bodyTag				= document.getElementsByTagName('body')[0],
+			documentCover	= document.getElementById('cover');
+		
+		function createButtons() {
+			var i, result = '';
+			if (buttons) {
+				for (i = 0; i < buttons.length; i += 1) {
+					result += '<button class="window-button">' + buttons[i] + '</button>';
+				}
+			}
+			return result;
+		}
+		
+		htmlTag.className = 'lock';
+		bodyTag.className = 'lock';
+		documentCover.className = 'cover noselect';
+		documentCover.innerHTML =
+			'<div class="window">' +
+			'<div class="window-header uppercase">' + header + '</div>' +
+			'<div class="window-content">' + content + '</div>' +
+			'<div class="pusher"></div>' +
+			'<div class="window-buttons-wrapper">' +
+			createButtons() + '</div></div>';
+	}
+	showWindow(0, 'Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No', 'Cancel']);
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
 			var i;
