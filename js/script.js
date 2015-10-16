@@ -3,6 +3,7 @@
 (function () {
 	'use strict';
 	var
+		tmp = document.getElementById('tmp'),
 		helpButton	= document.getElementById('helpButton'),
 		input				= document.getElementById('file'),
 		reader			= new FileReader();
@@ -17,7 +18,7 @@
 			var i, result = '';
 			if (buttons) {
 				for (i = 0; i < buttons.length; i += 1) {
-					result += '<button class="window-button">' + buttons[i] + '</button>';
+					result += '<button class="modal-button">' + buttons[i] + '</button>';
 				}
 			}
 			return result;
@@ -25,16 +26,15 @@
 		
 		htmlTag.className = 'lock';
 		bodyTag.className = 'lock';
-		documentCover.className = 'cover noselect';
+		documentCover.className = 'modal-cover noselect';
 		documentCover.innerHTML =
-			'<div class="window">' +
-			'<div class="window-header uppercase">' + header + '</div>' +
-			'<div class="window-content">' + content + '</div>' +
-			'<div class="pusher"></div>' +
-			'<div class="window-buttons-wrapper">' +
-			createButtons() + '</div></div>';
+			'<div class="modal" draggable="true">' +
+			'<div class="modal-header uppercase">' + header + '</div>' +
+			'<div class="modal-content">' + content + '</div>' +
+			createButtons() + '</div>';
+		documentCover.style.opacity = 1;
 	}
-	showWindow(0, 'Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No', 'Cancel']);
+			
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
 			var i;
@@ -401,4 +401,7 @@
 		window.console.log(content);
 		window.console.log(content.getPads());
 	};
+	
+	showWindow(0, 'Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No']);
+	
 }());

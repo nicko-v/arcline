@@ -17,6 +17,16 @@
 	font-style: italic;
 }
 
+@keyframes modal-show {
+	from { transform: rotate(6deg); opacity: 0; }
+	10% { transform: rotate(-5deg); }
+	30% { transform: rotate(4deg); }
+	50% { transform: rotate(-3deg); }
+	70% { transform: rotate(2deg); }
+	90% { transform: rotate(-1deg); }
+	to { transform: rotate(0deg); opacity: 1; }
+}
+
 body {
 	min-width: 900px;
 	margin: 0;
@@ -25,6 +35,9 @@ body {
 	align-items: center;
 	background-color: #364050;
 	color: #bbb;
+}
+button {
+	outline: none;
 }
 h1, h2 {
 	font-weight: normal;
@@ -46,14 +59,6 @@ li {
 	font-size: 1.6rem;
 }
 
-.cover {
-	height: 100%;
-	width: 100%;
-	z-index: 999;
-	position: absolute;
-	cursor: default;
-	background: rgba(0,0,0,0.4);
-}
 .h1-success::after {
 	content: '\2714';
 	color: #16C116;
@@ -123,64 +128,75 @@ li {
 	height: 100%;
 	overflow: hidden;
 }
-.window {
-	width: 50%;
-	min-width: 500px;
+.modal {
+	opacity: 0;
+	min-width: 350px;
 	max-width: 800px;
-	min-height: 200px;
 	max-height: 500px;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
 	position: relative;
-	display: flex;
-	flex-direction: column;
+	display: inline-block;
+	top: 30%;
 	background-color: #bbb;
-	border-radius: 15px;
 	border: 7px solid #666;
+	border-radius: 10px;
 	box-shadow: 0px 0px 10px 15px rgba(0,0,0,0.1);
-	transition: all 500ms linear;
+	animation: modal-show 500ms ease-out 400ms normal;
+	animation-fill-mode: forwards;
 }
-.window-button {
-	padding: 1rem 3rem;
+.modal-button {
+	padding: 0.7rem 2rem;
+	margin: 0 2rem 1rem;
 	font-size: 1.6rem;
 	color: #000;
 	background-image: linear-gradient(to bottom,  #ddd, #ccc);
 	border: 1px solid #aaa;
-	outline: none;
+	border-radius: 5px;
 }
-.window-button:hover {
+.modal-button:hover {
 	background-image: linear-gradient(to top,  #ddd, #ccc);
 }
-.window-button:active {
+.modal-button:active {
 	background-image: linear-gradient(to top,  #ccc, #bbb);
 }
-.window-buttons-wrapper {
-	display: flex;
-	justify-content: space-around;
-	padding: 2rem 0;
-}
-.window-header {
-	min-height: 15px;
-	margin: -1px -1px 0 -1px; /* Иначе появляются разрывы из-за округления(?) */
-	padding: 0.3rem 1.5rem 1rem;
-	background-color: #666;
-	font-size: 2rem;
-	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-}
-.window-content {
-	padding: 2rem 1.5rem;
+.modal-content {
+	padding: 3rem 1.5rem 0;
+	margin-bottom: 3rem;
+	text-align: left;
 	font-size: 1.6rem;
 	color: #000;
 	overflow: auto;
+}
+.modal-cover {
+	opacity: 0;
+	height: 100%;
+	width: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 999;
+	text-align: center;
+	cursor: default;
+	background: rgba(0,0,0,0.4);
+	transition: all 300ms linear;
+}
+.modal-header {
+	display: inline-block;
+	min-height: 15px;
+	margin: 0 20px;
+	padding: 0.3rem 1.5rem 1rem;
+	border-bottom-left-radius: 10px;
+	border-bottom-right-radius: 10px;
+	background-image: linear-gradient(to bottom,  #666, #474747);
+	font-size: 2rem;
+	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+	box-shadow: 5px 5px 5px 0px rgba(0,0,0,0.1),
+							-5px 5px 5px 0px rgba(0,0,0,0.1);
+	cursor: move;
 }
 .noselect {
 	-ms-user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;
-}
-.pusher {
-	flex-grow: 1;
 }
 .step {
 	display: flex;
