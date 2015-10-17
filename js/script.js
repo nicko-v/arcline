@@ -26,7 +26,7 @@
 			html  = document.getElementsByTagName('html')[0],
 			body  = document.getElementsByTagName('body')[0],
 			cover = document.getElementById('cover'),
-			close = (isCloseable) ? '<div class="modal-close">' +
+			close = (isCloseable) ? '<div class="modal-close" onclick="">' +
 															'<div class="modal-close-cross">' +
 															'</div></div>' : '',
 			modal;
