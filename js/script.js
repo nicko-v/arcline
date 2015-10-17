@@ -3,36 +3,64 @@
 (function () {
 	'use strict';
 	var
-		tmp = document.getElementById('tmp'),
 		helpButton	= document.getElementById('helpButton'),
 		input				= document.getElementById('file'),
 		reader			= new FileReader();
 	
-	function showWindow(type, header, content, buttons) {
+	function hideModal() {
 		var
-			htmlTag				= document.getElementsByTagName('html')[0],
-			bodyTag				= document.getElementsByTagName('body')[0],
-			documentCover	= document.getElementById('cover');
+			html  = document.getElementsByTagName('html')[0],
+			body  = document.getElementsByTagName('body')[0],
+			cover = document.getElementById('cover');
+		
+		cover.style.opacity = 0;
+		setTimeout(function () { cover.innerHTML = ''; }, 100);
+		setTimeout(function () {
+			cover.className = '';
+			body.className = '';
+			html.className = '';
+		}, 300);
+	}
+	function showModal(header, content, buttons, values, isCloseable) {
+		var
+			html  = document.getElementsByTagName('html')[0],
+			body  = document.getElementsByTagName('body')[0],
+			cover = document.getElementById('cover'),
+			close = (isCloseable) ? '<div class="modal-close">' +
+															'<div class="modal-close-cross">' +
+															'</div></div>' : '',
+			modal;
 		
 		function createButtons() {
 			var i, result = '';
 			if (buttons) {
 				for (i = 0; i < buttons.length; i += 1) {
-					result += '<button class="modal-button">' + buttons[i] + '</button>';
+					result += '<button class="modal-button" type="button" value="' +
+										values[i] + '">' + buttons[i] + '</button>';
 				}
 			}
 			return result;
 		}
 		
-		htmlTag.className = 'lock';
-		bodyTag.className = 'lock';
-		documentCover.className = 'modal-cover noselect';
-		documentCover.innerHTML =
-			'<div class="modal" draggable="true">' +
-			'<div class="modal-header uppercase">' + header + '</div>' +
-			'<div class="modal-content">' + content + '</div>' +
-			createButtons() + '</div>';
-		documentCover.style.opacity = 1;
+		html.className = 'lock';
+		body.className = 'lock';
+		cover.className = 'modal-cover noselect';
+		cover.innerHTML = '<div class="modal" draggable="true">' + close +
+											'<div class="modal-header uppercase">' + header + '</div>' +
+											'<div class="modal-content">' + content + '</div>' +
+											createButtons() + '</div>';
+		cover.style.opacity = 1;
+		body.addEventListener('click', function (event) { // (10)
+			if (event.target.className.match(/modal-cover|modal-close/)) {
+				if (isCloseable) {
+					hideModal();
+				} else {
+					modal = document.getElementsByClassName('modal')[0];
+					modal.style.animation = 'reset 0 linear normal';
+					setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
+				}
+			}
+		});
 	}
 			
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
@@ -402,6 +430,5 @@
 		window.console.log(content.getPads());
 	};
 	
-	showWindow(0, 'Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No']);
-	
+	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], 1);
 }());
