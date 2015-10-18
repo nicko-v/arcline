@@ -6,7 +6,7 @@
 		helpButton = document.getElementById('helpButton'),
 		input      = document.getElementById('file'),
 		reader     = new FileReader(),
-		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchstart' : 'click';
+		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click';
 	
 	function hideModal() {
 		var
