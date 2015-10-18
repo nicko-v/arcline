@@ -77,7 +77,6 @@ li {
 	font-weight: bold;
 	text-align: center;
 	color: #6e747e;
-	cursor: pointer;
 	transition: all 300ms linear;
 }
 .header-icon:hover {
