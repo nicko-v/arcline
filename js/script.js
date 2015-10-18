@@ -3,9 +3,10 @@
 (function () {
 	'use strict';
 	var
-		helpButton	= document.getElementById('helpButton'),
-		input				= document.getElementById('file'),
-		reader			= new FileReader();
+		helpButton = document.getElementById('helpButton'),
+		input      = document.getElementById('file'),
+		reader     = new FileReader(),
+		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchstart' : 'click';
 	
 	function hideModal() {
 		var
@@ -26,7 +27,7 @@
 			html  = document.getElementsByTagName('html')[0],
 			body  = document.getElementsByTagName('body')[0],
 			cover = document.getElementById('cover'),
-			close = (isCloseable) ? '<div class="modal-close" onclick="">' +
+			close = (isCloseable) ? '<div class="modal-close">' +
 															'<div class="modal-close-cross">' +
 															'</div></div>' : '',
 			modal;
@@ -50,7 +51,7 @@
 											'<div class="modal-content">' + content + '</div>' +
 											createButtons() + '</div>';
 		cover.style.opacity = 1;
-		body.addEventListener('click', function (event) { // (10)
+		body.addEventListener(click, function (event) { // (10)
 			if (event.target.className.match(/modal-cover|modal-close/)) {
 				if (isCloseable) {
 					hideModal();
@@ -74,7 +75,7 @@
 			}
 		}
 	});
-	helpButton.addEventListener('click', function () { // (01)
+	helpButton.addEventListener(click, function () { // (01)
 		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
 			helpWrapper.style.maxHeight = window.getComputedStyle(document.getElementById('calcHeight')).height;
