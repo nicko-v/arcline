@@ -3,16 +3,10 @@
 (function () {
 	'use strict';
 	var
-<<<<<<< HEAD
 		helpButton = document.getElementById('helpButton'),
 		input      = document.getElementById('file'),
 		reader     = new FileReader(),
 		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click';
-=======
-		helpButton	= document.getElementById('helpButton'),
-		input				= document.getElementById('file'),
-		reader			= new FileReader();
->>>>>>> dacde9a530e87344a8174167c232b38ea058c210
 	
 	function hideModal() {
 		var
@@ -57,11 +51,7 @@
 											'<div class="modal-content">' + content + '</div>' +
 											createButtons() + '</div>';
 		cover.style.opacity = 1;
-<<<<<<< HEAD
 		body.addEventListener(click, function (event) { // (10)
-=======
-		body.addEventListener('click', function (event) { // (10)
->>>>>>> dacde9a530e87344a8174167c232b38ea058c210
 			if (event.target.className.match(/modal-cover|modal-close/)) {
 				if (isCloseable) {
 					hideModal();
