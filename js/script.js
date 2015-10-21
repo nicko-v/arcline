@@ -8,6 +8,7 @@
 		reader     = new FileReader(),
 		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click';
 	
+	/* Модальные окна */
 	function hideModal() {
 		var
 			html  = document.getElementsByTagName('html')[0],
@@ -30,7 +31,7 @@
 			close = (isCloseable) ? '<div class="modal-close">' +
 															'<div class="modal-close-cross">' +
 															'</div></div>' : '',
-			modal;
+			modal, modalHeader;
 		
 		function createButtons() {
 			var i, result = '';
@@ -46,24 +47,41 @@
 		html.className = 'lock';
 		body.className = 'lock';
 		cover.className = 'modal-cover noselect';
-		cover.innerHTML = '<div class="modal" draggable="true">' + close +
+		cover.innerHTML = '<div class="modal">' + close +
 											'<div class="modal-header uppercase">' + header + '</div>' +
 											'<div class="modal-content">' + content + '</div>' +
 											createButtons() + '</div>';
 		cover.style.opacity = 1;
-		body.addEventListener(click, function (event) { // (10)
+		
+		modal = document.getElementsByClassName('modal')[0];
+		modalHeader = document.getElementsByClassName('modal-header')[0];
+		cover.addEventListener(click, function (event) { // (10)
 			if (event.target.className.match(/modal-cover|modal-close/)) {
 				if (isCloseable) {
 					hideModal();
 				} else {
-					modal = document.getElementsByClassName('modal')[0];
 					modal.style.animation = 'reset 0 linear normal';
 					setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
 				}
 			}
 		});
-	}
+		modalHeader.addEventListener('mousedown', function (downEvent) {
+			function move(e) {
+				modal.style.left = e.clientX - modal.offsetLeft + 'px';
+				modal.style.top = e.clientY - modal.offsetTop + 'px';
+			}
 			
+			if (downEvent.button === 0) {
+				modal.style.position = 'absolute';
+				document.addEventListener('mousemove', move);
+				modalHeader.addEventListener('mouseup', function () {
+					//document.removeEventListener('mousemove', move);
+				});
+			}
+		});
+	}
+	/* -=-=-=- */
+	
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
 			var i;
