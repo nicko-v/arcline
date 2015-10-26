@@ -15,17 +15,17 @@ from{ transform: scaleX(0.00); opacity: 0; }
 }
 */
 @keyframes modal-swing {
-	from { transform: rotate(6deg); }
-	10% { transform: rotate(-5deg); }
-	30% { transform: rotate(4deg); }
-	50% { transform: rotate(-3deg); }
-	70% { transform: rotate(2deg); }
-	90% { transform: rotate(-1deg); }
-	to { transform: rotate(0deg); }
+	from { transform: translateX(-50%) rotate(6deg); }
+	10%  { transform: translateX(-50%) rotate(-5deg); }
+	30%  { transform: translateX(-50%) rotate(4deg); }
+	50%  { transform: translateX(-50%) rotate(-3deg); }
+	70%  { transform: translateX(-50%) rotate(2deg); }
+	90%  { transform: translateX(-50%) rotate(-1deg); }
+	to   { transform: translateX(-50%) rotate(0deg); }
 }
 @keyframes modal-scale {
-	from { transform: scale(0.60); opacity: 0; }
-	to { transform: scale(1.00); opacity: 1; }
+	from { transform: translateX(-50%) scale(0.60); opacity: 0; }
+	to   { transform: translateX(-50%) scale(1.00); opacity: 1; }
 }
 
 .lock {
@@ -36,13 +36,14 @@ from{ transform: scaleX(0.00); opacity: 0; }
 	min-width: 350px;
 	max-width: 800px;
 	max-height: 500px;
-	position: relative;
+	position: absolute;
 	display: inline-block;
 	top: 30%;
 	background-color: #bbb;
 	border: 7px solid #666;
 	border-radius: 10px;
 	box-shadow: 0px 0px 10px 15px rgba(0,0,0,0.1);
+	transform: translateX(-50%);
 	animation: modal-scale 300ms ease-out 400ms normal;
 	animation-fill-mode: backwards;
 }

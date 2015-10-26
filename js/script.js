@@ -69,8 +69,6 @@
 		modalHeader = document.getElementsByClassName('modal-header')[0];
 		modalHeader.addEventListener('mousedown', function (downEvent) {
 			if (downEvent.button === 0) {
-				modal.style.position = 'absolute';
-				modal.style.transform = 'translateX(-50%)';
 				moving = true;
 				clickOffset = [downEvent.clientX - modal.offsetLeft,
 											 downEvent.clientY - modal.offsetTop];
@@ -451,5 +449,5 @@
 		window.console.log(content.getPads());
 	};
 	
-	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], true);
+	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], false);
 }());
