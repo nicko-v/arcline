@@ -10,28 +10,23 @@
 	
 	/* Модальные окна */
 	function hideModal() {
-		var
-			html  = document.getElementsByTagName('html')[0],
-			body  = document.getElementsByTagName('body')[0],
-			cover = document.getElementById('cover');
+		var cover = document.getElementById('cover');
 		
 		cover.style.opacity = 0;
 		setTimeout(function () { cover.innerHTML = ''; }, 100);
 		setTimeout(function () {
+			document.documentElement.className = '';
+			document.body.className = '';
 			cover.className = '';
-			body.className = '';
-			html.className = '';
 		}, 300);
 	}
 	function showModal(header, content, buttons, values, isCloseable) {
 		var
-			html  = document.getElementsByTagName('html')[0],
-			body  = document.getElementsByTagName('body')[0],
-			cover = document.getElementById('cover'),
 			close = (isCloseable) ? '<div class="modal-close">' +
 															'<div class="modal-close-cross">' +
 															'</div></div>' : '',
-			modal, modalHeader;
+			cover = document.getElementById('cover'),
+			clickOffset, modal, modalHeader, moving;
 		
 		function createButtons() {
 			var i, result = '';
@@ -43,39 +38,46 @@
 			}
 			return result;
 		}
+		function tryToClose(e) { // (10)
+			if (!moving) {
+				if (e.target.className.match(/modal-cover|modal-close/)) {
+					if (isCloseable) {
+						hideModal();
+					} else {
+						modal.style.animation = 'reset 0 linear normal';
+						setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
+					}
+				}
+			}
+		}
+		function moveModal(e) {
+			modal.style.left = e.clientX - clickOffset[0] + 'px';
+			modal.style.top = e.clientY - clickOffset[1] + 'px';
+		}
 		
-		html.className = 'lock';
-		body.className = 'lock';
-		cover.className = 'modal-cover noselect';
+		document.documentElement.className = 'lock';
+		document.body.className = 'lock noselect';
+		cover.className = 'modal-cover';
 		cover.innerHTML = '<div class="modal">' + close +
 											'<div class="modal-header uppercase">' + header + '</div>' +
 											'<div class="modal-content">' + content + '</div>' +
 											createButtons() + '</div>';
 		cover.style.opacity = 1;
+		cover.addEventListener(click, tryToClose);
 		
 		modal = document.getElementsByClassName('modal')[0];
 		modalHeader = document.getElementsByClassName('modal-header')[0];
-		cover.addEventListener(click, function (event) { // (10)
-			if (event.target.className.match(/modal-cover|modal-close/)) {
-				if (isCloseable) {
-					hideModal();
-				} else {
-					modal.style.animation = 'reset 0 linear normal';
-					setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
-				}
-			}
-		});
 		modalHeader.addEventListener('mousedown', function (downEvent) {
-			function move(e) {
-				modal.style.left = e.clientX - modal.offsetLeft + 'px';
-				modal.style.top = e.clientY - modal.offsetTop + 'px';
-			}
-			
 			if (downEvent.button === 0) {
 				modal.style.position = 'absolute';
-				document.addEventListener('mousemove', move);
-				modalHeader.addEventListener('mouseup', function () {
-					//document.removeEventListener('mousemove', move);
+				modal.style.transform = 'translateX(-50%)';
+				moving = true;
+				clickOffset = [downEvent.clientX - modal.offsetLeft,
+											 downEvent.clientY - modal.offsetTop];
+				document.addEventListener('mousemove', moveModal);
+				document.addEventListener('mouseup', function () {
+					document.removeEventListener('mousemove', moveModal);
+					setTimeout(function () { moving = false; }, 100);
 				});
 			}
 		});
@@ -449,5 +451,5 @@
 		window.console.log(content.getPads());
 	};
 	
-	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], 1);
+	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], true);
 }());
