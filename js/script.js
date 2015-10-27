@@ -6,7 +6,10 @@
 		helpButton = document.getElementById('helpButton'),
 		input      = document.getElementById('file'),
 		reader     = new FileReader(),
-		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click';
+		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
+		errors     = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files.</i>',
+	                'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
+	                'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
 	
 	/* Модальные окна */
 	function hideModal() {
@@ -22,11 +25,9 @@
 	}
 	function showModal(header, content, buttons, values, isCloseable) {
 		var
-			close = (isCloseable) ? '<div class="modal-close">' +
-															'<div class="modal-close-cross">' +
-															'</div></div>' : '',
-			cover = document.getElementById('cover'),
-			clickOffset, modal, modalHeader, moving;
+			close = (isCloseable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
+		  cover = document.getElementById('cover'),
+		  clickOffset, modal, modalHeader, moving;
 		
 		function createButtons() {
 			var i, result = '';
@@ -51,32 +52,45 @@
 			}
 		}
 		function moveModal(e) {
-			modal.style.left = e.clientX - clickOffset[0] + 'px';
-			modal.style.top = e.clientY - clickOffset[1] + 'px';
+			// offsetWidth делится пополам из-за того, что окно имеет свойство translateX(-50%),
+			// то есть 0 по X у него не слева, а в центре.
+			var
+				x = (e.clientX - clickOffset[0] - modal.offsetWidth / 2 > 0 &&
+			       e.clientX - clickOffset[0] + modal.offsetWidth / 2 < document.body.offsetWidth),
+				y = (e.clientY - clickOffset[1] > 0 &&
+			       e.clientY - clickOffset[1] + modal.offsetHeight < document.body.offsetHeight);
+			if (x && y) {
+				modal.style.left = e.clientX - clickOffset[0] + 'px';
+				modal.style.top = e.clientY - clickOffset[1] + 'px';
+			} else if (x) {
+				modal.style.left = e.clientX - clickOffset[0] + 'px';
+			} else if (y) {
+				modal.style.top = e.clientY - clickOffset[1] + 'px';
+			}
+		}
+		function stopMoving() {
+			document.removeEventListener('mousemove', moveModal);
+			setTimeout(function () { moving = false; }, 100);
 		}
 		
 		document.documentElement.className = 'lock';
 		document.body.className = 'lock noselect';
 		cover.className = 'modal-cover';
-		cover.innerHTML = '<div class="modal">' + close +
-											'<div class="modal-header uppercase">' + header + '</div>' +
+		cover.innerHTML = '<div class="modal" id="modal">' + close +
+											'<div class="modal-header uppercase" id="modalHeader">' + header + '</div>' +
 											'<div class="modal-content">' + content + '</div>' +
 											createButtons() + '</div>';
 		cover.style.opacity = 1;
 		cover.addEventListener(click, tryToClose);
 		
-		modal = document.getElementsByClassName('modal')[0];
-		modalHeader = document.getElementsByClassName('modal-header')[0];
-		modalHeader.addEventListener('mousedown', function (downEvent) {
-			if (downEvent.button === 0) {
+		modal = document.getElementById('modal');
+		modalHeader = document.getElementById('modalHeader');
+		modalHeader.addEventListener('mousedown', function (e) {
+			if (e.button === 0) {
 				moving = true;
-				clickOffset = [downEvent.clientX - modal.offsetLeft,
-											 downEvent.clientY - modal.offsetTop];
+				clickOffset = [e.clientX - modal.offsetLeft, e.clientY - modal.offsetTop];
 				document.addEventListener('mousemove', moveModal);
-				document.addEventListener('mouseup', function () {
-					document.removeEventListener('mousemove', moveModal);
-					setTimeout(function () { moving = false; }, 100);
-				});
+				document.addEventListener('mouseup', stopMoving);
 			}
 		});
 	}
@@ -107,20 +121,8 @@
 		}
 	});
 	reader.onload = function () {
-		var error = 0, content;
+		var content;
 		
-		function showError(n, step) { // (02)
-			var errors = ['Выбран некорректный файл.\n\nОткройте .pcb в P-CAD и выполните следующее:\n  File -> Save as... -> Save as type: ASCII Files.',
-										'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
-										'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
-			if (n > -1) {
-				document.getElementById(step).className = 'h1-error';
-				window.alert(errors[n]);
-				error = 1;
-			} else {
-				document.getElementById(step).className = 'h1-success';
-			}
-		}
 		function handleInput(string) { // (03)
 			var arr, obj = {}, currLevel = obj;
 			
@@ -142,7 +144,9 @@
 				return brackets;
 			}
 			
-			if (string.indexOf('ACCEL_ASCII') === -1) { showError(0, 'firstStep'); return; }
+			if (string.indexOf('ACCEL_ASCII') === -1) {
+				showModal('Ошибка', errors[0], [], [], false);
+			}
 			arr = string.split('\n').reduce(function (result, str, i, a) {
 				str = str.trim();
 				if (str) {
@@ -167,7 +171,9 @@
 					}
 				}
 			});
-			if (Object.keys(obj).length < 5) { showError(1, 'firstStep'); return; }
+			if (Object.keys(obj).length < 5) {
+				showModal('Ошибка', errors[1], [], [], false);
+			}
 			return obj;
 		}
 		
@@ -442,12 +448,8 @@
 				}
 			}
 		});
-		if (error) { return; } else { showError(-1, 'firstStep'); }
-		document.getElementById('step2').style.display = 'flex';
 		content.addLayer('Drill');
 		window.console.log(content);
 		window.console.log(content.getPads());
 	};
-	
-	showModal('Sample header', 'Lorem ipsum dolor sit amet', ['Yes', 'No'], [1, 0], false);
 }());
