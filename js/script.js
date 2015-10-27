@@ -7,7 +7,7 @@
 		input      = document.getElementById('file'),
 		reader     = new FileReader(),
 		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
-		errors     = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files.</i>',
+		errors     = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
 	                'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
 	
@@ -73,26 +73,28 @@
 			setTimeout(function () { moving = false; }, 100);
 		}
 		
-		document.documentElement.className = 'lock';
-		document.body.className = 'lock noselect';
-		cover.className = 'modal-cover';
-		cover.innerHTML = '<div class="modal" id="modal">' + close +
-											'<div class="modal-header uppercase" id="modalHeader">' + header + '</div>' +
-											'<div class="modal-content">' + content + '</div>' +
-											createButtons() + '</div>';
-		cover.style.opacity = 1;
-		cover.addEventListener(click, tryToClose);
-		
-		modal = document.getElementById('modal');
-		modalHeader = document.getElementById('modalHeader');
-		modalHeader.addEventListener('mousedown', function (e) {
-			if (e.button === 0) {
-				moving = true;
-				clickOffset = [e.clientX - modal.offsetLeft, e.clientY - modal.offsetTop];
-				document.addEventListener('mousemove', moveModal);
-				document.addEventListener('mouseup', stopMoving);
-			}
-		});
+		if (!document.getElementById('modal')) {
+			document.documentElement.className = 'lock';
+			document.body.className = 'lock noselect';
+			cover.className = 'modal-cover';
+			cover.innerHTML = '<div class="modal" id="modal">' + close +
+												'<div class="modal-header uppercase" id="modalHeader">' + header + '</div>' +
+												'<div class="modal-content">' + content + '</div>' +
+												createButtons() + '</div>';
+			cover.style.opacity = 1;
+			cover.addEventListener(click, tryToClose);
+			
+			modal = document.getElementById('modal');
+			modalHeader = document.getElementById('modalHeader');
+			modalHeader.addEventListener('mousedown', function (e) {
+				if (e.button === 0) {
+					moving = true;
+					clickOffset = [e.clientX - modal.offsetLeft, e.clientY - modal.offsetTop];
+					document.addEventListener('mousemove', moveModal);
+					document.addEventListener('mouseup', stopMoving);
+				}
+			});
+		}
 	}
 	/* -=-=-=- */
 	
@@ -145,7 +147,7 @@
 			}
 			
 			if (string.indexOf('ACCEL_ASCII') === -1) {
-				showModal('Ошибка', errors[0], [], [], false);
+				showModal('Ошибка', errors[0], ['Начать заново'], [], false);
 			}
 			arr = string.split('\n').reduce(function (result, str, i, a) {
 				str = str.trim();

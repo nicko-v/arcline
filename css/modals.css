@@ -17,10 +17,9 @@
 	overflow: hidden;
 }
 .modal {
-	min-width: 350px;
 	max-width: 500px;
 	max-height: 500px;
-	position: absolute;
+	position: relative;
 	top: 30%;
 	left: 50%;
 	text-align: center;
@@ -101,7 +100,7 @@
 	display: inline-block;
 	min-height: 15px;
 	margin: -1px 20px 0; /* При изменении размера страницы иногда появляется отступ, поэтому -1 */
-	padding: 0.3rem 1.5rem 1rem;
+	padding: 0.3rem 5rem 1rem;
 	border-bottom-left-radius: 10px;
 	border-bottom-right-radius: 10px;
 	background-image: linear-gradient(to bottom,  #666, #474747);
