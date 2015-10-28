@@ -10,9 +10,8 @@
 		errors     = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
 	                'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
-	
-	/* Модальные окна */
-	function hideModal() {
+
+	function modalHide() {
 		var cover = document.getElementById('cover');
 		
 		cover.style.opacity = 0;
@@ -23,18 +22,17 @@
 			cover.className = '';
 		}, 300);
 	}
-	function showModal(header, content, buttons, values, isCloseable) {
+	function modalShow(header, content, buttons, ids, isCloseable) { // (02)
 		var
 			close = (isCloseable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
 		  cover = document.getElementById('cover'),
-		  clickOffset, modal, modalHeader, moving;
+		  choice, clickOffset, modal, modalHeader, moving;
 		
 		function createButtons() {
 			var i, result = '';
 			if (buttons) {
 				for (i = 0; i < buttons.length; i += 1) {
-					result += '<button class="modal-button" type="button" value="' +
-										values[i] + '">' + buttons[i] + '</button>';
+					result += '<button class="modal-button"type="button" id="' + ids[i] + '">' + buttons[i] + '</button>';
 				}
 			}
 			return result;
@@ -43,7 +41,7 @@
 			if (!moving) {
 				if (e.target.className.match(/modal-cover|modal-close/)) {
 					if (isCloseable) {
-						hideModal();
+						modalHide();
 					} else {
 						modal.style.animation = 'reset 0 linear normal';
 						setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
@@ -83,8 +81,15 @@
 												createButtons() + '</div>';
 			cover.style.opacity = 1;
 			cover.addEventListener(click, tryToClose);
+			ids.forEach(function (id) {
+				document.getElementById(id).addEventListener(click, function () {
+					choice = id;
+					modalHide();
+				});
+			});
 			
 			modal = document.getElementById('modal');
+			modal.style.minWidth = modal.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
 			modalHeader = document.getElementById('modalHeader');
 			modalHeader.addEventListener('mousedown', function (e) {
 				if (e.button === 0) {
@@ -94,9 +99,12 @@
 					document.addEventListener('mouseup', stopMoving);
 				}
 			});
+			return choice;
 		}
 	}
-	/* -=-=-=- */
+	function setStepStatus(number, status) {
+		document.getElementById('step' + number).className = (status) ? 'h1-success' : 'h1-error';
+	}
 	
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
@@ -109,6 +117,7 @@
 			}
 		}
 	});
+	
 	helpButton.addEventListener(click, function () { // (01)
 		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
@@ -122,6 +131,7 @@
 			reader.readAsText(this.files[0], 'cp1251');
 		}
 	});
+
 	reader.onload = function () {
 		var content;
 		
@@ -147,7 +157,8 @@
 			}
 			
 			if (string.indexOf('ACCEL_ASCII') === -1) {
-				showModal('Ошибка', errors[0], ['Начать заново'], [], false);
+				modalShow('Ошибка', errors[0], [], [], true);
+				return;
 			}
 			arr = string.split('\n').reduce(function (result, str, i, a) {
 				str = str.trim();
@@ -174,12 +185,15 @@
 				}
 			});
 			if (Object.keys(obj).length < 5) {
-				showModal('Ошибка', errors[1], [], [], false);
+				modalShow('Ошибка', errors[1], [], [], true);
+				return;
 			}
 			return obj;
 		}
 		
 		content = handleInput(this.result);
+		if (!content) { setStepStatus(1, false); return; } else { setStepStatus(1, true); }
+		
 		Object.defineProperties(content, {
 			asArray: {
 				value: function (a) {

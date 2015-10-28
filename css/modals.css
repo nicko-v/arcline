@@ -19,7 +19,7 @@
 .modal {
 	max-width: 500px;
 	max-height: 500px;
-	position: relative;
+	position: absolute;
 	top: 30%;
 	left: 50%;
 	text-align: center;
@@ -53,16 +53,15 @@
 	top: -20px;
 	right: -20px;
 	border-radius: 5rem;
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgba(40,40,40,0.7);
 	box-shadow: 0px 0px 5px 5px rgba(0,0,0,0.1);
 	transition: all 200ms linear;
 }
 .modal-close:hover {
-	transform: scale(1.1);
-	background-color: rgba(0,0,0,0.9);
+	background-color: rgba(15,15,15,0.8);
 }
 .modal-close:active {
-	transform: scale(0.9);
+	background-color: rgba(0,0,0,0.9);
 }
 .modal-close-cross {
 	height: 20px;
@@ -79,7 +78,6 @@
 .modal-content {
 	padding: 3rem 1.5rem 0;
 	margin-bottom: 3rem;
-	text-align: left;
 	font-size: 1.6rem;
 	color: #000;
 	overflow: auto;
@@ -100,7 +98,7 @@
 	display: inline-block;
 	min-height: 15px;
 	margin: -1px 20px 0; /* При изменении размера страницы иногда появляется отступ, поэтому -1 */
-	padding: 0.3rem 5rem 1rem;
+	padding: 3px 50px 10px;
 	border-bottom-left-radius: 10px;
 	border-bottom-right-radius: 10px;
 	background-image: linear-gradient(to bottom,  #666, #474747);

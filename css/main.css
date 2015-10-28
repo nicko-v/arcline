@@ -25,7 +25,6 @@ body {
 	align-items: center;
 	background-color: #364050;
 	color: #bbb;
-	-webkit-transform: translate3d(0, 0, 0); /* Предотвращает мигание элементов в Сафари при трансформации */
 }
 button {
 	outline: none;
