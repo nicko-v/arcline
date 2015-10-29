@@ -9,8 +9,8 @@
 		helpButton   = document.getElementById('helpButton'),
 		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
 		errors       = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
-	                'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
+	                  'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
+	                  'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
 
 	function modalHide() {
 		var cover = document.getElementById('cover');
@@ -124,15 +124,34 @@
 		field.innerHTML = 'Имя файла: ' + fileName;
 	});
 	helpButton.addEventListener(click, function () { // (01)
-		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
+		var
+			helpWrapper = document.getElementById('help-wrapper'),
+			helpBorders = document.getElementById('help-borders'),
+			margins;
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
-			helpWrapper.style.maxHeight = window.getComputedStyle(document.getElementById('calcHeight')).height;
+			margins = parseInt(window.getComputedStyle(helpBorders).marginTop, 10) +
+				        parseInt(window.getComputedStyle(helpBorders).marginBottom, 10);
+			helpWrapper.style.maxHeight = helpBorders.offsetHeight + margins + 'px';
 		} else {
 			helpWrapper.style.maxHeight = '0px';
 		}
 	});
 	uploadButton.addEventListener(click, function () {
+		var
+			stepProgressWrapper = document.getElementById('step1Progress-wrapper'),
+			stepProgress        = document.getElementById('step1Progress'),
+			margins;
+			
 		if (input.files[0]) {
+			if (!parseInt(stepProgressWrapper.style.maxHeight, 10)) {
+				margins = parseInt(window.getComputedStyle(stepProgress).marginTop, 10) +
+				          parseInt(window.getComputedStyle(stepProgress).marginBottom, 10);
+				stepProgressWrapper.style.maxHeight = stepProgress.offsetHeight + margins + 'px';
+				stepProgressWrapper.style.borderTop = '2px solid #262d39';
+			} else {
+				stepProgressWrapper.style.maxHeight = '0px';
+				stepProgressWrapper.style.borderTop = '';
+			}
 			reader.readAsText(input.files[0], 'cp1251');
 		}
 	});
