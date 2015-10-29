@@ -23,7 +23,7 @@
 				<div id="calcHeight" style="width: 100%;">
 					<div class="help-borders">
 						<div class="help">
-							<h1 class="h1-help uppercase">Инструкция</h1>
+							<h1 class="uppercase" style="text-align: center;">Инструкция</h1>
 							<ol class="help-list">
 								<li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
 								Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
@@ -55,10 +55,32 @@
 				<h1 id="step1">Шаг 1. Загрузка файла</h1>
 				<div class="step">
 					<div class="step-actions">
-						<input type="file" id="file" required>
+						<div class="step-actions-loadFile">
+							<input type="file" id="file" required>
+							<label for="file">
+								<div class="uppercase noselect step-actions-loadFile-button step-actions-loadFile-choose">Выбрать&nbsp;файл</div>
+							</label>
+							<div class="uppercase noselect step-actions-loadFile-button step-actions-loadFile-upload" id="upload"><i class="icon-upload"></i></div>
+						</div>
+						<div class="step-actions-fileName" id="fileName"></div>
 					</div>
 					<div class="step-info">
 						<h2>Загрузите .pcb файл, сохраненный в формате ASCII</h2>
+					</div>
+				</div>
+				<div class="step1Progress-wrapper">
+					<h2 class="uppercase" style="text-align: center;">Обработка файла</h2>
+					<div class="step1Progress">
+						<div class="step1Progress-text">
+							<div class="icon-dot">Проверка полученного файла</div>
+							<div class="icon-dot">Построение структуры данных</div>
+							<div class="icon-dot">Поиск контактных площадок</div>
+						</div>
+						<div class="step1Progress-status">
+							<div class="yellow icon-spin5 animate-spin"></div>
+							<div class="yellow icon-spin5 animate-spin"></div>
+							<div class="yellow icon-spin5 animate-spin"></div>
+						</div>
 					</div>
 				</div>
 			</div>

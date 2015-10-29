@@ -3,11 +3,12 @@
 (function () {
 	'use strict';
 	var
-		helpButton = document.getElementById('helpButton'),
-		input      = document.getElementById('file'),
-		reader     = new FileReader(),
-		click      = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
-		errors     = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
+		reader       = new FileReader(),
+		input        = document.getElementById('file'),
+		uploadButton = document.getElementById('upload'),
+		helpButton   = document.getElementById('helpButton'),
+		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
+		errors       = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
 	                'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
 
@@ -102,9 +103,6 @@
 			return choice;
 		}
 	}
-	function setStepStatus(number, status) {
-		document.getElementById('step' + number).className = (status) ? 'h1-success' : 'h1-error';
-	}
 	
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
@@ -118,6 +116,13 @@
 		}
 	});
 	
+	input.addEventListener('change', function () {
+		var field = document.getElementById('fileName'), fileName;
+		if (this.value) {
+			fileName = this.value.slice(this.value.lastIndexOf('\\') + 1);
+		}
+		field.innerHTML = 'Имя файла: ' + fileName;
+	});
 	helpButton.addEventListener(click, function () { // (01)
 		var helpWrapper = document.getElementsByClassName('help-wrapper')[0];
 		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
@@ -126,16 +131,16 @@
 			helpWrapper.style.maxHeight = '0px';
 		}
 	});
-	input.addEventListener('change', function () {
-		if (this.files[0]) {
-			reader.readAsText(this.files[0], 'cp1251');
+	uploadButton.addEventListener(click, function () {
+		if (input.files[0]) {
+			reader.readAsText(input.files[0], 'cp1251');
 		}
 	});
 
 	reader.onload = function () {
 		var content;
 		
-		function handleInput(string) { // (03)
+		function createObject(string) { // (03)
 			var arr, obj = {}, currLevel = obj;
 			
 			function Branch(string) {
@@ -191,8 +196,8 @@
 			return obj;
 		}
 		
-		content = handleInput(this.result);
-		if (!content) { setStepStatus(1, false); return; } else { setStepStatus(1, true); }
+		content = createObject(this.result);
+		if (!content) { return; }
 		
 		Object.defineProperties(content, {
 			asArray: {

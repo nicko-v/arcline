@@ -1,18 +1,18 @@
 @font-face {
 	font-family: 'Clear Sans';
-	src: url('../fonts/clearsans/ttf/clearsans-regular.ttf');
+	src: url('../font/clearsans-regular.ttf');
 	font-weight: normal;
 	font-style: normal;
 }
 @font-face {
 	font-family: 'Clear Sans';
-	src: url('../fonts/clearsans/ttf/clearsans-bold.ttf');
+	src: url('../font/clearsans-bold.ttf');
 	font-weight: bold;
 	font-style: normal;
 }
 @font-face {
 	font-family: 'Clear Sans';
-	src: url('../fonts/clearsans/ttf/clearsans-italic.ttf');
+	src: url('../font/clearsans-italic.ttf');
 	font-weight: normal;
 	font-style: italic;
 }
@@ -46,24 +46,31 @@ li {
 }
 
 #file {
-	font-size: 1.6rem;
+	position: absolute;
+	top: -100px;
+	left: 0;
+	opacity: 0;
 }
 
-.h1-success::after {
-	content: '\2714';
-	color: #16C116;
-	margin-left: 3rem;
+.noselect {
+	-ms-user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
 }
-.h1-error::after {
-	content: '\2718';
-	color: #C1111F;
-	margin-left: 3rem;
+.uppercase {
+	text-transform: uppercase;
 }
-.h1-help {
-	margin: 0;
-	text-align: center;
-	color: #bbb;
+.yellow {
+	color: #e5c100;
 }
+.green {
+	color: #008800;
+}
+.red {
+	color: #880000;
+}
+
 .header-text {
 	font-size: 5rem;
 	font-weight: bold;
@@ -116,32 +123,63 @@ li {
 	overflow-y: hidden;
 	transition: all 500ms ease-in;
 }
-.noselect {
-	-ms-user-select: none;
-	-moz-user-select: none;
-	-webkit-user-select: none;
-}
 .step {
 	display: flex;
 	justify-content: space-between;
 	border-top: 1px dashed #bbb;
-	padding-top: 1.6rem;
+	padding-top: 30px;
 }
 .step-actions {
 	width: 70%;
 	display: flex;
 	align-items: center;
 }
+.step-actions-fileName {
+	font-size: 1.6rem;
+	margin: 0 15px;
+	overflow: hidden;
+}
+.step-actions-loadFile {
+	display: flex;
+	flex-direction: row;
+	text-align: center;
+	font-size: 1.6rem;
+	border-radius: 7px;
+	background-image: linear-gradient(to top, #444, #666);
+}
+.step-actions-loadFile-button {
+	padding: 15px;
+	display: flex;
+	align-items: center;
+}
+.step-actions-loadFile-button:hover {
+	background-image: linear-gradient(to bottom, #444, #666);
+	box-shadow: inset 0px 0px 10px 5px rgba(0,0,0,0.1);
+}
+.step-actions-loadFile-button:active {
+	background-image: linear-gradient(to bottom, #333, #555);
+	box-shadow: inset 0px 0px 10px 5px rgba(0,0,0,0.1);
+}
+.step-actions-loadFile-choose {
+	border-top-left-radius: 7px;
+	border-bottom-left-radius: 7px;
+	border-right: 1px solid #393939;
+}
+.step-actions-loadFile-upload {
+	border-top-right-radius: 7px;
+	border-bottom-right-radius: 7px;
+}
 .step-info {
 	display: flex;
 	align-items: center;
 	width: 30%;
-	padding: 0.2rem 1rem;
-	border-radius: 1.6rem;
+	padding: 2px 10px;
+	border-radius: 16px;
 	color: #bbb;
 	font-style: italic;
 	background-color: #303948;
 	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
+	border-top: 2px solid #262d39;
 }
 .step-wrapper {
 	display: none;
@@ -149,8 +187,31 @@ li {
 	padding: 1.6rem 0;
 	margin-bottom: 2rem;
 }
-.uppercase {
-	text-transform: uppercase;
+.step1Progress {
+	margin-bottom: 20px;
+	display: flex;
+	align-items: stretch;
+	justify-content: space-around;
+}
+.step1Progress-text {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	font-size: 1.4rem;
+}
+.step1Progress-status {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	font-size: 1.7rem;
+}
+.step1Progress-wrapper {
+	max-height: 0;
+	margin-top: 30px;
+	background-color: #303948;
+	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
+	overflow-y: hidden;
+	transition: all 500ms ease-in;
 }
 .wrapper {
 	width: 80%;
