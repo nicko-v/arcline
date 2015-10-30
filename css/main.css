@@ -148,6 +148,7 @@ li {
 	background-image: linear-gradient(to top, #444, #666);
 }
 .step-actions-loadFile-button {
+	cursor: pointer;
 	padding: 15px;
 	display: flex;
 	align-items: center;
@@ -214,9 +215,9 @@ li {
 	max-height: 0;
 	margin-top: 30px;
 	background-color: #303948;
-	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.1);
+	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.2);
 	overflow-y: hidden;
-	transition: max-height 500ms ease-in;
+	transition: max-height 500ms ease-in; /* При изменении времени изменить так же задержку перед началом чтения файла */
 }
 .wrapper {
 	width: 80%;

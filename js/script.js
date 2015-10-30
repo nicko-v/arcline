@@ -8,11 +8,12 @@
 		uploadButton = document.getElementById('upload'),
 		helpButton   = document.getElementById('helpButton'),
 		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
-		errors       = ['Выбран некорректный файл.<br><br>Откройте .pcb в P-CAD и выполните следующее:<br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                  'Не удалось сформировать корректную структуру данных из файла. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.',
-	                  'Не удалось распознать переходные отверстия или контактные площадки. \n\nВозможно файл содержит ошибки или непредусмотренные блоки.'];
+		errors       = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
+	                  'Не удалось сформировать корректную структуру данных из файла. <br><br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+	                  'Не удалось распознать переходные отверстия или контактные площадки. <br><br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+									  'Произошла непредвиденная ошибка. <br>Пожалуйста, передайте разработчику файл, вызвавший эту ошибку.<br><br>'];
 
-	function modalHide() {
+	function hideModal() {
 		var cover = document.getElementById('cover');
 		
 		cover.style.opacity = 0;
@@ -23,11 +24,11 @@
 			cover.className = '';
 		}, 300);
 	}
-	function modalShow(header, content, buttons, ids, isCloseable) { // (02)
+	function showModal(header, content, buttons, ids, isCloseable) { // (02)
 		var
 			close = (isCloseable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
 		  cover = document.getElementById('cover'),
-		  choice, clickOffset, modal, modalHeader, moving;
+		  clickOffset, modal, modalHeader, moving;
 		
 		function createButtons() {
 			var i, result = '';
@@ -42,7 +43,7 @@
 			if (!moving) {
 				if (e.target.className.match(/modal-cover|modal-close/)) {
 					if (isCloseable) {
-						modalHide();
+						hideModal();
 					} else {
 						modal.style.animation = 'reset 0 linear normal';
 						setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
@@ -84,8 +85,7 @@
 			cover.addEventListener(click, tryToClose);
 			ids.forEach(function (id) {
 				document.getElementById(id).addEventListener(click, function () {
-					choice = id;
-					modalHide();
+					hideModal();
 				});
 			});
 			
@@ -100,9 +100,33 @@
 					document.addEventListener('mouseup', stopMoving);
 				}
 			});
-			return choice;
 		}
 	}
+	function rollBlock(wrapper, block, restore) {
+		var
+			style = window.getComputedStyle(block),
+			margins = parseInt(style.marginTop, 10) + parseInt(style.marginBottom, 10);
+		
+		if (!parseInt(wrapper.style.maxHeight, 10)) {
+			wrapper.style.maxHeight = block.offsetHeight + margins + 'px';
+		} else if (restore) {
+			wrapper.style.maxHeight = '0px';
+		}
+	}
+	function setStepStatus(step, operation, status, restore) {
+		var icon = document.getElementById('stp' + step + operation), i = 1, opsAmount;
+		if (restore) {
+			while (document.getElementById('stp' + step + i)) {
+				icon = document.getElementById('stp' + step + i);
+				icon.className = 'yellow icon-spin5 animate-spin';
+				i += 1;
+			}
+		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
+	}
+	
+	window.onerror = function () {
+		showModal('Ошибка', errors[errors.length - 1], [], [], true);
+	};
 	
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
@@ -117,42 +141,24 @@
 	});
 	
 	input.addEventListener('change', function () {
-		var field = document.getElementById('fileName'), fileName;
+		var field = document.getElementById('fileName');
+		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
 		if (this.value) {
-			fileName = this.value.slice(this.value.lastIndexOf('\\') + 1);
+			field.innerHTML = 'Имя файла: ' + this.value.slice(this.value.lastIndexOf('\\') + 1);
+		} else {
+			field.innerHTML = '';
+			// Сворачивает блок статуса обработки файла если файл не был выбран:
+			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), true);
 		}
-		field.innerHTML = 'Имя файла: ' + fileName;
 	});
 	helpButton.addEventListener(click, function () { // (01)
-		var
-			helpWrapper = document.getElementById('help-wrapper'),
-			helpBorders = document.getElementById('help-borders'),
-			margins;
-		if (!parseInt(helpWrapper.style.maxHeight, 10)) {
-			margins = parseInt(window.getComputedStyle(helpBorders).marginTop, 10) +
-				        parseInt(window.getComputedStyle(helpBorders).marginBottom, 10);
-			helpWrapper.style.maxHeight = helpBorders.offsetHeight + margins + 'px';
-		} else {
-			helpWrapper.style.maxHeight = '0px';
-		}
+		rollBlock(document.getElementById('help-wrapper'), document.getElementById('help-borders'), true);
 	});
 	uploadButton.addEventListener(click, function () {
-		var
-			stepProgressWrapper = document.getElementById('step1Progress-wrapper'),
-			stepProgress        = document.getElementById('step1Progress'),
-			margins;
-			
+		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
 		if (input.files[0]) {
-			if (!parseInt(stepProgressWrapper.style.maxHeight, 10)) {
-				margins = parseInt(window.getComputedStyle(stepProgress).marginTop, 10) +
-				          parseInt(window.getComputedStyle(stepProgress).marginBottom, 10);
-				stepProgressWrapper.style.maxHeight = stepProgress.offsetHeight + margins + 'px';
-				stepProgressWrapper.style.borderTop = '2px solid #262d39';
-			} else {
-				stepProgressWrapper.style.maxHeight = '0px';
-				stepProgressWrapper.style.borderTop = '';
-			}
-			reader.readAsText(input.files[0], 'cp1251');
+			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'));
+			setTimeout(function () { reader.readAsText(input.files[0], 'cp1251'); }, 600);
 		}
 	});
 
@@ -180,38 +186,51 @@
 				return brackets;
 			}
 			
-			if (string.indexOf('ACCEL_ASCII') === -1) {
-				modalShow('Ошибка', errors[0], [], [], true);
+			if (string.indexOf('ACCEL_ASCII') + 1) {
+				setStepStatus(1, 1, true);
+			} else {
+				showModal('Ошибка', errors[0], [], [], true);
+				setStepStatus(1, 1, false);
 				return;
 			}
-			arr = string.split('\n').reduce(function (result, str, i, a) {
-				str = str.trim();
-				if (str) {
-					if (str[0] === ')') {
-						result[result.length - 1] += ')';
+			try {
+				arr = string.split('\n').reduce(function (result, str, i, a) {
+					str = str.trim();
+					if (str) {
+						if (str[0] === ')') {
+							result[result.length - 1] += ')';
+						} else {
+							result.push(str);
+						}
+					}
+					return result;
+				}, []);
+				arr.forEach(function (string) {
+					var brackets = calcBrackets(string), n = Object.keys(currLevel).length, i = 1;
+					if (brackets > 0) {
+						currLevel[n] = new Branch(string);
+						currLevel = currLevel[n];
 					} else {
-						result.push(str);
+						currLevel[n] = string;
+						while (i <= Math.abs(brackets)) {
+							currLevel = currLevel.parent;
+							i += 1;
+						}
 					}
-				}
-				return result;
-			}, []);
-			arr.forEach(function (string) {
-				var brackets = calcBrackets(string), n = Object.keys(currLevel).length, i = 1;
-				if (brackets > 0) {
-					currLevel[n] = new Branch(string);
-					currLevel = currLevel[n];
-				} else {
-					currLevel[n] = string;
-					while (i <= Math.abs(brackets)) {
-						currLevel = currLevel.parent;
-						i += 1;
-					}
-				}
-			});
-			if (Object.keys(obj).length < 5) {
-				modalShow('Ошибка', errors[1], [], [], true);
+				});
+			} catch (err) {
+				showModal('Ошибка', errors[1], [], [], true);
+				setStepStatus(1, 2, false);
 				return;
 			}
+			if (Object.keys(obj).length > 4) {
+				setStepStatus(1, 2, true);
+			} else {
+				showModal('Ошибка', errors[1], [], [], true);
+				setStepStatus(1, 2, false);
+				return;
+			}
+			
 			return obj;
 		}
 		
@@ -304,137 +323,144 @@
 						return find(object, 0);
 					}
 					
-					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-						if (this['4'][i].header === '(multiLayer') {
-							currPath = this['4'][i];
-							break;
-						}
-					}
-					for (i = 0; i < Object.keys(currPath).length; i += 1) { // (04)
-						if (typeof currPath[i] === 'string') {
-							type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
-									'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
-									'padStyleRef' : 0;
-							switch (type) {
-							case 'viaStyleRef':
-								name = parser(type, currPath[i]);
-								if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
-								vias[name].coords.push(parser('pt', currPath[i]));
-								break;
-							case 'padStyleRef':
-								name = parser(type, currPath[i]);
-								if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
-								pads[name].coords.push(parser('pt', currPath[i]));
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (this['4'][i].header === '(multiLayer') {
+								currPath = this['4'][i];
 								break;
 							}
-						} else {
-							if (currPath[i].header.indexOf('(pattern') > -1) {
-								name = parser('refDesRef', currPath[i].header);
-								if (!comp[name]) { comp[name] = {}; }
-								comp[name].pattern = parser('patternRef', currPath[i].header);
-								comp[name].zero = parser('pt', currPath[i].header);
-								comp[name].rotation = parser('rotation', currPath[i].header);
-								comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
-										parser('patternGraphicsNameRef', currPath[i].header) :
-										parser('patternGraphicsNameRef', currPath[i]['0']);
-							}
 						}
-					}
-					for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (05)
-						type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
-								'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
-								'pad' : 0;
-						if (type) {
-							name = parser(type + 'StyleDef', this['2'][i].header);
-							currPath = (type === 'via') ? vias : pads;
-							if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
-							currPath[name].side = 'thru';
-							for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
-								if (typeof this['2'][i][j] === 'string') {
-									prop = (this['2'][i][j].indexOf('holeDiam') + 1) ?
-													'hole' : (this['2'][i][j].indexOf('layerNumRef 1') + 1) ?
-													'layer1' : (this['2'][i][j].indexOf('layerNumRef 2') + 1) ?
-													'layer2' : null;
-									switch (prop) {
-									case 'hole':
-										currPath[name].hole = parser('holeDiam', this['2'][i][j]);
-										break;
-									case 'layer1':
-										currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]);
-										currPath[name].width = parser('shapeWidth', this['2'][i][j]);
-										currPath[name].height = parser('shapeHeight', this['2'][i][j]);
-										break;
-									case 'layer2':
-										width = parser('shapeWidth', this['2'][i][j]);
-										height = parser('shapeHeight', this['2'][i][j]);
-										if (width && !currPath[name].width) {
-											currPath[name].side = 'bot';
-											currPath[name].width = width;
-											currPath[name].height = height;
-										} else if (!width) {
-											currPath[name].side = 'top';
-										}
-										break;
-									}
-								}
-							}
-						}
-						type = null;
-					}
-					for (key in comp) { // (07)
-						if (comp.hasOwnProperty(key)) {
-							comp[key].pads = {};
-							currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
-																 '(patternGraphicsDef',
-																 '(patternGraphicsNameDef "' + comp[key].graphics + '")'], this['2']);
-							for (i = 0; i < Object.keys(currPath).length; i += 1) {
-								if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
-									for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
-										name = parser('padStyleRef', currPath[i][j]);
-										if (!comp[key].pads[name]) { comp[key].pads[name] = []; }
-										comp[key].pads[name].push(parser('pt', currPath[i][j]) + ' ' + parser('rotation', currPath[i][j]));
-									}
+						for (i = 0; i < Object.keys(currPath).length; i += 1) { // (04)
+							if (typeof currPath[i] === 'string') {
+								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
+										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
+										'padStyleRef' : 0;
+								switch (type) {
+								case 'viaStyleRef':
+									name = parser(type, currPath[i]);
+									if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
+									vias[name].coords.push(parser('pt', currPath[i]));
+									break;
+								case 'padStyleRef':
+									name = parser(type, currPath[i]);
+									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
+									pads[name].coords.push(parser('pt', currPath[i]));
 									break;
 								}
+							} else {
+								if (currPath[i].header.indexOf('(pattern') > -1) {
+									name = parser('refDesRef', currPath[i].header);
+									if (!comp[name]) { comp[name] = {}; }
+									comp[name].pattern = parser('patternRef', currPath[i].header);
+									comp[name].zero = parser('pt', currPath[i].header);
+									comp[name].rotation = parser('rotation', currPath[i].header);
+									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
+											parser('patternGraphicsNameRef', currPath[i].header) :
+											parser('patternGraphicsNameRef', currPath[i]['0']);
+								}
 							}
 						}
-					}
-					for (key in comp) { // (08)
-						if (comp.hasOwnProperty(key)) {
-							zero = comp[key].zero.split(' ');
-							for (name in comp[key].pads) {
-								if (comp[key].pads.hasOwnProperty(name)) {
-									for (i = 0; i < comp[key].pads[name].length; i += 1) {
-										shiftX = +comp[key].pads[name][i].split(' ')[0];
-										shiftY = +comp[key].pads[name][i].split(' ')[1];
-										side = pads[name].side;
-										if (comp[key].rotation) {
-											sinA = Math.sin(comp[key].rotation * Math.PI / 180);
-											cosA = Math.cos(comp[key].rotation * Math.PI / 180);
-											x = (shiftX * cosA - shiftY * sinA);
-											y = (shiftY * cosA + shiftX * sinA);
-										} else {
-											x = shiftX;
-											y = shiftY;
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (05)
+							type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
+									'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
+									'pad' : 0;
+							if (type) {
+								name = parser(type + 'StyleDef', this['2'][i].header);
+								currPath = (type === 'via') ? vias : pads;
+								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
+								currPath[name].side = 'thru';
+								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+									if (typeof this['2'][i][j] === 'string') {
+										prop = (this['2'][i][j].indexOf('holeDiam') + 1) ?
+														'hole' : (this['2'][i][j].indexOf('layerNumRef 1') + 1) ?
+														'layer1' : (this['2'][i][j].indexOf('layerNumRef 2') + 1) ?
+														'layer2' : null;
+										switch (prop) {
+										case 'hole':
+											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
+											break;
+										case 'layer1':
+											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]);
+											currPath[name].width = parser('shapeWidth', this['2'][i][j]);
+											currPath[name].height = parser('shapeHeight', this['2'][i][j]);
+											break;
+										case 'layer2':
+											width = parser('shapeWidth', this['2'][i][j]);
+											height = parser('shapeHeight', this['2'][i][j]);
+											if (width && !currPath[name].width) {
+												currPath[name].side = 'bot';
+												currPath[name].width = width;
+												currPath[name].height = height;
+											} else if (!width) {
+												currPath[name].side = 'top';
+											}
+											break;
 										}
-										if (zero[2] === 'flipped') {
-											x = -x;
-											side = (pads[name].side === 'top') ?
-													'bot' : (pads[name].side === 'bot') ?
-													'top' : 'thru';
+									}
+								}
+							}
+							type = null;
+						}
+						for (key in comp) { // (07)
+							if (comp.hasOwnProperty(key)) {
+								comp[key].pads = {};
+								currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
+																	 '(patternGraphicsDef',
+																	 '(patternGraphicsNameDef "' + comp[key].graphics + '")'], this['2']);
+								for (i = 0; i < Object.keys(currPath).length; i += 1) {
+									if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
+										for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
+											name = parser('padStyleRef', currPath[i][j]);
+											if (!comp[key].pads[name]) { comp[key].pads[name] = []; }
+											comp[key].pads[name].push(parser('pt', currPath[i][j]) + ' ' + parser('rotation', currPath[i][j]));
 										}
-										pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
-																					 (+zero[1] + y).toFixed(3) + ' ' +
-																					 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
+										break;
 									}
 								}
 							}
 						}
+						for (key in comp) { // (08)
+							if (comp.hasOwnProperty(key)) {
+								zero = comp[key].zero.split(' ');
+								for (name in comp[key].pads) {
+									if (comp[key].pads.hasOwnProperty(name)) {
+										for (i = 0; i < comp[key].pads[name].length; i += 1) {
+											shiftX = +comp[key].pads[name][i].split(' ')[0];
+											shiftY = +comp[key].pads[name][i].split(' ')[1];
+											side = pads[name].side;
+											if (comp[key].rotation) {
+												sinA = Math.sin(comp[key].rotation * Math.PI / 180);
+												cosA = Math.cos(comp[key].rotation * Math.PI / 180);
+												x = (shiftX * cosA - shiftY * sinA);
+												y = (shiftY * cosA + shiftX * sinA);
+											} else {
+												x = shiftX;
+												y = shiftY;
+											}
+											if (zero[2] === 'flipped') {
+												x = -x;
+												side = (pads[name].side === 'top') ?
+														'bot' : (pads[name].side === 'bot') ?
+														'top' : 'thru';
+											}
+											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
+																						 (+zero[1] + y).toFixed(3) + ' ' +
+																						 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
+										}
+									}
+								}
+							}
+						}
+						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
+						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
+					} catch (err) {
+						showModal('Ошибка', errors[2], [], [], true);
+						setStepStatus(1, 3, false);
+						return;
 					}
-					for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
-					for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
 					result.vias = vias;
 					result.pads = pads;
+					setStepStatus(1, 3, true);
 					return result;
 				}
 			},
@@ -488,8 +514,6 @@
 				}
 			}
 		});
-		content.addLayer('Drill');
-		window.console.log(content);
-		window.console.log(content.getPads());
+		if (!content.getPads()) { return; }
 	};
 }());
