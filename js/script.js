@@ -3,17 +3,18 @@
 (function () {
 	'use strict';
 	var
-		reader       = new FileReader(),
+		reader,
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
 		helpButton   = document.getElementById('helpButton'),
 		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
-		errors       = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                  'Не удалось сформировать корректную структуру данных из файла. <br><br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-	                  'Не удалось распознать переходные отверстия или контактные площадки. <br><br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
+	                  'Не удалось сформировать корректную структуру данных из файла. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
+	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
+										'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 									  'Произошла непредвиденная ошибка. <br>Пожалуйста, передайте разработчику файл, вызвавший эту ошибку.<br><br>'];
 
-	function hideModal() {
+	function hidePopup() {
 		var cover = document.getElementById('cover');
 		
 		cover.style.opacity = 0;
@@ -24,26 +25,26 @@
 			cover.className = '';
 		}, 300);
 	}
-	function showModal(header, content, buttons, ids, isCloseable) { // (02)
+	function showPopup(params) { // (02)
 		var
-			close = (isCloseable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
+			close = (params.closeable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
 		  cover = document.getElementById('cover'),
 		  clickOffset, modal, modalHeader, moving;
 		
 		function createButtons() {
-			var i, result = '';
-			if (buttons) {
-				for (i = 0; i < buttons.length; i += 1) {
-					result += '<button class="modal-button"type="button" id="' + ids[i] + '">' + buttons[i] + '</button>';
-				}
+			var result = '';
+			if (params.buttons) {
+				params.buttons.forEach(function (button, index) {
+					result += '<button class="modal-button"type="button" id="popup-btn' + index + '">' + button + '</button>';
+				});
 			}
 			return result;
 		}
 		function tryToClose(e) { // (10)
 			if (!moving) {
 				if (e.target.className.match(/modal-cover|modal-close/)) {
-					if (isCloseable) {
-						hideModal();
+					if (params.closeable) {
+						hidePopup();
 					} else {
 						modal.style.animation = 'reset 0 linear normal';
 						setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
@@ -78,16 +79,19 @@
 			document.body.className = 'lock noselect';
 			cover.className = 'modal-cover';
 			cover.innerHTML = '<div class="modal" id="modal">' + close +
-												'<div class="modal-header uppercase" id="modalHeader">' + header + '</div>' +
-												'<div class="modal-content">' + content + '</div>' +
+												'<div class="modal-header uppercase" id="modalHeader">' + params.header + '</div>' +
+												'<div class="modal-content">' + params.content + '</div>' +
 												createButtons() + '</div>';
 			cover.style.opacity = 1;
 			cover.addEventListener(click, tryToClose);
-			ids.forEach(function (id) {
-				document.getElementById(id).addEventListener(click, function () {
-					hideModal();
+			if (params.buttons) {
+				params.buttons.forEach(function (item, index) {
+					document.getElementById('popup-btn' + index).addEventListener(click, function () {
+						params.funcs[index]();
+						hidePopup();
+					});
 				});
-			});
+			}
 			
 			modal = document.getElementById('modal');
 			modal.style.minWidth = modal.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
@@ -125,8 +129,24 @@
 	}
 	
 	window.onerror = function () {
-		showModal('Ошибка', errors[errors.length - 1], [], [], true);
+		showPopup({
+			header:    'Ошибка',
+			content:   msgs[msgs.length - 1], // Неопределенная ошибка всегда последняя в массиве msgs
+			buttons:   ['Обновить страницу'],
+			funcs:     [location.reload.bind(location, true)],
+			closeable: false
+		});
 	};
+	if (!window.FileReader) {
+		showPopup({
+			header: 'Ошибка',
+			content: msgs[msgs.length - 2],
+			closeable: false
+		});
+		return;
+	}
+	
+	reader = new FileReader();
 	
 	Object.defineProperty(Object.prototype, 'shiftProperties', {
 		value: function (from, step) {
@@ -189,7 +209,11 @@
 			if (string.indexOf('ACCEL_ASCII') + 1) {
 				setStepStatus(1, 1, true);
 			} else {
-				showModal('Ошибка', errors[0], [], [], true);
+				showPopup({
+					header:    'Ошибка',
+					content:   msgs[0],
+					closeable: true
+				});
 				setStepStatus(1, 1, false);
 				return;
 			}
@@ -219,14 +243,22 @@
 					}
 				});
 			} catch (err) {
-				showModal('Ошибка', errors[1], [], [], true);
+				showPopup({
+					header:    'Ошибка',
+					content:   msgs[1],
+					closeable: true
+				});
 				setStepStatus(1, 2, false);
 				return;
 			}
 			if (Object.keys(obj).length > 4) {
 				setStepStatus(1, 2, true);
 			} else {
-				showModal('Ошибка', errors[1], [], [], true);
+				showPopup({
+					header:    'Ошибка',
+					content:   msgs[1],
+					closeable: true
+				});
 				setStepStatus(1, 2, false);
 				return;
 			}
@@ -454,7 +486,11 @@
 						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
 						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
 					} catch (err) {
-						showModal('Ошибка', errors[2], [], [], true);
+						showPopup({
+							header:    'Ошибка',
+							content:   msgs[2],
+							closeable: true
+						});
 						setStepStatus(1, 3, false);
 						return;
 					}

@@ -81,6 +81,7 @@
 	font-size: 1.6rem;
 	color: #000;
 	overflow: auto;
+	text-align: left;
 }
 .modal-cover {
 	opacity: 0;
