@@ -137,7 +137,7 @@
 			closeable: false
 		});
 	};
-	if (!window.FileReader) {
+	if (!(window.FileReader && document.body.style.hasOwnProperty('flex'))) {
 		showPopup({
 			header: 'Ошибка',
 			content: msgs[msgs.length - 2],
