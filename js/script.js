@@ -134,7 +134,7 @@
 			var radius = x / 2 - margin;
 			
 			canvas.strokeStyle = '#000';
-			canvas.lineWidth = 2;
+			canvas.lineWidth = 1;
 			canvas.lineJoin = 'round';
 			
 			/* Основа - круг с крестом внутри */
