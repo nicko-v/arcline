@@ -1,183 +1,354 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="370px" height="310px" viewBox="0 0 370 310" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+<svg width="370px" height="610" viewBox="0 0 370 610" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
 	
 	<style>
 		circle, line, rect, path {
 			fill: none;
-			stroke: #000;
+			stroke: #008800;
 			stroke-width: 1;
+			stroke-linecap: round;
+			stroke-linejoin: round;
 		}
 	</style>
 	
 	<defs>
-		<g id="s01"> <!-- Заготовка (круг с крестом) -->
+		<g id="c01">
 			<circle cx="0"  cy="0"  r="25" />
 			<path d="M -25 0 H 25 M 0 -25 V 25" />
 		</g>
-		<g id="s02">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c02">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
 		</g>
-		<g id="s03">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c03">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -12.5 L 25 0" />
 		</g>
-		<g id="s04">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c04">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L 0 25 L 12.5 0" />
 		</g>
-		<g id="s05">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c05">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0" />
 		</g>
-		<g id="s06">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c06">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 L 0 25 z" />
 		</g>
-		<g id="s07">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c07">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 M 0 25 L 25 0 M -12.5 -12.5 L 12.5 12.5" />
 		</g>
-		<g id="s08">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c08">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
 		</g>
-		<g id="s09">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c09">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
 		</g>
-		<g id="s10">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c10">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 		</g>
-		<g id="s11">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c11">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
 		</g>
-		<g id="s12">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c12">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
 		</g>
-		<g id="s13">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c13">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
 		</g>
-		<g id="s14">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c14">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 L 0 0 L 17.677 -17.677 L 0 25 z" />
 		</g>
-		<g id="s15">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c15">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 L 0 0 L 17.677 -17.677 L 12.5 0 L 0 12.5 L -12.5 0 z" />
 		</g>
-		<g id="s16">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c16">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 L 12.5 0 L 0 12.5 L -12.5 0 z" />
 		</g>
-		<g id="s17">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c17">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0 L 17.677 17.677 H -17.677 L -12.5 0 z" />
 		</g>
-		<g id="s18">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c18">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 L -17.677 17.677 H 17.677 z" />
 		</g>
-		<g id="s19">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c19">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -12.5 L 25 0" />
 			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
 		</g>
-		<g id="s20">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c20">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -12.5 L 25 0" />
 			<path d="M -12.5 0 L 0 25 L 12.5 0" />
 		</g>
-		<g id="s21">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c21">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
 			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
 		</g>
-		<g id="s22">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c22">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 		</g>
-		<g id="s23">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c23">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
 			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
 		</g>
-		<g id="s24">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c24">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
 			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
 		</g>
-		<g id="s25">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c25">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
 			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
 		</g>
-		<g id="s26">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c26">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 		</g>
-		<g id="s27">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c27">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
 		</g>
-		<g id="s28">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c28">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 		</g>
-		<g id="s29">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c29">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
 			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
 		</g>
-		<g id="s30">
-			<use xlink:href="#s01" x="0" y="0" />
+		<g id="c30">
+			<use xlink:href="#c01" x="0" y="0" />
 			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
 			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0 L 17.677 17.677 H -17.677 L -12.5 0 z" />
+		</g>
+		
+		<g id="r01">
+			<rect x="-25" y="-25" width="50" height="50" />
+		</g>
+		<g id="r02">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 25 25" />
+		</g>
+		<g id="r03">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 25 25 M 25 -25 L -25 25" />
+		</g>
+		<g id="r04">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+		</g>
+		<g id="r05">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 0 25 L 25 -25" />
+		</g>
+		<g id="r06">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 0 L 0 25 L 25 0" />
+		</g>
+		<g id="r07">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 25 -12.5 M -25 12.5 L 25 25" />
+		</g>
+		<g id="r08">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -12.5 L 25 12.5 M -25 12.5 L 25 -12.5" />
+		</g>
+		<g id="r09">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 25 A 25 25 180 1 1 25 25" />
+		</g>
+		<g id="r10">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 A 12.5 25 180 1 1 -25 25 M 25 -25 A 12.5 25 180 1 0 25 25" />
+		</g>
+		<g id="r11">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 V 25 M 12.5 -25 V 25" />
+		</g>
+		<g id="r12">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 V 25 M 0 -25 V 25 M 12.5 -25 V 25" />
+		</g>
+		<g id="r13">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 0 L 0 25 M -25 -25 L 25 25 M 0 -25 L 25 0" />
+		</g>
+		<g id="r14">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 25 -12.5 M -25 -12.5 25 0 M -25 0 25 12.5 M -25 12.5 L 25 25" />
+		</g>
+		<g id="r15">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -12.5 L -12.5 -25 M 12.5 -25 L 25 -12.5 M 25 12.5 L 12.5 25 M -12.5 25 L -25 12.5" />
+		</g>
+		<g id="r16">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M 0 -25 L 25 0 L 0 25 L -25 0 z" />
+		</g>
+		<g id="r17">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 0 L -12.5 -25 M -25 0 L -12.5 25 M 25 0 L 12.5 -25 M 25 0 L 12.5 25" />
+		</g>
+		<g id="r18">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L -12.5 0 L -25 25 M 25 -25 L 12.5 0 L 25 25" />
+		</g>
+		<g id="r19">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 0 L 0 25 L 25 0" />
+			<path d="M -25 -25 A 25 25 180 1 0 25 -25" />
+		</g>
+		<g id="r20">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+			<path d="M -25 25 A 25 25 180 1 1 25 25" />
+		</g>
+		<g id="r21">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -25 L 0 25 L 25 -25" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+		</g>
+		<g id="r22">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+			<path d="M -12.5 -25 V 25 M 12.5 -25 V 25" />
+		</g>
+		<g id="r23">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 V 25 M 12.5 -25 V 25" />
+			<path d="M -25 -25 A 12.5 25 180 1 1 -25 25 M 25 -25 A 12.5 25 180 1 0 25 25" />
+		</g>
+		<g id="r24">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+			<path d="M -25 -25 A 12.5 25 180 1 1 -25 25 M 25 -25 A 12.5 25 180 1 0 25 25" />
+		</g>
+		<g id="r25">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 V 25 M 12.5 -25 V 25" />
+			<path d="M -25 -25 L -12.5 0 L -25 25 M 25 -25 L 12.5 0 L 25 25" />
+		</g>
+		<g id="r26">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+			<path d="M -25 -25 L -12.5 0 L -25 25 M 25 -25 L 12.5 0 L 25 25" />
+		</g>
+		<g id="r27">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 L 0 0 L 12.5 -25" />
+			<path d="M -25 -12.5 L -12.5 -25 M 12.5 -25 L 25 -12.5 M 25 12.5 L 12.5 25 M -12.5 25 L -25 12.5" />
+		</g>
+		<g id="r28">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -12.5 -25 V 25 M 12.5 -25 V 25" />
+			<path d="M -25 -12.5 L -12.5 -25 M 12.5 -25 L 25 -12.5 M 25 12.5 L 12.5 25 M -12.5 25 L -25 12.5" />
+		</g>
+		<g id="r29">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M 0 -25 L 25 0 L 0 25 L -25 0 z" />
+			<path d="M -25 -12.5 L -12.5 -25 M 12.5 -25 L 25 -12.5 M 25 12.5 L 12.5 25 M -12.5 25 L -25 12.5" />
+		</g>
+		<g id="r30">
+			<use xlink:href="#r01" x="0" y="0" />
+			<path d="M -25 -12.5 L 25 12.5 M -25 12.5 L 25 -12.5" />
+			<path d="M -25 -12.5 L -12.5 -25 M 12.5 -25 L 25 -12.5 M 25 12.5 L 12.5 25 M -12.5 25 L -25 12.5" />
 		</g>
 	</defs>
 	
-	<use xlink:href="#s01" x="35"  y="35" />
-	<use xlink:href="#s02" x="95"  y="35" />
-	<use xlink:href="#s03" x="155" y="35" />
-	<use xlink:href="#s04" x="215" y="35" />
-	<use xlink:href="#s05" x="275" y="35" />
-	<use xlink:href="#s06" x="335" y="35" />
+	<!-- Круглые -->
+	<use xlink:href="#c01" x="35"  y="35" />
+	<use xlink:href="#c02" x="95"  y="35" />
+	<use xlink:href="#c03" x="155" y="35" />
+	<use xlink:href="#c04" x="215" y="35" />
+	<use xlink:href="#c05" x="275" y="35" />
+	<use xlink:href="#c06" x="335" y="35" />
 	
-	<use xlink:href="#s07" x="35"  y="95" />
-	<use xlink:href="#s08" x="95"  y="95" />
-	<use xlink:href="#s09" x="155" y="95" />
-	<use xlink:href="#s10" x="215" y="95" />
-	<use xlink:href="#s11" x="275" y="95" />
-	<use xlink:href="#s12" x="335" y="95" />
+	<use xlink:href="#c07" x="35"  y="95" />
+	<use xlink:href="#c08" x="95"  y="95" />
+	<use xlink:href="#c09" x="155" y="95" />
+	<use xlink:href="#c10" x="215" y="95" />
+	<use xlink:href="#c11" x="275" y="95" />
+	<use xlink:href="#c12" x="335" y="95" />
 	
-	<use xlink:href="#s13" x="35"  y="155" />
-	<use xlink:href="#s14" x="95"  y="155" />
-	<use xlink:href="#s15" x="155" y="155" />
-	<use xlink:href="#s16" x="215" y="155" />
-	<use xlink:href="#s17" x="275" y="155" />
-	<use xlink:href="#s18" x="335" y="155" />
+	<use xlink:href="#c13" x="35"  y="155" />
+	<use xlink:href="#c14" x="95"  y="155" />
+	<use xlink:href="#c15" x="155" y="155" />
+	<use xlink:href="#c16" x="215" y="155" />
+	<use xlink:href="#c17" x="275" y="155" />
+	<use xlink:href="#c18" x="335" y="155" />
 	
-	<use xlink:href="#s19" x="35"  y="215" />
-	<use xlink:href="#s20" x="95"  y="215" />
-	<use xlink:href="#s21" x="155" y="215" />
-	<use xlink:href="#s22" x="215" y="215" />
-	<use xlink:href="#s23" x="275" y="215" />
-	<use xlink:href="#s24" x="335" y="215" />
+	<use xlink:href="#c19" x="35"  y="215" />
+	<use xlink:href="#c20" x="95"  y="215" />
+	<use xlink:href="#c21" x="155" y="215" />
+	<use xlink:href="#c22" x="215" y="215" />
+	<use xlink:href="#c23" x="275" y="215" />
+	<use xlink:href="#c24" x="335" y="215" />
 	
-	<use xlink:href="#s25" x="35"  y="275" />
-	<use xlink:href="#s26" x="95"  y="275" />
-	<use xlink:href="#s27" x="155" y="275" />
-	<use xlink:href="#s28" x="215" y="275" />
-	<use xlink:href="#s29" x="275" y="275" />
-	<use xlink:href="#s30" x="335" y="275" />
+	<use xlink:href="#c25" x="35"  y="275" />
+	<use xlink:href="#c26" x="95"  y="275" />
+	<use xlink:href="#c27" x="155" y="275" />
+	<use xlink:href="#c28" x="215" y="275" />
+	<use xlink:href="#c29" x="275" y="275" />
+	<use xlink:href="#c30" x="335" y="275" />
+	
+	<!-- Прямоугольные -->
+	<use xlink:href="#r01" x="35"  y="335" />
+	<use xlink:href="#r02" x="95"  y="335" />
+	<use xlink:href="#r03" x="155" y="335" />
+	<use xlink:href="#r04" x="215" y="335" />
+	<use xlink:href="#r05" x="275" y="335" />
+	<use xlink:href="#r06" x="335" y="335" />
+	
+	<use xlink:href="#r07" x="35"  y="395" />
+	<use xlink:href="#r08" x="95"  y="395" />
+	<use xlink:href="#r09" x="155" y="395" />
+	<use xlink:href="#r10" x="215" y="395" />
+	<use xlink:href="#r11" x="275" y="395" />
+	<use xlink:href="#r12" x="335" y="395" />
+	
+	<use xlink:href="#r13" x="35"  y="455" />
+	<use xlink:href="#r14" x="95"  y="455" />
+	<use xlink:href="#r15" x="155" y="455" />
+	<use xlink:href="#r16" x="215" y="455" />
+	<use xlink:href="#r17" x="275" y="455" />
+	<use xlink:href="#r18" x="335" y="455" />
+	
+	<use xlink:href="#r19" x="35"  y="515" />
+	<use xlink:href="#r20" x="95"  y="515" />
+	<use xlink:href="#r21" x="155" y="515" />
+	<use xlink:href="#r22" x="215" y="515" />
+	<use xlink:href="#r23" x="275" y="515" />
+	<use xlink:href="#r24" x="335" y="515" />
+	
+	<use xlink:href="#r25" x="35"  y="575" />
+	<use xlink:href="#r26" x="95"  y="575" />
+	<use xlink:href="#r27" x="155" y="575" />
+	<use xlink:href="#r28" x="215" y="575" />
+	<use xlink:href="#r29" x="275" y="575" />
+	<use xlink:href="#r30" x="335" y="575" />
 	
 </svg>
