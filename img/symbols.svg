@@ -1,0 +1,183 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="370px" height="310px" viewBox="0 0 370 310" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+	
+	<style>
+		circle, line, rect, path {
+			fill: none;
+			stroke: #000;
+			stroke-width: 1;
+		}
+	</style>
+	
+	<defs>
+		<g id="s01"> <!-- Заготовка (круг с крестом) -->
+			<circle cx="0"  cy="0"  r="25" />
+			<path d="M -25 0 H 25 M 0 -25 V 25" />
+		</g>
+		<g id="s02">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
+		</g>
+		<g id="s03">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -12.5 L 25 0" />
+		</g>
+		<g id="s04">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L 0 25 L 12.5 0" />
+		</g>
+		<g id="s05">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0" />
+		</g>
+		<g id="s06">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 L 0 25 z" />
+		</g>
+		<g id="s07">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 M 0 25 L 25 0 M -12.5 -12.5 L 12.5 12.5" />
+		</g>
+		<g id="s08">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
+		</g>
+		<g id="s09">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
+		</g>
+		<g id="s10">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+		</g>
+		<g id="s11">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
+		</g>
+		<g id="s12">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
+		</g>
+		<g id="s13">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
+		</g>
+		<g id="s14">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 L 0 0 L 17.677 -17.677 L 0 25 z" />
+		</g>
+		<g id="s15">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 L 0 0 L 17.677 -17.677 L 12.5 0 L 0 12.5 L -12.5 0 z" />
+		</g>
+		<g id="s16">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 L 12.5 0 L 0 12.5 L -12.5 0 z" />
+		</g>
+		<g id="s17">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0 L 17.677 17.677 H -17.677 L -12.5 0 z" />
+		</g>
+		<g id="s18">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 L -17.677 17.677 H 17.677 z" />
+		</g>
+		<g id="s19">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -12.5 L 25 0" />
+			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
+		</g>
+		<g id="s20">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -12.5 L 25 0" />
+			<path d="M -12.5 0 L 0 25 L 12.5 0" />
+		</g>
+		<g id="s21">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -17.677 -17.677 H 17.677 M -17.677 17.677 H 17.677" />
+			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
+		</g>
+		<g id="s22">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+		</g>
+		<g id="s23">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
+			<path d="M -25 0 L 0 -12.5 L 25 0 L 0 12.5 z" />
+		</g>
+		<g id="s24">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
+			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
+		</g>
+		<g id="s25">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
+			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
+		</g>
+		<g id="s26">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 -12.5 H 12.5 V 12.5 H -12.5 z" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+		</g>
+		<g id="s27">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+			<path d="M -17.677 -17.677 H 17.677 V 17.677 H -17.677 z" />
+		</g>
+		<g id="s28">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+		</g>
+		<g id="s29">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -25 0 L 0 -25 L 25 0 L 0 25 z" />
+			<path d="M -12.5 0 V -12.5 H 0 M 0 12.5 H 12.5 V 0 M -12.5 -12.5 L 12.5 12.5" />
+		</g>
+		<g id="s30">
+			<use xlink:href="#s01" x="0" y="0" />
+			<path d="M -12.5 0 L 0 -12.5 L 12.5 0 L 0 12.5 z" />
+			<path d="M -12.5 0 L -17.677 -17.677 H 17.677 L 12.5 0 L 17.677 17.677 H -17.677 L -12.5 0 z" />
+		</g>
+	</defs>
+	
+	<use xlink:href="#s01" x="35"  y="35" />
+	<use xlink:href="#s02" x="95"  y="35" />
+	<use xlink:href="#s03" x="155" y="35" />
+	<use xlink:href="#s04" x="215" y="35" />
+	<use xlink:href="#s05" x="275" y="35" />
+	<use xlink:href="#s06" x="335" y="35" />
+	
+	<use xlink:href="#s07" x="35"  y="95" />
+	<use xlink:href="#s08" x="95"  y="95" />
+	<use xlink:href="#s09" x="155" y="95" />
+	<use xlink:href="#s10" x="215" y="95" />
+	<use xlink:href="#s11" x="275" y="95" />
+	<use xlink:href="#s12" x="335" y="95" />
+	
+	<use xlink:href="#s13" x="35"  y="155" />
+	<use xlink:href="#s14" x="95"  y="155" />
+	<use xlink:href="#s15" x="155" y="155" />
+	<use xlink:href="#s16" x="215" y="155" />
+	<use xlink:href="#s17" x="275" y="155" />
+	<use xlink:href="#s18" x="335" y="155" />
+	
+	<use xlink:href="#s19" x="35"  y="215" />
+	<use xlink:href="#s20" x="95"  y="215" />
+	<use xlink:href="#s21" x="155" y="215" />
+	<use xlink:href="#s22" x="215" y="215" />
+	<use xlink:href="#s23" x="275" y="215" />
+	<use xlink:href="#s24" x="335" y="215" />
+	
+	<use xlink:href="#s25" x="35"  y="275" />
+	<use xlink:href="#s26" x="95"  y="275" />
+	<use xlink:href="#s27" x="155" y="275" />
+	<use xlink:href="#s28" x="215" y="275" />
+	<use xlink:href="#s29" x="275" y="275" />
+	<use xlink:href="#s30" x="335" y="275" />
+	
+</svg>

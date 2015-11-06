@@ -12,7 +12,7 @@
 	                  'Не удалось сформировать корректную структуру данных из файла. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
 	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
 										'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-									  'Произошла непредвиденная ошибка. <br>Пожалуйста, передайте разработчику файл, вызвавший эту ошибку.<br><br>'];
+									  'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику, какие действия к этому привели или передайте файл, вызвавший ошибку.'];
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -127,84 +127,6 @@
 			}
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
 	}
-	function drawDrillSymbols() {
-		var canvas,	i, x, y, margin = 5;
-		
-		function drawRoundSymbol(canvas, x, y, symbol) {
-			var radius = x / 2 - margin;
-			
-			canvas.strokeStyle = '#000';
-			canvas.lineWidth = 1;
-			canvas.lineJoin = 'round';
-			
-			/* Основа - круг с крестом внутри */
-			canvas.beginPath();
-			canvas.arc(x / 2, y / 2, (x / 2 - margin), 0, Math.PI * 2);
-			canvas.moveTo(x / 2, margin);
-			canvas.lineTo(x / 2, y - margin);
-			canvas.moveTo(margin, y / 2);
-			canvas.lineTo(x - margin, y / 2);
-			canvas.stroke();
-			canvas.clip();
-			/* -=-=-=-=- */
-			
-			switch (symbol) {
-			case 1:
-				canvas.beginPath();
-				canvas.moveTo(Math.cos(5 * Math.PI / 4) * radius + x / 2,
-											Math.sin(5 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(Math.cos(7 * Math.PI / 4) * radius + x / 2,
-											Math.sin(7 * Math.PI / 4) * radius + y / 2);
-				canvas.moveTo(Math.cos(3 * Math.PI / 4) * radius + x / 2,
-											Math.sin(3 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(Math.cos(Math.PI / 4) * radius + x / 2,
-											Math.sin(Math.PI / 4) * radius + y / 2);
-				canvas.stroke();
-				break;
-			case 2:
-				canvas.beginPath();
-				canvas.moveTo(margin, y / 2);
-				canvas.lineTo(x / 2, y / 2 - radius / 2);
-				canvas.lineTo(x - margin, y / 2);
-				canvas.stroke();
-				break;
-			case 3:
-				canvas.beginPath();
-				canvas.moveTo(x / 2 - radius / 2, y / 2);
-				canvas.lineTo(x / 2, y - margin);
-				canvas.lineTo(x / 2 + radius / 2, y / 2);
-				canvas.stroke();
-				break;
-			case 4:
-				canvas.beginPath();
-				canvas.moveTo(x / 2 - radius / 2, y / 2);
-				canvas.lineTo(Math.cos(5 * Math.PI / 4) * radius + x / 2,
-											Math.sin(5 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(Math.cos(7 * Math.PI / 4) * radius + x / 2,
-											Math.sin(7 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(x / 2 + radius / 2, y / 2);
-				canvas.stroke();
-				break;
-			case 5:
-				canvas.beginPath();
-				canvas.moveTo(Math.cos(5 * Math.PI / 4) * radius + x / 2,
-											Math.sin(5 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(Math.cos(7 * Math.PI / 4) * radius + x / 2,
-											Math.sin(7 * Math.PI / 4) * radius + y / 2);
-				canvas.lineTo(x / 2, y - margin);
-				canvas.closePath();
-				canvas.stroke();
-				break;
-			}
-		}
-		
-		for (i = 0; (i < 30) && document.getElementById('symb' + i); i += 1) {
-			canvas = document.getElementById('symb' + i);
-			x = canvas.offsetWidth;
-			y = canvas.offsetHeight;
-			drawRoundSymbol(canvas.getContext('2d'), x, y, i);
-		}
-	}
 	
 	window.onerror = function () {
 		showPopup({
@@ -215,7 +137,7 @@
 			closeable: false
 		});
 	};
-	if (!(window.FileReader && document.body.style.hasOwnProperty('flex'))) {
+	if (!(window.FileReader && document.body.style.flex !== undefined)) {
 		showPopup({
 			header: 'Ошибка',
 			content: msgs[msgs.length - 2],
@@ -630,5 +552,4 @@
 		});
 		if (!content.getPads()) { return; }
 	};
-	drawDrillSymbols();
 }());
