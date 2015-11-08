@@ -205,25 +205,40 @@ html {
 }
 .step2-actions {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
+	justify-content: space-between;
 	border-top: 1px dashed #bbb;
 	margin-top: 13px;
 	padding-top: 27px;
 }
 .step2-actions-symbol {
-	width: 60px;
-	height: 60px;
-	background-color: #303948;
+	width: 64px;
+	height: 64px;
 	background-image: url('../img/symbols.svg');
-	border-radius: 5px;
-	margin: 0 10px 20px;
+	margin: 10px 5px;
+	transition: all 200ms linear;
+}
+.step2-actions-symbol:hover {
+	transform: scale(1.2);
+}
+.step2-actions-symbols {
+	padding: 8px 0;
+	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
 }
-.step2-actions-symbolsWrapper {
+.step2-actions-symbols-group {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
+}
+.step2-actions-symbolsBorders {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 5px;
+	border-top: 2px dashed #262d39;
+	border-bottom: 2px dashed #262d39;
 }
 .wrapper {
 	width: 80%;
