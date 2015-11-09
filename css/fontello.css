@@ -101,12 +101,12 @@
   display: inline-block;
   text-decoration: inherit;
   width: 1em;
-  margin-right: .2em;
+  margin-right: .5em;
   text-align: center;
   font-variant: normal;
   text-transform: none;
   line-height: 1em;
-  margin-left: .2em;
+  margin-left: .5em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -120,3 +120,9 @@
 .icon-spin6:before { content: '\e806'; } /* '' */
 .icon-spin5:before { content: '\e807'; } /* '' */
 .icon-dot:before { content: '\e808'; } /* '' */
+.icon-angle-double-right:before { content: '\e809'; } /* '' */
+.icon-right-open:before { content: '\e80a'; } /* '' */
+.icon-angle-right:before { content: '\e80b'; } /* '' */
+.icon-angle-double-down:before { content: '\e80c'; } /* '' */
+.icon-down-open:before { content: '\e80d'; } /* '' */
+.icon-down-open-1:before { content: '\e80e'; } /* '' */

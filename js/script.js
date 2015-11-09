@@ -7,6 +7,7 @@
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
 		helpButton   = document.getElementById('helpButton'),
+		libButton    = document.getElementById('libButton'),
 		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
 		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                  'Не удалось сформировать корректную структуру данных из файла. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
@@ -181,7 +182,11 @@
 			setTimeout(function () { reader.readAsText(input.files[0], 'cp1251'); }, 600);
 		}
 	});
-
+	libButton.addEventListener(click, function () {
+		rollBlock(document.getElementById('libWrapper'), document.getElementById('lib'), true);
+		libButton.classList.toggle('step2-actions-open-active');
+	});
+	
 	reader.onload = function () {
 		var content;
 		

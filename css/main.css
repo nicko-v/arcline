@@ -41,6 +41,9 @@ header {
 html {
 	font: 10px 'Clear Sans';
 }
+p {
+	margin: 0;
+}
 
 #file {
 	position: absolute;
@@ -81,6 +84,7 @@ html {
 	text-align: center;
 	color: #6e747e;
 	transition: all 300ms linear;
+	cursor: pointer;
 }
 .header-icon:hover {
 	transform: scale(1.2);
@@ -205,40 +209,101 @@ html {
 }
 .step2-actions {
 	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
+	flex-direction: column;
+	justify-content: center;
 	border-top: 1px dashed #bbb;
 	margin-top: 13px;
-	padding-top: 27px;
 }
-.step2-actions-symbol {
+.step2-actions-open {
+	display: inline-block;
+	margin-top: 10px;
+	font-size: 1.4rem;
+	padding: 5px;
+	cursor: pointer;
+}
+.step2-actions-open-active {
+	background-color: #303948;
+}
+.step2-actions-pads {
+	display: flex;
+	flex-direction: column;
+	margin-top: 30px;
+}
+.step2-actions-pads-padInfo {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 40px;
+}
+.step2-actions-pads-padInfo:last-child {
+	margin-bottom: 0;
+}
+.step2-actions-pads-padInfo-img {
+	width: 80px;
+	height: 80px;
+	min-width: 80px;
+	min-height: 80px;
+	margin-right: 20px;
+	border: 2px dashed #262d39;
+	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+	background-color: #303948;
+	position: relative;
+}
+.step2-actions-pads-padInfo-img-cross {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 20px;
+	height: 20px;
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	font-size: 20px;
+	color: rgba(136,0,0,0.5);
+	transition: all 200ms linear;
+}
+.step2-actions-pads-padInfo-img-cross:hover {
+	color: rgba(136,0,0,1);
+	transform: scale(1.1);
+	cursor: pointer;
+}
+.step2-actions-pads-padInfo-text {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	margin-left: 20px;
+	font-size: 1.4rem;
+}
+.step2-actions-lib {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	margin: 8px 0;
+	padding: 5px;
+	border-top: 2px dashed #262d39;
+	border-bottom: 2px dashed #262d39;
+}
+.step2-actions-lib-group-symbol {
 	width: 64px;
 	height: 64px;
 	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
 	transition: all 200ms linear;
 }
-.step2-actions-symbol:hover {
+.step2-actions-lib-group-symbol:hover {
 	transform: scale(1.2);
 }
-.step2-actions-symbols {
-	padding: 8px 0;
+.step2-actions-lib-wrapper {
 	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+	transition: all 500ms linear;
+	overflow-y: hidden;
+	max-height: 0px;
 }
-.step2-actions-symbols-group {
+.step2-actions-lib-group {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
-}
-.step2-actions-symbolsBorders {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	padding: 5px;
-	border-top: 2px dashed #262d39;
-	border-bottom: 2px dashed #262d39;
 }
 .wrapper {
 	width: 80%;

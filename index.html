@@ -48,7 +48,7 @@
 					</div>
 				</div>
 		</div>
-		<div class="wrapper">
+		<div class="wrapper" id="mainWrapper">
 			<div class="step-wrapper" style="display: flex;">
 				<h1 class="step-header">Шаг 1. Загрузка файла</h1>
 				<h2 class="step-header">Загрузите .pcb файл, сохраненный в формате ASCII</h2>
@@ -85,78 +85,96 @@
 				<h1 class="step-header">Шаг 2. Настройка параметров</h1>
 				<h2 class="step-header">Настройте соответствия между контактными площадками и их символами</h2>
 				<div class="step2-actions">
-					<div style="flex-basis: 75%;">
-						<h2>Контактные площадки:</h2>
-						<div></div>
+					<div class="icon-down-open step2-actions-open uppercase noselect" id="libButton">Библиотека символов</div>
+					<div class="step2-actions-lib-wrapper" id="libWrapper">
+						<div class="step2-actions-lib" id="lib">
+							<div class="step2-actions-lib-group">
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -13px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -83px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -153px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -223px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -293px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -293px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -293px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -293px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -293px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -293px;"></div>
+							</div>
+							<div class="step2-actions-lib-group">
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -363px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -433px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -503px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -573px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -643px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -643px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -153px -643px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -223px -643px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -643px;"></div>
+								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -643px;"></div>
+							</div>
+						</div>
 					</div>
-					<div style="flex-basis: 25%;">
-						<h2 style="text-align: right;">Доступные символы:</h2>
-						<div class="step2-actions-symbols">
-							<div class="step2-actions-symbolsBorders">
-								<div class="step2-actions-symbols-group">
-									<div class="step2-actions-symbol" style="background-position: -13px  -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -13px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -83px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -153px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -223px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -293px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -293px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -293px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -293px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -293px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -293px;"></div>
-								</div>
-								<div class="step2-actions-symbols-group">
-									<div class="step2-actions-symbol" style="background-position: -13px  -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -363px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -433px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -503px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -573px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -13px  -643px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -83px  -643px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -153px -643px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -223px -643px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -293px -643px;"></div>
-									<div class="step2-actions-symbol" style="background-position: -363px -643px;"></div>
-								</div>
+					<div class="step2-actions-pads" id="pads">
+						<div class="step2-actions-pads-padInfo">
+							<div class="step2-actions-pads-padInfo-img"></div>
+							<div class="step2-actions-pads-padInfo-img">
+								<div class="step2-actions-pads-padInfo-img-cross icon-cancel"></div>
+							</div>
+							<div class="step2-actions-pads-padInfo-text">
+								<p>Площадка: 2мм</p>
+								<p>Отверстие: 1мм</p>
+								<p>Используется: D1, D5...D7, R20</p>
+							</div>
+						</div>
+						<div class="step2-actions-pads-padInfo">
+							<div class="step2-actions-pads-padInfo-img"></div>
+							<div class="step2-actions-pads-padInfo-img">
+								<div class="step2-actions-pads-padInfo-img-cross icon-cancel"></div>
+							</div>
+							<div class="step2-actions-pads-padInfo-text">
+								<p>Площадка: 2мм</p>
+								<p>Отверстие: 1мм</p>
+								<p>Используется: D1, D5...D7, R20</p>
 							</div>
 						</div>
 					</div>
