@@ -11,15 +11,15 @@
 		<link rel="icon" type="image/png" href="img/favicon.ico">
 		<script src="js/script.js" defer></script>
 	</head>
-	<body>
+	<body class="noselect">
 		<div id="cover"></div>
 		<div style="width: 80%;">
-			<header class="noselect">
+			<header>
 				<div class="header-text">P-CAD PCB tools</div>
 				<div class="header-icon" id="helpButton"><i class="icon-help-circled"></i></div>
 			</header>
 		</div>
-			<div class="help-wrapper noselect" id="help-wrapper">
+			<div class="help-wrapper" id="help-wrapper">
 				<div class="help-borders" id="help-borders">
 					<div class="help">
 						<h1 class="uppercase" style="text-align: center;">Инструкция</h1>
@@ -56,9 +56,9 @@
 					<div class="step1-actions-loadFile">
 						<input type="file" id="file" required>
 						<label for="file">
-							<div class="uppercase noselect step1-actions-loadFile-button step1-actions-loadFile-choose">Выбрать&nbsp;файл</div>
+							<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-choose">Выбрать&nbsp;файл</div>
 						</label>
-						<div class="uppercase noselect step1-actions-loadFile-button step1-actions-loadFile-upload" id="upload"><i class="icon-upload"></i></div>
+						<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-upload" id="upload"><i class="icon-upload"></i></div>
 					</div>
 					<div class="step1-actions-fileName" id="fileName"></div>
 				</div>
@@ -85,7 +85,9 @@
 				<h1 class="step-header">Шаг 2. Настройка параметров</h1>
 				<h2 class="step-header">Настройте соответствия между контактными площадками и их символами</h2>
 				<div class="step2-actions">
-					<div class="icon-down-open step2-actions-open uppercase noselect" id="libButton">Библиотека символов</div>
+					<div style="text-align: right;">
+						<div class="icon-down-open step2-actions-open uppercase" id="libButton">Библиотека символов</div>
+					</div>
 					<div class="step2-actions-lib-wrapper" id="libWrapper">
 						<div class="step2-actions-lib" id="lib">
 							<div class="step2-actions-lib-group">
@@ -120,6 +122,7 @@
 								<div class="step2-actions-lib-group-symbol" style="background-position: -293px -293px;"></div>
 								<div class="step2-actions-lib-group-symbol" style="background-position: -363px -293px;"></div>
 							</div>
+							<div style="width: 50px;"></div>
 							<div class="step2-actions-lib-group">
 								<div class="step2-actions-lib-group-symbol" style="background-position: -13px  -363px;"></div>
 								<div class="step2-actions-lib-group-symbol" style="background-position: -83px  -363px;"></div>

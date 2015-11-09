@@ -10,8 +10,8 @@
 		libButton    = document.getElementById('libButton'),
 		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
 		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                  'Не удалось сформировать корректную структуру данных из файла. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
-	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>>Возможно файл содержит ошибки или непредусмотренные блоки.',
+	                  'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 										'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 									  'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику, какие действия к этому привели или передайте файл, вызвавший ошибку.'];
 
@@ -178,13 +178,12 @@
 	uploadButton.addEventListener(click, function () {
 		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
 		if (input.files[0]) {
-			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'));
+			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), false);
 			setTimeout(function () { reader.readAsText(input.files[0], 'cp1251'); }, 600);
 		}
 	});
 	libButton.addEventListener(click, function () {
 		rollBlock(document.getElementById('libWrapper'), document.getElementById('lib'), true);
-		libButton.classList.toggle('step2-actions-open-active');
 	});
 	
 	reader.onload = function () {

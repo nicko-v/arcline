@@ -71,6 +71,10 @@ p {
 	color: #880000;
 }
 
+.transition-reset {
+	transition: none;
+}
+
 .header-text {
 	font-size: 5rem;
 	font-weight: bold;
@@ -208,9 +212,6 @@ p {
 	transition: max-height 500ms ease-in; /* При изменении времени изменить так же задержку перед началом чтения файла */
 }
 .step2-actions {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
 	border-top: 1px dashed #bbb;
 	margin-top: 13px;
 }
@@ -218,11 +219,11 @@ p {
 	display: inline-block;
 	margin-top: 10px;
 	font-size: 1.4rem;
-	padding: 5px;
-	cursor: pointer;
-}
-.step2-actions-open-active {
+	padding: 8px 13px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
 	background-color: #303948;
+	cursor: pointer;
 }
 .step2-actions-pads {
 	display: flex;
@@ -256,7 +257,7 @@ p {
 	height: 20px;
 	position: absolute;
 	right: 0px;
-	top: 0px;
+	top: -2px;
 	font-size: 20px;
 	color: rgba(136,0,0,0.5);
 	transition: all 200ms linear;
@@ -275,7 +276,7 @@ p {
 }
 .step2-actions-lib {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	justify-content: center;
 	margin: 8px 0;
 	padding: 5px;
@@ -295,7 +296,7 @@ p {
 .step2-actions-lib-wrapper {
 	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
-	transition: all 500ms linear;
+	transition: max-height 500ms ease-in;
 	overflow-y: hidden;
 	max-height: 0px;
 }
