@@ -277,11 +277,17 @@ p {
 .step2-actions-lib {
 	display: flex;
 	flex-direction: row;
-	justify-content: center;
+	justify-content: space-between;
 	margin: 8px 0;
 	padding: 5px;
 	border-top: 2px dashed #262d39;
 	border-bottom: 2px dashed #262d39;
+}
+.step2-actions-lib-group {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
 }
 .step2-actions-lib-group-symbol {
 	width: 64px;
@@ -299,12 +305,6 @@ p {
 	transition: max-height 500ms ease-in;
 	overflow-y: hidden;
 	max-height: 0px;
-}
-.step2-actions-lib-group {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	justify-content: center;
 }
 .wrapper {
 	width: 80%;

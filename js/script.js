@@ -28,60 +28,60 @@
 	}
 	function showPopup(params) { // (02)
 		var
-			close = (params.closeable) ? '<div class="modal-close"><div class="modal-close-cross"></div></div>' : '',
+			close = (params.closeable) ? '<div class="popup-close"><div class="popup-close-cross"></div></div>' : '',
 		  cover = document.getElementById('cover'),
-		  clickOffset, modal, modalHeader, moving;
+		  clickOffset, popup, popupHeader, moving;
 		
 		function createButtons() {
 			var result = '';
 			if (params.buttons) {
 				params.buttons.forEach(function (button, index) {
-					result += '<button class="modal-button"type="button" id="popup-btn' + index + '">' + button + '</button>';
+					result += '<button class="popup-button"type="button" id="popup-btn' + index + '">' + button + '</button>';
 				});
 			}
 			return result;
 		}
 		function tryToClose(e) { // (10)
 			if (!moving) {
-				if (e.target.className.match(/modal-cover|modal-close/)) {
+				if (e.target.className.match(/popup-cover|popup-close/)) {
 					if (params.closeable) {
 						hidePopup();
 					} else {
-						modal.style.animation = 'reset 0 linear normal';
-						setTimeout(function () { modal.style.animation = 'modal-swing 500ms ease-out normal'; }, 20);
+						popup.style.animation = 'reset 0 linear normal';
+						setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
 					}
 				}
 			}
 		}
-		function moveModal(e) {
+		function movePopup(e) {
 			// offsetWidth делится пополам из-за того, что окно имеет свойство translateX(-50%),
 			// то есть 0 по X у него не слева, а в центре.
 			var
-				x = (e.clientX - clickOffset[0] - modal.offsetWidth / 2 > 0 &&
-			       e.clientX - clickOffset[0] + modal.offsetWidth / 2 < document.body.offsetWidth),
+				x = (e.clientX - clickOffset[0] - popup.offsetWidth / 2 > 0 &&
+			       e.clientX - clickOffset[0] + popup.offsetWidth / 2 < document.body.offsetWidth),
 				y = (e.clientY - clickOffset[1] > 0 &&
-			       e.clientY - clickOffset[1] + modal.offsetHeight < document.body.offsetHeight);
+			       e.clientY - clickOffset[1] + popup.offsetHeight < document.body.offsetHeight);
 			if (x && y) {
-				modal.style.left = e.clientX - clickOffset[0] + 'px';
-				modal.style.top = e.clientY - clickOffset[1] + 'px';
+				popup.style.left = e.clientX - clickOffset[0] + 'px';
+				popup.style.top = e.clientY - clickOffset[1] + 'px';
 			} else if (x) {
-				modal.style.left = e.clientX - clickOffset[0] + 'px';
+				popup.style.left = e.clientX - clickOffset[0] + 'px';
 			} else if (y) {
-				modal.style.top = e.clientY - clickOffset[1] + 'px';
+				popup.style.top = e.clientY - clickOffset[1] + 'px';
 			}
 		}
 		function stopMoving() {
-			document.removeEventListener('mousemove', moveModal);
+			document.removeEventListener('mousemove', movePopup);
 			setTimeout(function () { moving = false; }, 100);
 		}
 		
-		if (!document.getElementById('modal')) {
+		if (!document.getElementById('popup')) {
 			document.documentElement.className = 'lock';
 			document.body.className = 'lock noselect';
-			cover.className = 'modal-cover';
-			cover.innerHTML = '<div class="modal" id="modal">' + close +
-												'<div class="modal-header uppercase" id="modalHeader">' + params.header + '</div>' +
-												'<div class="modal-content">' + params.content + '</div>' +
+			cover.className = 'popup-cover';
+			cover.innerHTML = '<div class="popup" id="popup">' + close +
+												'<div class="popup-header uppercase" id="popupHeader">' + params.header + '</div>' +
+												'<div class="popup-content">' + params.content + '</div>' +
 												createButtons() + '</div>';
 			cover.style.opacity = 1;
 			cover.addEventListener(click, tryToClose);
@@ -94,14 +94,14 @@
 				});
 			}
 			
-			modal = document.getElementById('modal');
-			modal.style.minWidth = modal.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
-			modalHeader = document.getElementById('modalHeader');
-			modalHeader.addEventListener('mousedown', function (e) {
+			popup = document.getElementById('popup');
+			popup.style.minWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
+			popupHeader = document.getElementById('popupHeader');
+			popupHeader.addEventListener('mousedown', function (e) {
 				if (e.button === 0) {
 					moving = true;
-					clickOffset = [e.clientX - modal.offsetLeft, e.clientY - modal.offsetTop];
-					document.addEventListener('mousemove', moveModal);
+					clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
+					document.addEventListener('mousemove', movePopup);
 					document.addEventListener('mouseup', stopMoving);
 				}
 			});
@@ -127,6 +127,27 @@
 				i += 1;
 			}
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
+	}
+	function drawPadShapes(lib) {
+		var pads = document.getElementById('pads'), key, result = '';
+		
+		for (key in lib.pads) {
+			if (lib.pads.hasOwnProperty(key)) {
+				result += '<div class="step2-actions-pads-padInfo">' +
+				            '<div class="step2-actions-pads-padInfo-img"></div>' +
+				            '<div class="step2-actions-pads-padInfo-img">' +
+				              '<div class="step2-actions-pads-padInfo-img-cross icon-cancel"></div>' +
+				            '</div>' +
+				            '<div class="step2-actions-pads-padInfo-text">' +
+				              '<p>Площадка: ' + lib.pads[key].width + 'мм</p>' +
+				              '<p>Отверстие: ' + lib.pads[key].hole + 'мм</p>' +
+				              '<p>Количество: ' + lib.pads[key].coords.length + '</p>' +
+				              '<p>Используется: D1, D5...D7, R20</p>' +
+				            '</div>' +
+				            '</div>';
+			}
+		}
+		pads.innerHTML = result;
 	}
 	
 	window.onerror = function () {
@@ -555,5 +576,6 @@
 			}
 		});
 		if (!content.getPads()) { return; }
+		drawPadShapes(content.getPads());
 	};
 }());
