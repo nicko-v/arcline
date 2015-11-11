@@ -71,10 +71,6 @@ p {
 	color: #880000;
 }
 
-.transition-reset {
-	transition: none;
-}
-
 .header-text {
 	font-size: 5rem;
 	font-weight: bold;
@@ -227,52 +223,93 @@ p {
 }
 .step2-actions-pads {
 	display: flex;
-	flex-direction: column;
-	margin-top: 30px;
+	justify-content: space-between;
 }
-.step2-actions-pads-padInfo {
-	display: flex;
-	flex-direction: row;
-	margin-bottom: 40px;
-}
-.step2-actions-pads-padInfo:last-child {
-	margin-bottom: 0;
-}
-.step2-actions-pads-padInfo-img {
-	width: 80px;
-	height: 80px;
-	min-width: 80px;
-	min-height: 80px;
-	margin-right: 20px;
-	border: 2px dashed #262d39;
-	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+.step2-actions-pads-list {
+	flex-grow: 1;
+	height: 278px; /* 280 - 2 бордера */
 	background-color: #303948;
+	border-top: 1px solid #262d39;
+	border-right: 1px solid #262d39;
+	border-bottom: 1px solid #262d39;
+	overflow-y: auto;
+}
+.step2-actions-pads-list-row {
+	padding: 10px 15px;
+	font-size: 1.3rem;
+	border-bottom: 1px solid #262d39;
+	transition: all 100ms linear;
+}
+.step2-actions-pads-list-row:hover {
+	background-color: #262d39;
+	cursor: pointer;
+}
+.step2-actions-pads-list-row:last-child {
+	border: none;
+}
+.step2-actions-pads-viewer {
+	min-width: 180px;
+	height: 280px;
+	border-right: 2px solid #262d39;
+	background-color: #303948;
+	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+}
+.step2-actions-pads-viewer-descr {
+	width: 130px;
+	height: 90px;
+	margin: 20px auto;
+	font-size: 1.2rem;
+	text-align: center;
+	overflow-y: hidden;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+}
+.step2-actions-pads-viewer-icon {
+	width: 130px;
+	height: 130px;
+	margin: 20px auto;
+	border: 2px dashed #262d39;
+	border-radius: 16px;
 	position: relative;
 }
-.step2-actions-pads-padInfo-img-cross {
+.step2-actions-pads-viewer-icon-cross {
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	width: 20px;
 	height: 20px;
 	position: absolute;
-	right: 0px;
-	top: -2px;
+	right: 3px;
+	top: 3px;
 	font-size: 20px;
 	color: rgba(136,0,0,0.5);
 	transition: all 200ms linear;
 }
-.step2-actions-pads-padInfo-img-cross:hover {
+.step2-actions-pads-viewer-icon-cross:hover {
 	color: rgba(136,0,0,1);
 	transform: scale(1.1);
 	cursor: pointer;
 }
-.step2-actions-pads-padInfo-text {
+.step2-actions-pads-start {
+	width: 50px;
 	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	margin-left: 20px;
-	font-size: 1.4rem;
+	align-items: center;
+	justify-content: center;
+	background-color: #303948;
+	border-top: 1px solid #262d39;
+	border-right: 1px solid #262d39;
+	border-bottom: 1px solid #262d39;
+	font-size: 30px;
+	transition: all 100ms linear;
+	cursor: pointer;
+}
+.step2-actions-pads-start:hover {
+	color: #008800;
+}
+.step2-actions-pads-start:active {
+	color: #006600;
+	box-shadow: inset -2px 0px 2px 2px rgba(0, 0, 0, 0.1);
 }
 .step2-actions-lib {
 	display: flex;
@@ -302,9 +339,14 @@ p {
 .step2-actions-lib-wrapper {
 	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
-	transition: max-height 500ms ease-in;
+	transition-property: max-height, margin-bottom;
+	transition-duration: 500ms;
+	transition-timing-function: ease-in;
 	overflow-y: hidden;
 	max-height: 0px;
+}
+.step2-actions-lib-wrapper-JS_toggle_margin {
+	margin-bottom: 30px;
 }
 .wrapper {
 	width: 80%;

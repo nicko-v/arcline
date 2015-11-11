@@ -129,25 +129,15 @@
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
 	}
 	function drawPadShapes(lib) {
-		var pads = document.getElementById('pads'), key, result = '';
+		var padsList = document.getElementById('padsList'), key, result = '';
 		
 		for (key in lib.pads) {
 			if (lib.pads.hasOwnProperty(key)) {
-				result += '<div class="step2-actions-pads-padInfo">' +
-				            '<div class="step2-actions-pads-padInfo-img"></div>' +
-				            '<div class="step2-actions-pads-padInfo-img">' +
-				              '<div class="step2-actions-pads-padInfo-img-cross icon-cancel"></div>' +
-				            '</div>' +
-				            '<div class="step2-actions-pads-padInfo-text">' +
-				              '<p>Площадка: ' + lib.pads[key].width + 'мм</p>' +
-				              '<p>Отверстие: ' + lib.pads[key].hole + 'мм</p>' +
-				              '<p>Количество: ' + lib.pads[key].coords.length + '</p>' +
-				              '<p>Используется: D1, D5...D7, R20</p>' +
-				            '</div>' +
-				            '</div>';
+				result += '<div class="step2-actions-pads-list-row">' +
+				           key + ' (используется: )</div>';
 			}
 		}
-		pads.innerHTML = result;
+		padsList.innerHTML = result;
 	}
 	
 	window.onerror = function () {
@@ -204,6 +194,7 @@
 		}
 	});
 	libButton.addEventListener(click, function () {
+		document.getElementById('libWrapper').classList.toggle('step2-actions-lib-wrapper-JS_toggle_margin');
 		rollBlock(document.getElementById('libWrapper'), document.getElementById('lib'), true);
 	});
 	
