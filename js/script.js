@@ -95,7 +95,7 @@
 			}
 			
 			popup = document.getElementById('popup');
-			popup.style.minWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
+			popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
 			popupHeader = document.getElementById('popupHeader');
 			popupHeader.addEventListener('mousedown', function (e) {
 				if (e.button === 0) {
@@ -129,12 +129,14 @@
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
 	}
 	function drawPadShapes(lib) {
-		var padsList = document.getElementById('padsList'), key, result = '';
+		var padsList = document.getElementById('padsList'), key, comps, result = '';
 		
 		for (key in lib.pads) {
 			if (lib.pads.hasOwnProperty(key)) {
+				if (lib.pads[key].comps) { comps = lib.pads[key].comps.join(', '); } else { comps = ''; }
 				result += '<div class="step2-actions-pads-list-row">' +
-				           key + ' (используется: )</div>';
+				           key + ' (используется: ' +
+				           comps + ')</div>';
 			}
 		}
 		padsList.innerHTML = result;
@@ -370,6 +372,30 @@
 						}
 						return find(object, 0);
 					}
+					function compareNames(a, b) {
+						var arrA, arrB, i, result = -1;
+						
+						function split(str) {
+							var arr = [];
+							str.split('').forEach(function (c) {
+								if (+c && +arr[arr.length - 1]) { arr[arr.length - 1] += c; } else { arr.push(c); }
+							});
+							return arr;
+						}
+						
+						arrA = split(a);
+						arrB = split(b);
+						arrA.forEach(function (item, index) {
+							if (item !== arrB[index] && index < arrB.length) {
+								if (+item) {
+									if (+arrB[index]) { result = (+item > +arrB[index]) ? 1 : -1; return; } else { result = 1; return; }
+								} else {
+									if (+arrB[index]) { result = -1; return; } else { result = (item.charCodeAt(0) > arrB[index].charCodeAt(0)) ? 1 : -1; return; }
+								}
+							}
+						});
+						return result;
+					}
 					
 					try {
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
@@ -495,12 +521,21 @@
 																						 (+zero[1] + y).toFixed(3) + ' ' +
 																						 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
 										}
+										// Записывает в каких компонентах использована площадка:
+										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
 									}
 								}
 							}
 						}
 						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
 						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
+						for (name in pads) {
+							if (pads.hasOwnProperty(name) && pads[name].comps) {
+								if (pads[name].comps.length > 1) {
+									pads[name].comps.sort(compareNames);
+								}
+							}
+						}
 					} catch (err) {
 						showPopup({
 							header:    'Ошибка',

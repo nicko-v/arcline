@@ -128,7 +128,7 @@ p {
 	margin: 3px 0;
 }
 .step-wrapper {
-	display: none;
+	display: flex;
 	flex-direction: column;
 	padding: 1.6rem 0;
 	margin-bottom: 30px;
@@ -218,24 +218,39 @@ p {
 	padding: 8px 13px;
 	border-top-left-radius: 5px;
 	border-top-right-radius: 5px;
+	border-top: 1px solid #262d39;
+	border-right: 1px solid #262d39;
+	border-left: 1px solid #262d39;
 	background-color: #303948;
 	cursor: pointer;
+	transition: box-shadow 100ms linear;
+}
+.step2-actions-open:active {
+	box-shadow: inset 0px 2px 2px 2px rgba(0, 0, 0, 0.1);
 }
 .step2-actions-pads {
 	display: flex;
 	justify-content: space-between;
+	overflow: hidden;
+	position: relative;
 }
 .step2-actions-pads-list {
 	flex-grow: 1;
-	height: 278px; /* 280 - 2 бордера */
+	height: 278px; /* высота вьювера - 2 бордера */
 	background-color: #303948;
 	border-top: 1px solid #262d39;
-	border-right: 1px solid #262d39;
 	border-bottom: 1px solid #262d39;
 	overflow-y: auto;
+	/* Сокрытие скроллбара: */
+	position: absolute;
+	top: 0px;
+	right: 30px;
+	bottom: 0px;
+	left: 182px;
+	z-index: 1;
 }
 .step2-actions-pads-list-row {
-	padding: 10px 15px;
+	padding: 10px 25px 10px 15px;
 	font-size: 1.3rem;
 	border-bottom: 1px solid #262d39;
 	transition: all 100ms linear;
@@ -248,9 +263,9 @@ p {
 	border: none;
 }
 .step2-actions-pads-viewer {
-	min-width: 180px;
 	height: 280px;
-	border-right: 2px solid #262d39;
+	min-width: 180px; /* Менять вместе с left у step2-actions-pads-list */
+	border-right: 2px solid #262d39;  /* -||- */
 	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
 }
@@ -292,17 +307,16 @@ p {
 	cursor: pointer;
 }
 .step2-actions-pads-start {
-	width: 50px;
+	width: 50px; /* Менять вместе с right у step2-actions-pads-list */
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	background-color: #303948;
-	border-top: 1px solid #262d39;
-	border-right: 1px solid #262d39;
-	border-bottom: 1px solid #262d39;
+	border: 1px solid #262d39;
 	font-size: 30px;
 	transition: all 100ms linear;
 	cursor: pointer;
+	z-index: 2; /* Что бы перекрыть скроллбар списка */
 }
 .step2-actions-pads-start:hover {
 	color: #008800;
