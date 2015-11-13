@@ -128,18 +128,37 @@
 			}
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
 	}
-	function drawPadShapes(lib) {
-		var padsList = document.getElementById('padsList'), key, comps, result = '';
+	function createPadsList(lib) {
+		var i = 0, padDescr = {};
 		
-		for (key in lib.pads) {
-			if (lib.pads.hasOwnProperty(key)) {
-				if (lib.pads[key].comps) { comps = lib.pads[key].comps.join(', '); } else { comps = ''; }
-				result += '<div class="step2-actions-pads-list-row">' +
-				           key + ' (используется: ' +
-				           comps + ')</div>';
+		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
+			var key, usage, result = '';
+			
+			function createDescr(obj) {
+				var descr = '';
+				
+				
 			}
+			
+			for (key in object) {
+				if (object.hasOwnProperty(key)) {
+					
+					if (object[key].comps) {
+						usage = '<span style="color: #666;"> (' + object[key].comps.join(', ') + ')</span>';
+					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
+					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
+					
+					result += '<input type="radio" name="padsList" id="r' + i + '" class="step2-actions-pads-list-row-radio" />' +
+					          '<label for="r' + i + '" class="step2-actions-pads-list-row">' +
+					          '<span class="icon-help-1 step2-actions-pads-list-row-status yellow"></span>' +
+					          key + usage + '</label>';
+					i += 1;
+				}
+			}
+			return result;
 		}
-		padsList.innerHTML = result;
+		
+		document.getElementById('padsList').innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
 	}
 	
 	window.onerror = function () {
@@ -378,23 +397,56 @@
 						function split(str) {
 							var arr = [];
 							str.split('').forEach(function (c) {
-								if (+c && +arr[arr.length - 1]) { arr[arr.length - 1] += c; } else { arr.push(c); }
+								if (+c + 1 && +arr[arr.length - 1]) { arr[arr.length - 1] += c; } else { arr.push(c); }
 							});
 							return arr;
 						}
 						
 						arrA = split(a);
 						arrB = split(b);
-						arrA.forEach(function (item, index) {
-							if (item !== arrB[index] && index < arrB.length) {
-								if (+item) {
-									if (+arrB[index]) { result = (+item > +arrB[index]) ? 1 : -1; return; } else { result = 1; return; }
+						for (i = 0; i < arrA.length; i += 1) {
+							if (arrA[i] !== arrB[i] && i < arrB.length) {
+								if (+arrA[i] + 1) {
+									if (+arrB[i] + 1) { result = (+arrA[i] > +arrB[i]) ? 1 : -1; break; } else { result = 1; break; }
 								} else {
-									if (+arrB[index]) { result = -1; return; } else { result = (item.charCodeAt(0) > arrB[index].charCodeAt(0)) ? 1 : -1; return; }
+									if (+arrB[i] + 1) { result = -1; break; } else { result = (arrA[i].charCodeAt(0) > arrB[i].charCodeAt(0)) ? 1 : -1; break; }
 								}
 							}
-						});
+						}
 						return result;
+					}
+					function compressNames(array) {
+						var pattern = [], box = [];
+						
+						function openBox(arr) {
+							switch (arr.length) {
+							case 1:
+								return arr[0];
+							case 2:
+								return arr.join(', ');
+							default:
+								return arr[0] + '...' + arr[arr.length - 1];
+							}
+						}
+						
+						return array.reduce(function (result, item, index) {
+							var num = item.match(/[0-9]+$/)[0], base = item.slice(0, item.length - num.length);
+							
+							if (base === pattern[0] && +num === pattern[1] + 1) {
+								box.push(item);
+								pattern[1] += 1;
+								if (index === array.length - 1) { result.push(openBox(box)); }
+							} else {
+								pattern[0] = base;
+								pattern[1] = +num;
+								if (index > 0) {
+									result.push(openBox(box));
+									if (index !== array.length - 1) { box = [item]; } else { result.push(item); }
+								} else { box.push(item); }
+							}
+							
+							return result;
+						}, []);
 					}
 					
 					try {
@@ -530,10 +582,9 @@
 						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
 						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
 						for (name in pads) {
-							if (pads.hasOwnProperty(name) && pads[name].comps) {
-								if (pads[name].comps.length > 1) {
-									pads[name].comps.sort(compareNames);
-								}
+							if (pads.hasOwnProperty(name) && pads[name].comps && pads[name].comps.length > 1) {
+								pads[name].comps.sort(compareNames);
+								pads[name].comps = compressNames(pads[name].comps);
 							}
 						}
 					} catch (err) {
@@ -602,6 +653,6 @@
 			}
 		});
 		if (!content.getPads()) { return; }
-		drawPadShapes(content.getPads());
+		createPadsList(content.getPads());
 	};
 }());

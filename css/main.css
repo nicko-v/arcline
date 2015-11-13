@@ -250,17 +250,29 @@ p {
 	z-index: 1;
 }
 .step2-actions-pads-list-row {
-	padding: 10px 25px 10px 15px;
+	display: block;
+	padding: 10px 25px 10px 25px;
+	position: relative;
 	font-size: 1.3rem;
 	border-bottom: 1px solid #262d39;
 	transition: all 100ms linear;
+}
+.step2-actions-pads-list-row:last-child {
+	border: none;
+}
+.step2-actions-pads-list-row-radio {
+	display: none;
+}
+.step2-actions-pads-list-row-radio:checked + label {
+	background-color: #262d39;
 }
 .step2-actions-pads-list-row:hover {
 	background-color: #262d39;
 	cursor: pointer;
 }
-.step2-actions-pads-list-row:last-child {
-	border: none;
+.step2-actions-pads-list-row-status {
+	position: absolute;
+	margin-left: -20px;
 }
 .step2-actions-pads-viewer {
 	height: 280px;
@@ -345,10 +357,7 @@ p {
 	height: 64px;
 	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
-	transition: all 200ms linear;
-}
-.step2-actions-lib-group-symbol:hover {
-	transform: scale(1.2);
+	cursor: move;
 }
 .step2-actions-lib-wrapper {
 	background-color: #303948;
