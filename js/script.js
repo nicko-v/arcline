@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var
-		reader,
+		reader, highlatedRow,
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
 		helpButton   = document.getElementById('helpButton'),
@@ -128,17 +128,91 @@
 			}
 		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
 	}
+	function parseInputFile(string) { // (03)
+		var arr, obj = {}, currLevel = obj;
+		
+		function Branch(string) {
+			Object.defineProperties(this, {
+				header: {value: string, enumerable: false},
+				parent: {value: currLevel, enumerable: false}
+			});
+		}
+		function calcBrackets(string) {
+			var brackets = 0, quote = 0, i;
+			for (i = 0; i < string.length; i += 1) {
+				if (string[i] === '\"' && string[i - 1] !== '\\') { quote += 1; }
+				if (quote % 2 === 0) {
+					if (string[i] === '(') { brackets += 1; }
+					if (string[i] === ')') { brackets -= 1; }
+				}
+			}
+			return brackets;
+		}
+		
+		if (string.indexOf('ACCEL_ASCII') + 1) {
+			setStepStatus(1, 1, true);
+		} else {
+			showPopup({
+				header:    'Ошибка',
+				content:   msgs[0],
+				closeable: true
+			});
+			setStepStatus(1, 1, false);
+			return;
+		}
+		try {
+			arr = string.split('\n').reduce(function (result, str, i, a) {
+				str = str.trim();
+				if (str) {
+					if (str[0] === ')') {
+						result[result.length - 1] += ')';
+					} else {
+						result.push(str);
+					}
+				}
+				return result;
+			}, []);
+			arr.forEach(function (string) {
+				var brackets = calcBrackets(string), n = Object.keys(currLevel).length, i = 1;
+				if (brackets > 0) {
+					currLevel[n] = new Branch(string);
+					currLevel = currLevel[n];
+				} else {
+					currLevel[n] = string;
+					while (i <= Math.abs(brackets)) {
+						currLevel = currLevel.parent;
+						i += 1;
+					}
+				}
+			});
+		} catch (err) {
+			showPopup({
+				header:    'Ошибка',
+				content:   msgs[1],
+				closeable: true
+			});
+			setStepStatus(1, 2, false);
+			return;
+		}
+		if (Object.keys(obj).length > 4) {
+			setStepStatus(1, 2, true);
+		} else {
+			showPopup({
+				header:    'Ошибка',
+				content:   msgs[1],
+				closeable: true
+			});
+			setStepStatus(1, 2, false);
+			return;
+		}
+		
+		return obj;
+	}
 	function createPadsList(lib) {
-		var i = 0, padDescr = {};
+		var i = 0;
 		
 		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
 			var key, usage, result = '';
-			
-			function createDescr(obj) {
-				var descr = '';
-				
-				
-			}
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
@@ -148,10 +222,9 @@
 					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
 					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
 					
-					result += '<input type="radio" name="padsList" id="r' + i + '" class="step2-actions-pads-list-row-radio" />' +
-					          '<label for="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="icon-help-1 step2-actions-pads-list-row-status yellow"></span>' +
-					          key + usage + '</label>';
+					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
+					          '<span class="icon-help-1 step2-actions-pads-list-row-status yellow"></span>' + key + usage +
+					          '</div>';
 					i += 1;
 				}
 			}
@@ -159,6 +232,9 @@
 		}
 		
 		document.getElementById('padsList').innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
+	}
+	function createPadsDescr(lib) {
+		
 	}
 	
 	window.onerror = function () {
@@ -217,96 +293,28 @@
 	libButton.addEventListener(click, function () {
 		document.getElementById('libWrapper').classList.toggle('step2-actions-lib-wrapper-JS_toggle_margin');
 		rollBlock(document.getElementById('libWrapper'), document.getElementById('lib'), true);
+		libButton.classList.toggle('icon-down-open');
+		libButton.classList.toggle('icon-up-open');
+	});
+	document.getElementById('padsList').addEventListener(click, function (e) {
+		var row = e.target;
+		
+		if (e.target.id !== 'padsList') { // Если клик не на обертке списка, а на строке внутри.
+			while (!row.classList.contains('step2-actions-pads-list-row')) { row = row.parentElement; }
+			[].forEach.call(document.getElementsByClassName('step2-actions-pads-list-rowActive'), function (elem) {
+				if (elem !== row) { elem.classList.remove('step2-actions-pads-list-rowActive'); }
+			});
+			row.classList.toggle('step2-actions-pads-list-rowActive');
+		}
 	});
 	
 	reader.onload = function () {
-		var content;
+		var fileContent, padsLib;
 		
-		function createObject(string) { // (03)
-			var arr, obj = {}, currLevel = obj;
-			
-			function Branch(string) {
-				Object.defineProperties(this, {
-					header: {value: string, enumerable: false},
-					parent: {value: currLevel, enumerable: false}
-				});
-			}
-			function calcBrackets(string) {
-				var brackets = 0, quote = 0, i;
-				for (i = 0; i < string.length; i += 1) {
-					if (string[i] === '\"' && string[i - 1] !== '\\') { quote += 1; }
-					if (quote % 2 === 0) {
-						if (string[i] === '(') { brackets += 1; }
-						if (string[i] === ')') { brackets -= 1; }
-					}
-				}
-				return brackets;
-			}
-			
-			if (string.indexOf('ACCEL_ASCII') + 1) {
-				setStepStatus(1, 1, true);
-			} else {
-				showPopup({
-					header:    'Ошибка',
-					content:   msgs[0],
-					closeable: true
-				});
-				setStepStatus(1, 1, false);
-				return;
-			}
-			try {
-				arr = string.split('\n').reduce(function (result, str, i, a) {
-					str = str.trim();
-					if (str) {
-						if (str[0] === ')') {
-							result[result.length - 1] += ')';
-						} else {
-							result.push(str);
-						}
-					}
-					return result;
-				}, []);
-				arr.forEach(function (string) {
-					var brackets = calcBrackets(string), n = Object.keys(currLevel).length, i = 1;
-					if (brackets > 0) {
-						currLevel[n] = new Branch(string);
-						currLevel = currLevel[n];
-					} else {
-						currLevel[n] = string;
-						while (i <= Math.abs(brackets)) {
-							currLevel = currLevel.parent;
-							i += 1;
-						}
-					}
-				});
-			} catch (err) {
-				showPopup({
-					header:    'Ошибка',
-					content:   msgs[1],
-					closeable: true
-				});
-				setStepStatus(1, 2, false);
-				return;
-			}
-			if (Object.keys(obj).length > 4) {
-				setStepStatus(1, 2, true);
-			} else {
-				showPopup({
-					header:    'Ошибка',
-					content:   msgs[1],
-					closeable: true
-				});
-				setStepStatus(1, 2, false);
-				return;
-			}
-			
-			return obj;
-		}
+		fileContent = parseInputFile(this.result);
+		if (!fileContent) { return; }
 		
-		content = createObject(this.result);
-		if (!content) { return; }
-		
-		Object.defineProperties(content, {
+		Object.defineProperties(fileContent, {
 			asArray: {
 				value: function (a) {
 					var array = [];
@@ -652,7 +660,10 @@
 				}
 			}
 		});
-		if (!content.getPads()) { return; }
-		createPadsList(content.getPads());
+		padsLib = fileContent.getPads();
+		if (!padsLib) { return; }
+		
+		createPadsList(padsLib);
+		createPadsDescr(padsLib);
 	};
 }());

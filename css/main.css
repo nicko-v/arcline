@@ -240,9 +240,9 @@ p {
 	background-color: #303948;
 	border-top: 1px solid #262d39;
 	border-bottom: 1px solid #262d39;
-	overflow-y: auto;
 	/* Сокрытие скроллбара: */
 	position: absolute;
+	overflow-y: auto;
 	top: 0px;
 	right: 30px;
 	bottom: 0px;
@@ -260,15 +260,12 @@ p {
 .step2-actions-pads-list-row:last-child {
 	border: none;
 }
-.step2-actions-pads-list-row-radio {
-	display: none;
-}
-.step2-actions-pads-list-row-radio:checked + label {
-	background-color: #262d39;
-}
 .step2-actions-pads-list-row:hover {
 	background-color: #262d39;
 	cursor: pointer;
+}
+.step2-actions-pads-list-rowActive {
+	background-color: #262d39;
 }
 .step2-actions-pads-list-row-status {
 	position: absolute;
