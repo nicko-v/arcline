@@ -42,7 +42,7 @@ html {
 	font: 10px 'Clear Sans';
 }
 p {
-	margin: 0;
+	margin: 2px 0;
 }
 
 #file {
@@ -284,12 +284,15 @@ p {
 	margin: 20px auto;
 	font-size: 1.2rem;
 	text-align: center;
-	overflow-y: hidden;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	justify-content: space-around;
+	justify-content: center;
 }
 .step2-actions-pads-viewer-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	width: 130px;
 	height: 130px;
 	margin: 20px auto;

@@ -3,12 +3,15 @@
 (function () {
 	'use strict';
 	var
-		reader, highlatedRow,
+		reader, padsDescriptions,
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
-		helpButton   = document.getElementById('helpButton'),
+		padsList     = document.getElementById('padsList'),
+		icon         = document.getElementById('padsIcon'),
+		descr        = document.getElementById('padsDescr'),
 		libButton    = document.getElementById('libButton'),
-		click        = navigator.userAgent.toLowerCase().match(/iphone|ipod|ipad/) ? 'touchend' : 'click',
+		helpButton   = document.getElementById('helpButton'),
+		click        = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
 		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                  'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
@@ -29,8 +32,8 @@
 	function showPopup(params) { // (02)
 		var
 			close = (params.closeable) ? '<div class="popup-close"><div class="popup-close-cross"></div></div>' : '',
-		  cover = document.getElementById('cover'),
-		  clickOffset, popup, popupHeader, moving;
+			cover = document.getElementById('cover'),
+			clickOffset, popup, popupHeader, moving;
 		
 		function createButtons() {
 			var result = '';
@@ -208,6 +211,86 @@
 		
 		return obj;
 	}
+	function createPadsDescr(lib) {
+		var
+			bckgrdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
+			result = {},
+			i = 0;
+		
+		function collectInfo(object) {
+			var key, width, height, hole, amount;
+			
+			for (key in object) {
+				if (object.hasOwnProperty(key)) {
+					
+					width  = (object[key].width > object[key].height) ? object[key].width : object[key].height;
+					height = (object[key].width > object[key].height) ? object[key].height : object[key].width;
+					amount = object[key].coords.length;
+					hole   = object[key].hole;
+					
+					if (object[key].shape.match(/ellipse|oval|mthole|target/i)) {
+						
+						if (width === height) {
+							if (hole > 0) {
+								result['r' + i] = ['<p>Площадка: ' + width + 'мм</p>' +
+								                   '<p>Отверстие: ' + hole + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							} else if (hole === 0) {
+								result['r' + i] = ['<p>Площадка: ' + width + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							} else if (width === hole) {
+								result['r' + i] = ['<p>Отверстие: ' + hole + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							}
+						} else if (width !== height) {
+							if (hole > 0) {
+								result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
+								                   '<p>Ширина: ' + height + 'мм</p>' +
+								                   '<p>Отверстие: ' + hole + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							} else if (hole === 0) {
+								result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
+								                   '<p>Ширина: ' + height + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							} else if (width === hole) {
+								result['r' + i] = ['<p>Длина отверстия: ' + width + 'мм</p>' +
+								                   '<p>Ширина отверстия: ' + height + 'мм</p>' +
+								                   '<p>Количество: ' + amount + '</p>'];
+							}
+						}
+						result['r' + i][1] = '<svg width="102px" height="102px">' +
+						                     '<style>*{stroke: #7c4e22; stroke-width: 1;}</style>' +
+						                     '<ellipse cx="51" cy="51" rx="' + (height / width * 50).toFixed(3) + '" ry="50" fill="#7c4e22" />' +
+						                     '<circle cx="51" cy="51" r="' + (hole / width * 50).toFixed(3) + '" fill="' + bckgrdColor + '" />' +
+						                     '</svg>';
+							
+					} else if (object[key].shape.match(/rect|rndrect/i)) {
+						
+						if (hole > 0) {
+							result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
+							                   '<p>Ширина: ' + height + 'мм</p>' +
+							                   '<p>Отверстие: ' + hole + 'мм</p>' +
+							                   '<p>Количество: ' + amount + '</p>'];
+						} else if (hole === 0) {
+							result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
+							                   '<p>Ширина: ' + height + 'мм</p>' +
+							                   '<p>Количество: ' + amount + '</p>'];
+						}
+						result['r' + i][1] = '<svg width="102px" height="102px">' +
+						                     '<style>*{stroke: #7c4e22; stroke-width: 1;}</style>' +
+						                     '<rect x="' + ((102 - height / width * 100) / 2).toFixed(3) + '" y="1" width="' + (height / width * 100).toFixed(3) + '" height="100" fill="#7c4e22" />' +
+						                     '<circle cx="51" cy="51" r="' + (hole / width * 50).toFixed(3) + '" fill="' + bckgrdColor + '" />' +
+						                     '</svg>';
+					}
+					i += 1;
+				}
+			}
+		}
+		
+		collectInfo(lib.vias);
+		collectInfo(lib.pads);
+		return result;
+	}
 	function createPadsList(lib) {
 		var i = 0;
 		
@@ -231,10 +314,8 @@
 			return result;
 		}
 		
+		padsDescriptions = createPadsDescr(lib);
 		document.getElementById('padsList').innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
-	}
-	function createPadsDescr(lib) {
-		
 	}
 	
 	window.onerror = function () {
@@ -275,8 +356,9 @@
 		if (this.value) {
 			field.innerHTML = 'Имя файла: ' + this.value.slice(this.value.lastIndexOf('\\') + 1);
 		} else {
+			// Сворачивает блок статуса обработки файла если отменен выбор файла и убирает его название.
+			// NOTE: [] Наверное этот код надо удалить, он бесполезен.
 			field.innerHTML = '';
-			// Сворачивает блок статуса обработки файла если файл не был выбран:
 			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), true);
 		}
 	});
@@ -296,15 +378,23 @@
 		libButton.classList.toggle('icon-down-open');
 		libButton.classList.toggle('icon-up-open');
 	});
-	document.getElementById('padsList').addEventListener(click, function (e) {
-		var row = e.target;
+	padsList.addEventListener(click, function (e) {
+		var row   = e.target;
 		
 		if (e.target.id !== 'padsList') { // Если клик не на обертке списка, а на строке внутри.
 			while (!row.classList.contains('step2-actions-pads-list-row')) { row = row.parentElement; }
 			[].forEach.call(document.getElementsByClassName('step2-actions-pads-list-rowActive'), function (elem) {
 				if (elem !== row) { elem.classList.remove('step2-actions-pads-list-rowActive'); }
 			});
-			row.classList.toggle('step2-actions-pads-list-rowActive');
+			if (row.classList.contains('step2-actions-pads-list-rowActive')) {
+				row.classList.remove('step2-actions-pads-list-rowActive');
+				icon.innerHTML = '';
+				descr.innerHTML = '';
+			} else {
+				row.classList.add('step2-actions-pads-list-rowActive');
+				icon.innerHTML = padsDescriptions[row.id][1];
+				descr.innerHTML = padsDescriptions[row.id][0];
+			}
 		}
 	});
 	
@@ -438,15 +528,16 @@
 						}
 						
 						return array.reduce(function (result, item, index) {
-							var num = item.match(/[0-9]+$/)[0], base = item.slice(0, item.length - num.length);
+							var num = item.match(/[0-9]+$/), base = num ? item.slice(0, item.length - num[0].length) : null;
 							
-							if (base === pattern[0] && +num === pattern[1] + 1) {
+							if (num && base === pattern[0] && +num[0] === pattern[1] + 1) {
 								box.push(item);
 								pattern[1] += 1;
 								if (index === array.length - 1) { result.push(openBox(box)); }
 							} else {
-								pattern[0] = base;
-								pattern[1] = +num;
+								// Если из имени получилось изъять число (т.е. на конце нет никаких символов вроде *),
+								// создаем новый паттерн, иначе - обнуляем:
+								if (num) { pattern[0] = base; pattern[1] = +num[0]; } else { pattern = []; }
 								if (index > 0) {
 									result.push(openBox(box));
 									if (index !== array.length - 1) { box = [item]; } else { result.push(item); }
@@ -664,6 +755,5 @@
 		if (!padsLib) { return; }
 		
 		createPadsList(padsLib);
-		createPadsDescr(padsLib);
 	};
 }());
