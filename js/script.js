@@ -213,12 +213,12 @@
 	}
 	function createPadsDescr(lib) {
 		var
-			bckgrdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
+			bgdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
 			result = {},
 			i = 0;
 		
 		function collectInfo(object) {
-			var key, width, height, hole, amount;
+			var key, width, height, hole, amount, border, radius;
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
@@ -227,6 +227,8 @@
 					height = (object[key].width > object[key].height) ? object[key].height : object[key].width;
 					amount = object[key].coords.length;
 					hole   = object[key].hole;
+					border = (hole === width) ? '2px solid #666' : 'none';
+					radius = 0;
 					
 					if (object[key].shape.match(/ellipse|oval|mthole|target/i)) {
 						
@@ -258,11 +260,7 @@
 								                   '<p>Количество: ' + amount + '</p>'];
 							}
 						}
-						result['r' + i][1] = '<svg width="102px" height="102px">' +
-						                     '<style>*{stroke: #7c4e22; stroke-width: 1;}</style>' +
-						                     '<ellipse cx="51" cy="51" rx="' + (height / width * 50).toFixed(3) + '" ry="50" fill="#7c4e22" />' +
-						                     '<circle cx="51" cy="51" r="' + (hole / width * 50).toFixed(3) + '" fill="' + bckgrdColor + '" />' +
-						                     '</svg>';
+						radius = 50;
 							
 					} else if (object[key].shape.match(/rect|rndrect/i)) {
 						
@@ -276,12 +274,22 @@
 							                   '<p>Ширина: ' + height + 'мм</p>' +
 							                   '<p>Количество: ' + amount + '</p>'];
 						}
-						result['r' + i][1] = '<svg width="102px" height="102px">' +
-						                     '<style>*{stroke: #7c4e22; stroke-width: 1;}</style>' +
-						                     '<rect x="' + ((102 - height / width * 100) / 2).toFixed(3) + '" y="1" width="' + (height / width * 100).toFixed(3) + '" height="100" fill="#7c4e22" />' +
-						                     '<circle cx="51" cy="51" r="' + (hole / width * 50).toFixed(3) + '" fill="' + bckgrdColor + '" />' +
-						                     '</svg>';
 					}
+					
+					result['r' + i][1] = '<div style="display: flex;' +
+					                                 'align-items: center;' +
+					                                 'justify-content: center;' +
+					                                 'position: relative;' +
+						                               'background-color: #7c4e22;' +
+						                               'width: 100px;' +
+					                                 'height: ' + (100 / width * height).toFixed(3) + 'px;' +
+					                                 'border-radius: ' + radius + 'px;">' +
+						                   '<div style="background-color: ' + bgdColor + ';' +
+					                                 'border: ' + border + ';' +
+					                                 'border-radius: 50px;' +
+						                               'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
+						                               'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
+						                   '</div></div>';
 					i += 1;
 				}
 			}
@@ -388,11 +396,11 @@
 			});
 			if (row.classList.contains('step2-actions-pads-list-rowActive')) {
 				row.classList.remove('step2-actions-pads-list-rowActive');
-				icon.innerHTML = '';
+				icon.innerHTML = '<div class="step2-actions-pads-viewer-icon-cross icon-cancel" title="Удалить символ"></div>';
 				descr.innerHTML = '';
 			} else {
 				row.classList.add('step2-actions-pads-list-rowActive');
-				icon.innerHTML = padsDescriptions[row.id][1];
+				icon.innerHTML = '<div class="step2-actions-pads-viewer-icon-cross icon-cancel" title="Удалить символ"></div>' + padsDescriptions[row.id][1];
 				descr.innerHTML = padsDescriptions[row.id][0];
 			}
 		}

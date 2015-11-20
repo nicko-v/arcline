@@ -4,7 +4,7 @@
 	
 	<style>
 		<![CDATA[
-		circle, line, rect, path {
+		* {
 			fill: none;
 			stroke: #008800;
 			stroke-width: 1;

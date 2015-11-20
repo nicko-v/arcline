@@ -236,7 +236,7 @@ p {
 }
 .step2-actions-pads-list {
 	flex-grow: 1;
-	height: 278px; /* высота вьювера - 2 бордера */
+	height: 298px; /* высота вьювера - 2 бордера */
 	background-color: #303948;
 	border-top: 1px solid #262d39;
 	border-bottom: 1px solid #262d39;
@@ -246,7 +246,7 @@ p {
 	top: 0px;
 	right: 30px;
 	bottom: 0px;
-	left: 182px;
+	left: 192px;
 	z-index: 1;
 }
 .step2-actions-pads-list-row {
@@ -272,8 +272,8 @@ p {
 	margin-left: -20px;
 }
 .step2-actions-pads-viewer {
-	height: 280px;
-	min-width: 180px; /* Менять вместе с left у step2-actions-pads-list */
+	height: 300px;
+	min-width: 190px; /* Менять вместе с left у step2-actions-pads-list */
 	border-right: 2px solid #262d39;  /* -||- */
 	background-color: #303948;
 	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
@@ -282,7 +282,7 @@ p {
 	width: 130px;
 	height: 90px;
 	margin: 20px auto;
-	font-size: 1.2rem;
+	font-size: 1.3rem;
 	text-align: center;
 	overflow: hidden;
 	display: flex;
@@ -293,8 +293,8 @@ p {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 130px;
-	height: 130px;
+	width: 145px;
+	height: 145px;
 	margin: 20px auto;
 	border: 2px dashed #262d39;
 	border-radius: 16px;
@@ -312,6 +312,7 @@ p {
 	font-size: 20px;
 	color: rgba(136,0,0,0.5);
 	transition: all 200ms linear;
+	z-index: 2;
 }
 .step2-actions-pads-viewer-icon-cross:hover {
 	color: rgba(136,0,0,1);
@@ -358,6 +359,7 @@ p {
 	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
 	cursor: move;
+	z-index: 1;
 }
 .step2-actions-lib-wrapper {
 	background-color: #303948;
