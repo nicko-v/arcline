@@ -1,9 +1,10 @@
-/*global FileReader */
+/*global FileReader, createSVGsymbol */
 
 (function () {
 	'use strict';
 	var
-		reader, padsDescriptions,
+		reader, padsDescriptions, moving,
+		lib          = document.getElementById('lib'),
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
 		padsList     = document.getElementById('padsList'),
@@ -59,17 +60,17 @@
 		function movePopup(e) {
 			// offsetWidth делится пополам из-за того, что окно имеет свойство translateX(-50%),
 			// то есть 0 по X у него не слева, а в центре.
-			var
+			var // Что бы не уходило за края страницы:
 				x = (e.clientX - clickOffset[0] - popup.offsetWidth / 2 > 0 &&
 			       e.clientX - clickOffset[0] + popup.offsetWidth / 2 < document.body.offsetWidth),
 				y = (e.clientY - clickOffset[1] > 0 &&
 			       e.clientY - clickOffset[1] + popup.offsetHeight < document.body.offsetHeight);
-			if (x && y) {
+			if (x && y) { // Если мышь находится в пределах страницы, то символ двигается по обеим осям:
 				popup.style.left = e.clientX - clickOffset[0] + 'px';
 				popup.style.top = e.clientY - clickOffset[1] + 'px';
-			} else if (x) {
+			} else if (x) { // Если мышь находится за пределами страницы по высоте, то символ может двигаться только по длине:
 				popup.style.left = e.clientX - clickOffset[0] + 'px';
-			} else if (y) {
+			} else if (y) { // Наоборот:
 				popup.style.top = e.clientY - clickOffset[1] + 'px';
 			}
 		}
@@ -233,7 +234,7 @@
 					if (object[key].shape.match(/ellipse|oval|mthole|target/i)) {
 						
 						if (width === height) {
-							if (hole > 0) {
+							if (hole > 0 && width !== hole) {
 								result['r' + i] = ['<p>Площадка: ' + width + 'мм</p>' +
 								                   '<p>Отверстие: ' + hole + 'мм</p>' +
 								                   '<p>Количество: ' + amount + '</p>'];
@@ -290,6 +291,7 @@
 						                               'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
 						                               'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
 						                   '</div></div>';
+					result['r' + i][2] = height / width; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
 					i += 1;
 				}
 			}
@@ -358,6 +360,24 @@
 		}
 	});
 	
+	window.addEventListener('load', function () { // Добавление символов в библиотеку
+		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
+		
+		result = '<div class="step2-actions-lib-group">';
+		for (i = 0; i < 30; i += 1) {
+			result += '<div id="symbC' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
+			x -= 70;
+		}
+		result += '</div><div class="step2-actions-lib-group">';
+		x = -13;
+		for (i = 0; i < 30; i += 1) {
+			result += '<div id="symbR' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
+			x -= 70;
+		}
+		result += '</div>';
+		lib.innerHTML = result;
+	//document.write(createSVGsymbol(100, 100, 'c1'));
+	});
 	input.addEventListener('change', function () {
 		var field = document.getElementById('fileName');
 		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
@@ -387,7 +407,7 @@
 		libButton.classList.toggle('icon-up-open');
 	});
 	padsList.addEventListener(click, function (e) {
-		var row   = e.target;
+		var row = e.target;
 		
 		if (e.target.id !== 'padsList') { // Если клик не на обертке списка, а на строке внутри.
 			while (!row.classList.contains('step2-actions-pads-list-row')) { row = row.parentElement; }
@@ -396,7 +416,7 @@
 			});
 			if (row.classList.contains('step2-actions-pads-list-rowActive')) {
 				row.classList.remove('step2-actions-pads-list-rowActive');
-				icon.innerHTML = '<div class="step2-actions-pads-viewer-icon-cross icon-cancel" title="Удалить символ"></div>';
+				icon.innerHTML = '';
 				descr.innerHTML = '';
 			} else {
 				row.classList.add('step2-actions-pads-list-rowActive');
@@ -405,7 +425,90 @@
 			}
 		}
 	});
-	
+	lib.addEventListener('mousedown', function (e) {
+		var symbol, placeholder, margin, initialLeft, initialTop;
+		
+		function moveSymb(e) {
+			var // Что бы не уходило за края страницы:
+				x = (e.pageX - symbol.offsetWidth / 2 > 0 && e.pageX + symbol.offsetWidth / 2 < document.body.offsetWidth),
+				y = (e.pageY - symbol.offsetHeight / 2 > 0 && e.pageY + symbol.offsetHeight / 2 < document.body.offsetHeight);
+			
+			symbol.style.margin = 0;
+			symbol.style.zIndex = 99;
+			
+			if (x && y) { // Если мышь находится в пределах страницы, то символ двигается по обеим осям:
+				symbol.style.left = e.pageX - symbol.offsetWidth / 2 + 'px';
+				symbol.style.top = e.pageY - symbol.offsetHeight / 2 + 'px';
+			} else if (x) { // Если мышь находится за пределами страницы по высоте, то символ может двигаться только по длине:
+				symbol.style.left = e.pageX - symbol.offsetWidth / 2 + 'px';
+			} else if (y) { // Наоборот:
+				symbol.style.top = e.pageY - symbol.offsetHeight / 2 + 'px';
+			}
+		}
+		function stopMoving(e) {
+			var rightPlace, currPad, dropZone = icon.getBoundingClientRect();
+			
+			document.removeEventListener('mousemove', moveSymb);
+			document.removeEventListener('mouseup', stopMoving);
+			
+			rightPlace = e.clientX > dropZone.left &&
+			             e.clientX < dropZone.right &&
+			             e.clientY > dropZone.top &&
+			             e.clientY < dropZone.bottom;
+						
+			if (icon.childNodes.length && rightPlace) {
+				currPad = document.querySelector('.step2-actions-pads-list-rowActive').id;
+				padsDescriptions[currPad][3] = symbol.id;
+				
+				icon.appendChild(symbol);
+				symbol.style.left = '50%';
+				symbol.style.top = '50%';
+				symbol.style.transform = 'translate(-50%, -50%) scaleX(2) scaleY(' + padsDescriptions[currPad][2] * 2 + ')';
+				symbol.style.cursor = 'default';
+				symbol.style.zIndex = 1;
+				padsDescriptions[currPad][1] = icon.innerHTML;
+			} else {
+				symbol.style.transition = ''; // Возвращение значения перехода, заданного в css
+				symbol.style.left = initialLeft; // Перемещение на изначальное место и возвращение отступов
+				symbol.style.top = initialTop;
+				symbol.style.margin = margin;
+				symbol.style.cursor = '';
+				
+				setTimeout(function () { // Возвращение символа в поток как только кончится анимация и удаление заменителя
+					symbol.style.position = '';
+					symbol.style.zIndex = 1;
+					placeholder.remove();
+				}, parseFloat(window.getComputedStyle(symbol).transitionDuration) * 1000);
+			}
+			moving = false;
+		}
+		
+		if (moving || e.button !== 0 || !e.target.id.match(/symb[CR]\d+/i)) { return; }
+		
+		symbol = e.target;
+		symbol.style.cursor = '-webkit-grabbing';
+		margin = window.getComputedStyle(symbol).margin;
+		moving = true; // Пока верно, другие символы нельзя переносить
+		
+		/* Создается прозрачный див, который заменит переносимый: */
+		placeholder = document.createElement('div');
+		placeholder.style.width = symbol.offsetWidth + 'px';
+		placeholder.style.height = symbol.offsetHeight + 'px';
+		placeholder.style.margin = margin;
+		
+		/* Запоминается изначальное положение для плавного возвращения обратно: */
+		initialLeft = symbol.offsetLeft + 'px';
+		initialTop = symbol.offsetTop + 'px';
+		
+		symbol.style.transition = 'none'; // Временное отключение что бы не работало во время переноса
+		symbol.style.left = initialLeft; // Что бы при изменении position символ не дернулся
+		symbol.style.top = initialTop; // -||-
+		symbol.style.position = 'absolute';
+		symbol.parentNode.insertBefore(placeholder, symbol.nextSibling); // Вставка созданного ранее заменителя
+		
+		document.addEventListener('mousemove', moveSymb);
+		document.addEventListener('mouseup', stopMoving);
+	});
 	reader.onload = function () {
 		var fileContent, padsLib;
 		

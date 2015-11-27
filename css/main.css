@@ -352,14 +352,19 @@ p {
 	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
+	align-content: flex-start;
+	width: 45%;
 }
 .step2-actions-lib-group-symbol {
 	width: 64px;
 	height: 64px;
 	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
-	cursor: move;
-	z-index: 1;
+	cursor: move; /* Для IE */
+	cursor: -webkit-grab;
+	transition-property: left, top, transform;
+	transition-duration: 400ms;
+	transition-timing-function: ease-in;
 }
 .step2-actions-lib-wrapper {
 	background-color: #303948;

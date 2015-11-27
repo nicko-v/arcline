@@ -1,6 +1,6 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="440px" height="720px" viewBox="0 0 440 720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+<svg width="2120px" height="160px" viewBox="0 0 2120 160" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
 	
 	<style>
 		<![CDATA[
@@ -282,75 +282,75 @@
 	</defs>
 	
 	<!-- Круглые -->
-	<use xlink:href="#c01" x="45"  y="45" />
-	<use xlink:href="#c02" x="115" y="45" />
-	<use xlink:href="#c03" x="185" y="45" />
-	<use xlink:href="#c04" x="255" y="45" />
-	<use xlink:href="#c05" x="325" y="45" />
-	<use xlink:href="#c06" x="395" y="45" />
+	<use xlink:href="#c01" x="45"   y="45" />
+	<use xlink:href="#c02" x="115"  y="45" />
+	<use xlink:href="#c03" x="185"  y="45" />
+	<use xlink:href="#c04" x="255"  y="45" />
+	<use xlink:href="#c05" x="325"  y="45" />
+	<use xlink:href="#c06" x="395"  y="45" />
 	
-	<use xlink:href="#c07" x="45"  y="115" />
-	<use xlink:href="#c08" x="115" y="115" />
-	<use xlink:href="#c09" x="185" y="115" />
-	<use xlink:href="#c10" x="255" y="115" />
-	<use xlink:href="#c11" x="325" y="115" />
-	<use xlink:href="#c12" x="395" y="115" />
+	<use xlink:href="#c07" x="465"  y="45" />
+	<use xlink:href="#c08" x="535"  y="45" />
+	<use xlink:href="#c09" x="605"  y="45" />
+	<use xlink:href="#c10" x="675"  y="45" />
+	<use xlink:href="#c11" x="745"  y="45" />
+	<use xlink:href="#c12" x="815"  y="45" />
 	
-	<use xlink:href="#c13" x="45"  y="185" />
-	<use xlink:href="#c14" x="115" y="185" />
-	<use xlink:href="#c15" x="185" y="185" />
-	<use xlink:href="#c16" x="255" y="185" />
-	<use xlink:href="#c17" x="325" y="185" />
-	<use xlink:href="#c18" x="395" y="185" />
+	<use xlink:href="#c13" x="885"  y="45" />
+	<use xlink:href="#c14" x="955"  y="45" />
+	<use xlink:href="#c15" x="1025" y="45" />
+	<use xlink:href="#c16" x="1095" y="45" />
+	<use xlink:href="#c17" x="1165" y="45" />
+	<use xlink:href="#c18" x="1235" y="45" />
 	
-	<use xlink:href="#c19" x="45"  y="255" />
-	<use xlink:href="#c20" x="115" y="255" />
-	<use xlink:href="#c21" x="185" y="255" />
-	<use xlink:href="#c22" x="255" y="255" />
-	<use xlink:href="#c23" x="325" y="255" />
-	<use xlink:href="#c24" x="395" y="255" />
+	<use xlink:href="#c19" x="1305" y="45" />
+	<use xlink:href="#c20" x="1375" y="45" />
+	<use xlink:href="#c21" x="1445" y="45" />
+	<use xlink:href="#c22" x="1515" y="45" />
+	<use xlink:href="#c23" x="1585" y="45" />
+	<use xlink:href="#c24" x="1655" y="45" />
 	
-	<use xlink:href="#c25" x="45"  y="325" />
-	<use xlink:href="#c26" x="115" y="325" />
-	<use xlink:href="#c27" x="185" y="325" />
-	<use xlink:href="#c28" x="255" y="325" />
-	<use xlink:href="#c29" x="325" y="325" />
-	<use xlink:href="#c30" x="395" y="325" />
+	<use xlink:href="#c25" x="1725" y="45" />
+	<use xlink:href="#c26" x="1795" y="45" />
+	<use xlink:href="#c27" x="1865" y="45" />
+	<use xlink:href="#c28" x="1935" y="45" />
+	<use xlink:href="#c29" x="2005" y="45" />
+	<use xlink:href="#c30" x="2075" y="45" />
 	
 	<!-- Прямоугольные -->
-	<use xlink:href="#r01" x="45"  y="395" />
-	<use xlink:href="#r02" x="115" y="395" />
-	<use xlink:href="#r03" x="185" y="395" />
-	<use xlink:href="#r04" x="255" y="395" />
-	<use xlink:href="#r05" x="325" y="395" />
-	<use xlink:href="#r06" x="395" y="395" />
+	<use xlink:href="#r01" x="45"   y="115" />
+	<use xlink:href="#r02" x="115"  y="115" />
+	<use xlink:href="#r03" x="185"  y="115" />
+	<use xlink:href="#r04" x="255"  y="115" />
+	<use xlink:href="#r05" x="325"  y="115" />
+	<use xlink:href="#r06" x="395"  y="115" />
 	
-	<use xlink:href="#r07" x="45"  y="465" />
-	<use xlink:href="#r08" x="115" y="465" />
-	<use xlink:href="#r09" x="185" y="465" />
-	<use xlink:href="#r10" x="255" y="465" />
-	<use xlink:href="#r11" x="325" y="465" />
-	<use xlink:href="#r12" x="395" y="465" />
+	<use xlink:href="#r07" x="465"  y="115" />
+	<use xlink:href="#r08" x="535"  y="115" />
+	<use xlink:href="#r09" x="605"  y="115" />
+	<use xlink:href="#r10" x="675"  y="115" />
+	<use xlink:href="#r11" x="745"  y="115" />
+	<use xlink:href="#r12" x="815"  y="115" />
 	
-	<use xlink:href="#r13" x="45"  y="535" />
-	<use xlink:href="#r14" x="115" y="535" />
-	<use xlink:href="#r15" x="185" y="535" />
-	<use xlink:href="#r16" x="255" y="535" />
-	<use xlink:href="#r17" x="325" y="535" />
-	<use xlink:href="#r18" x="395" y="535" />
+	<use xlink:href="#r13" x="885"  y="115" />
+	<use xlink:href="#r14" x="955"  y="115" />
+	<use xlink:href="#r15" x="1025" y="115" />
+	<use xlink:href="#r16" x="1095" y="115" />
+	<use xlink:href="#r17" x="1165" y="115" />
+	<use xlink:href="#r18" x="1235" y="115" />
 	
-	<use xlink:href="#r19" x="45"  y="605" />
-	<use xlink:href="#r20" x="115" y="605" />
-	<use xlink:href="#r21" x="185" y="605" />
-	<use xlink:href="#r22" x="255" y="605" />
-	<use xlink:href="#r23" x="325" y="605" />
-	<use xlink:href="#r24" x="395" y="605" />
+	<use xlink:href="#r19" x="1305" y="115" />
+	<use xlink:href="#r20" x="1375" y="115" />
+	<use xlink:href="#r21" x="1445" y="115" />
+	<use xlink:href="#r22" x="1515" y="115" />
+	<use xlink:href="#r23" x="1585" y="115" />
+	<use xlink:href="#r24" x="1655" y="115" />
 	
-	<use xlink:href="#r25" x="45"  y="675" />
-	<use xlink:href="#r26" x="115" y="675" />
-	<use xlink:href="#r27" x="185" y="675" />
-	<use xlink:href="#r28" x="255" y="675" />
-	<use xlink:href="#r29" x="325" y="675" />
-	<use xlink:href="#r30" x="395" y="675" />
+	<use xlink:href="#r25" x="1725" y="115" />
+	<use xlink:href="#r26" x="1795" y="115" />
+	<use xlink:href="#r27" x="1865" y="115" />
+	<use xlink:href="#r28" x="1935" y="115" />
+	<use xlink:href="#r29" x="2005" y="115" />
+	<use xlink:href="#r30" x="2075" y="115" />
 	
 </svg>
