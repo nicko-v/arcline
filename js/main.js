@@ -1,9 +1,9 @@
-/*global FileReader, createSVGsymbol */
+/*global FileReader, generateSVG */
 
 (function () {
 	'use strict';
 	var
-		reader, padsDescriptions, moving,
+		reader       = new FileReader(),
 		lib          = document.getElementById('lib'),
 		input        = document.getElementById('file'),
 		uploadButton = document.getElementById('upload'),
@@ -13,11 +13,13 @@
 		libButton    = document.getElementById('libButton'),
 		helpButton   = document.getElementById('helpButton'),
 		click        = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
+		allSupported = window.FileReader && document.body.style.flex !== undefined,
 		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 	                  'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 										'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-									  'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику, какие действия к этому привели или передайте файл, вызвавший ошибку.'];
+									  'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
+		padsDescriptions, moving;
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -328,16 +330,8 @@
 		document.getElementById('padsList').innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
 	}
 	
-	window.onerror = function () {
-		showPopup({
-			header:    'Ошибка',
-			content:   msgs[msgs.length - 1], // Неопределенная ошибка всегда последняя в массиве msgs
-			buttons:   ['Обновить страницу'],
-			funcs:     [location.reload.bind(location, true)],
-			closeable: false
-		});
-	};
-	if (!(window.FileReader && document.body.style.flex !== undefined)) {
+	
+	if (!allSupported) {
 		showPopup({
 			header: 'Ошибка',
 			content: msgs[msgs.length - 2],
@@ -346,20 +340,15 @@
 		return;
 	}
 	
-	reader = new FileReader();
-	
-	Object.defineProperty(Object.prototype, 'shiftProperties', {
-		value: function (from, step) {
-			var i;
-			if (Object.keys(this).length > 0) {
-				for (i = Object.keys(this).length - 1; i >= from; i -= 1) {
-					this[i + step] = this[i];
-					delete this[i];
-				}
-			}
-		}
+	window.addEventListener('error', function () {
+		showPopup({
+			header:    'Ошибка',
+			content:   msgs[msgs.length - 1], // Неопределенная ошибка всегда последняя в массиве msgs
+			buttons:   ['Обновить страницу'],
+			funcs:     [location.reload.bind(location, true)],
+			closeable: false
+		});
 	});
-	
 	window.addEventListener('load', function () { // Добавление символов в библиотеку
 		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
 		
@@ -376,7 +365,6 @@
 		}
 		result += '</div>';
 		lib.innerHTML = result;
-	//document.write(createSVGsymbol(100, 100, 'c1'));
 	});
 	input.addEventListener('change', function () {
 		var field = document.getElementById('fileName');
@@ -509,7 +497,7 @@
 		document.addEventListener('mousemove', moveSymb);
 		document.addEventListener('mouseup', stopMoving);
 	});
-	reader.onload = function () {
+	reader.addEventListener('load', function () {
 		var fileContent, padsLib;
 		
 		fileContent = parseInputFile(this.result);
@@ -827,6 +815,18 @@
 						return result || array.length;
 					}
 					
+					Object.defineProperty(Object.prototype, 'shiftProperties', {
+						value: function (from, step) {
+							var i;
+							if (Object.keys(this).length > 0) {
+								for (i = Object.keys(this).length - 1; i >= from; i -= 1) {
+									this[i + step] = this[i];
+									delete this[i];
+								}
+							}
+						}
+					});
+					
 					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
 						if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerDef') + 1) {
 							if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) {
@@ -859,6 +859,8 @@
 							break;
 						}
 					}
+					
+					delete Object.prototype.shiftProperties;
 				}
 			}
 		});
@@ -866,5 +868,5 @@
 		if (!padsLib) { return; }
 		
 		createPadsList(padsLib);
-	};
+	});
 }());

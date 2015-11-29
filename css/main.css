@@ -71,6 +71,12 @@ p {
 	color: #880000;
 }
 
+.svg-path {
+	fill: none;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
 .header-text {
 	font-size: 5rem;
 	font-weight: bold;
