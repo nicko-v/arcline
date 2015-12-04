@@ -3,23 +3,30 @@
 (function () {
 	'use strict';
 	var
-		reader       = new FileReader(),
-		lib          = document.getElementById('lib'),
-		input        = document.getElementById('file'),
-		uploadButton = document.getElementById('upload'),
-		padsList     = document.getElementById('padsList'),
-		icon         = document.getElementById('padsIcon'),
-		descr        = document.getElementById('padsDescr'),
-		libButton    = document.getElementById('libButton'),
-		helpButton   = document.getElementById('helpButton'),
-		click        = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
-		allSupported = window.FileReader && document.body.style.flex !== undefined,
-		msgs         = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                  'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-	                  'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-										'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-									  'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
-		padsDescriptions, moving;
+		reader        = new FileReader(),
+		lib           = document.getElementById('lib'),
+		autoButton    = document.getElementById('auto'),
+		input         = document.getElementById('file'),
+		uploadButton  = document.getElementById('upload'),
+		padsList      = document.getElementById('padsList'),
+		icon          = document.getElementById('padsIcon'),
+		descr         = document.getElementById('padsDescr'),
+		libButton     = document.getElementById('libButton'),
+		symbol        = document.getElementById('padsSymbol'),
+		helpButton    = document.getElementById('helpButton'),
+		clearButton   = document.getElementById('clearSymbol'),
+		allSupported  = window.FileReader && document.body.style.flex !== undefined,
+		click         = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
+		msgs          = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
+	                   'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+	                   'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+										 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
+										 'Закончились доступные для использования символы. Попробуйте уменьшить количество контактных площадок на плате.',
+										 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
+									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
+		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
+		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости показа кнопки автоподбора
+		padsDescriptions, activeRow, file;
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -27,9 +34,9 @@
 		cover.style.opacity = 0;
 		setTimeout(function () { cover.innerHTML = ''; }, 100);
 		setTimeout(function () {
-			document.documentElement.className = '';
-			document.body.className = '';
-			cover.className = '';
+			document.documentElement.classList.remove('lock');
+			document.body.classList.remove('lock');
+			cover.classList.remove('popup-cover');
 		}, 300);
 	}
 	function showPopup(params) { // (02)
@@ -82,9 +89,9 @@
 		}
 		
 		if (!document.getElementById('popup')) {
-			document.documentElement.className = 'lock';
-			document.body.className = 'lock noselect';
-			cover.className = 'popup-cover';
+			document.documentElement.classList.add('lock');
+			document.body.classList.add('lock');
+			cover.classList.add('popup-cover');
 			cover.innerHTML = '<div class="popup" id="popup">' + close +
 												'<div class="popup-header uppercase" id="popupHeader">' + params.header + '</div>' +
 												'<div class="popup-content">' + params.content + '</div>' +
@@ -217,12 +224,11 @@
 	function createPadsDescr(lib) {
 		var
 			bgdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
-			result = {},
-			i = 0;
+			result = {}, i = 0;
 		
 		function collectInfo(object) {
-			var key, width, height, hole, amount, border, radius;
-			
+			var key, width, height, hole, amount, border, radius, color;
+
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
 					
@@ -231,69 +237,76 @@
 					amount = object[key].coords.length;
 					hole   = object[key].hole;
 					border = (hole === width) ? '2px solid #666' : 'none';
+					color  = (hole) ? bgdColor : '#7c4e22';
 					radius = 0;
+					result['r' + i] = {};
 					
 					if (object[key].shape.match(/ellipse|oval|mthole|target/i)) {
 						
 						if (width === height) {
 							if (hole > 0 && width !== hole) {
-								result['r' + i] = ['<p>Площадка: ' + width + 'мм</p>' +
-								                   '<p>Отверстие: ' + hole + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Площадка: ' + width + 'мм</p>' +
+								                        '<p>Отверстие: ' + hole + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							} else if (hole === 0) {
-								result['r' + i] = ['<p>Площадка: ' + width + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Площадка: ' + width + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							} else if (width === hole) {
-								result['r' + i] = ['<p>Отверстие: ' + hole + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Отверстие: ' + hole + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							}
 						} else if (width !== height) {
 							if (hole > 0) {
-								result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
-								                   '<p>Ширина: ' + height + 'мм</p>' +
-								                   '<p>Отверстие: ' + hole + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Длина: ' + width + 'мм</p>' +
+								                        '<p>Ширина: ' + height + 'мм</p>' +
+								                        '<p>Отверстие: ' + hole + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							} else if (hole === 0) {
-								result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
-								                   '<p>Ширина: ' + height + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Длина: ' + width + 'мм</p>' +
+								                        '<p>Ширина: ' + height + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							} else if (width === hole) {
-								result['r' + i] = ['<p>Длина отверстия: ' + width + 'мм</p>' +
-								                   '<p>Ширина отверстия: ' + height + 'мм</p>' +
-								                   '<p>Количество: ' + amount + '</p>'];
+								result['r' + i].descr = '<p>Длина отверстия: ' + width + 'мм</p>' +
+								                        '<p>Ширина отверстия: ' + height + 'мм</p>' +
+								                        '<p>Количество: ' + amount + '</p>';
 							}
 						}
 						radius = 50;
-							
+						
 					} else if (object[key].shape.match(/rect|rndrect/i)) {
 						
 						if (hole > 0) {
-							result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
-							                   '<p>Ширина: ' + height + 'мм</p>' +
-							                   '<p>Отверстие: ' + hole + 'мм</p>' +
-							                   '<p>Количество: ' + amount + '</p>'];
+							result['r' + i].descr = '<p>Длина: ' + width + 'мм</p>' +
+							                        '<p>Ширина: ' + height + 'мм</p>' +
+							                        '<p>Отверстие: ' + hole + 'мм</p>' +
+							                        '<p>Количество: ' + amount + '</p>';
 						} else if (hole === 0) {
-							result['r' + i] = ['<p>Длина: ' + width + 'мм</p>' +
-							                   '<p>Ширина: ' + height + 'мм</p>' +
-							                   '<p>Количество: ' + amount + '</p>'];
+							result['r' + i].descr = '<p>Длина: ' + width + 'мм</p>' +
+							                        '<p>Ширина: ' + height + 'мм</p>' +
+							                        '<p>Количество: ' + amount + '</p>';
 						}
 					}
 					
-					result['r' + i][1] = '<div style="display: flex;' +
-					                                 'align-items: center;' +
-					                                 'justify-content: center;' +
-					                                 'position: relative;' +
-						                               'background-color: #7c4e22;' +
-						                               'width: 100px;' +
-					                                 'height: ' + (100 / width * height).toFixed(3) + 'px;' +
-					                                 'border-radius: ' + radius + 'px;">' +
-						                   '<div style="background-color: ' + bgdColor + ';' +
-					                                 'border: ' + border + ';' +
-					                                 'border-radius: 50px;' +
-						                               'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
-						                               'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
-						                   '</div></div>';
-					result['r' + i][2] = height / width; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
+					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
+					result['r' + i].imageCode = '<div style="display: flex;' +
+					                                        'align-items: center;' +
+					                                        'justify-content: center;' +
+					                                        'position: relative;' +
+						                                      'background-color: #7c4e22;' +
+						                                      'width: 100px;' +
+					                                        'height: ' + (100 / width * height).toFixed(3) + 'px;' +
+					                                        'border-radius: ' + radius + 'px;">' +
+						                          '<div style="background-color: ' + color + ';' +
+					                                        'display: flex;' +
+					                                        'align-items: center;' +
+					                                        'justify-content: center;' +
+					                                        'box-sizing: border-box;' +
+					                                        'border: ' + border + ';' +
+					                                        'border-radius: 50px;' +
+						                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
+						                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;" id="padCenter">' +
+						                          '</div></div>';
+					result['r' + i].ratio = width / height; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
 					i += 1;
 				}
 			}
@@ -327,7 +340,22 @@
 		}
 		
 		padsDescriptions = createPadsDescr(lib);
-		document.getElementById('padsList').innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
+		padsList.innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
+		icon.innerHTML = 'Выберите контактную площадку из списка.';
+	}
+	function resetPadsInfo() {
+		var i = 1;
+		
+		padsList.innerHTML = '';
+		symbol.innerHTML = '';
+		descr.innerHTML = '';
+		icon.innerHTML = '';
+		activeRow = null;
+		padsDescriptions = {};
+		
+		while (document.getElementById('rnd' + i)) { document.getElementById('rnd' + i).style.display = 'block'; i += 1; }
+		i = 1;
+		while (document.getElementById('rect' + i)) { document.getElementById('rect' + i).style.display = 'block'; i += 1; }
 	}
 	
 	
@@ -353,29 +381,25 @@
 		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
 		
 		result = '<div class="step2-actions-lib-group">';
-		for (i = 0; i < 30; i += 1) {
-			result += '<div id="symbC' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
+		for (i = 1; i <= 30; i += 1) {
+			result += '<div id="rnd' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
 			x -= 70;
 		}
 		result += '</div><div class="step2-actions-lib-group">';
 		x = -13;
-		for (i = 0; i < 30; i += 1) {
-			result += '<div id="symbR' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
+		for (i = 1; i <= 30; i += 1) {
+			result += '<div id="rect' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
 			x -= 70;
 		}
 		result += '</div>';
 		lib.innerHTML = result;
 	});
 	input.addEventListener('change', function () {
-		var field = document.getElementById('fileName');
-		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
-		if (this.value) {
-			field.innerHTML = 'Имя файла: ' + this.value.slice(this.value.lastIndexOf('\\') + 1);
-		} else {
-			// Сворачивает блок статуса обработки файла если отменен выбор файла и убирает его название.
-			// NOTE: [] Наверное этот код надо удалить, он бесполезен.
-			field.innerHTML = '';
-			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), true);
+		if (input.value) { // Если был выбран файл
+			setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
+			file = input.files[0];
+			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
+			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
 		}
 	});
 	helpButton.addEventListener(click, function () { // (01)
@@ -383,9 +407,14 @@
 	});
 	uploadButton.addEventListener(click, function () {
 		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
-		if (input.files[0]) {
+		
+		if (padsList.innerHTML) { resetPadsInfo(); }
+		
+		if (file) {
 			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), false);
-			setTimeout(function () { reader.readAsText(input.files[0], 'cp1251'); }, 600);
+			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
+			                                                '<p>Состояние: <span style="color:#666;">подтвержден, загружен</span></p>';
+			setTimeout(function () { reader.readAsText(file, 'cp1251'); }, 600);
 		}
 	});
 	libButton.addEventListener(click, function () {
@@ -393,6 +422,73 @@
 		rollBlock(document.getElementById('libWrapper'), document.getElementById('lib'), true);
 		libButton.classList.toggle('icon-down-open');
 		libButton.classList.toggle('icon-up-open');
+	});
+	clearButton.addEventListener(click, function () {
+		var status;
+		
+		if (!activeRow || !padsDescriptions[activeRow.id].symbolCode) { return; }
+		
+		status = activeRow.firstChild;
+		
+		document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
+		clearButton.style.display = 'none';
+		autoButton.style.display = 'block';
+		symbol.innerHTML = 'Выберите символ из библиотеки.';
+		status.classList.remove('green', 'icon-ok');
+		status.classList.add('icon-help-1', 'yellow');
+		
+		freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1;
+		
+		delete padsDescriptions[activeRow.id].symbol;
+		delete padsDescriptions[activeRow.id].symbolCode;
+	});
+	autoButton.addEventListener(click, function () {
+		var i = 1, freeSymbols = { rnd: [], rect: [] };
+		
+		for (i = 1; i <= symbolsAmount[0]; i += 1) { // Поиск еще не занятых символов
+			if (document.getElementById('rnd' + i).style.display !== 'none') { freeSymbols.rnd.push('rnd' + i); }
+		}
+		for (i = 1; i <= symbolsAmount[1]; i += 1) {
+			if (document.getElementById('rect' + i).style.display !== 'none') { freeSymbols.rect.push('rect' + i); }
+		}
+		
+		i = 0;
+		while (padsDescriptions['r' + i]) {
+			if (!padsDescriptions['r' + i].symbolCode) { // Если еще не назначен символ
+				if (padsDescriptions['r' + i].shape === 'rnd' && freeSymbols.rnd.length) { // Если круглая КП
+					
+					padsDescriptions['r' + i].symbol = freeSymbols.rnd[0]; // Берем первый свободный символ нужного типа
+					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100, freeSymbols.rnd[0], 2); // Генерируем для него svg
+					document.getElementById(freeSymbols.rnd[0]).style.display = 'none'; // Прячем выбранный символ в библиотеке
+					freeSymbols.rnd.shift(); // Удаляем из массива уже не свободный символ
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help-1', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
+					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
+					freeSymbolsAm.rnd -= 1; // Уменьшаем остаток символов
+					
+				} else if (padsDescriptions['r' + i].shape === 'rect' && freeSymbols.rect.length) {
+					
+					padsDescriptions['r' + i].symbol = freeSymbols.rect[0];
+					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100 / padsDescriptions['r' + i].ratio, freeSymbols.rect[0], 2);
+					document.getElementById(freeSymbols.rect[0]).style.display = 'none';
+					freeSymbols.rect.shift();
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help-1', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
+					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
+					freeSymbolsAm.rect -= 1; // Уменьшаем остаток символов
+					
+				} else if (freeSymbols.rnd.length === 0 || freeSymbols.rect.length === 0) {
+					showPopup({
+						header: 'Предупреждение',
+						content: msgs[4],
+						buttons: ['OK'],
+						funcs: [hidePopup],
+						closeable: true
+					});
+				}
+			}
+			i += 1;
+		}
+		autoButton.style.display = 'none';
+		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
 	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
@@ -402,100 +498,58 @@
 			[].forEach.call(document.getElementsByClassName('step2-actions-pads-list-rowActive'), function (elem) {
 				if (elem !== row) { elem.classList.remove('step2-actions-pads-list-rowActive'); }
 			});
-			if (row.classList.contains('step2-actions-pads-list-rowActive')) {
-				row.classList.remove('step2-actions-pads-list-rowActive');
-				icon.innerHTML = '';
+			if (row.classList.contains('step2-actions-pads-list-rowActive')) { // Если клик по уже активной строке
+				row.classList.remove('step2-actions-pads-list-rowActive'); // Снимаем выделение
+				icon.innerHTML = 'Выберите контактную площадку из списка.'; // Убираем иконку, символ и описание
+				symbol.innerHTML = '';
 				descr.innerHTML = '';
+				activeRow = null;
+				clearButton.style.display = 'none';
+				autoButton.style.display = 'none';
 			} else {
 				row.classList.add('step2-actions-pads-list-rowActive');
-				icon.innerHTML = '<div class="step2-actions-pads-viewer-icon-cross icon-cancel" title="Удалить символ"></div>' + padsDescriptions[row.id][1];
-				descr.innerHTML = padsDescriptions[row.id][0];
+				icon.innerHTML = padsDescriptions[row.id].imageCode;
+				symbol.innerHTML = padsDescriptions[row.id].symbolCode || 'Выберите символ из библиотеки.';
+				descr.innerHTML = padsDescriptions[row.id].descr;
+				activeRow = row;
+				clearButton.style.display = (padsDescriptions[row.id].symbolCode) ? 'flex' : 'none';
+				autoButton.style.display = (padsDescriptions[row.id].symbolCode || freeSymbolsAm[padsDescriptions[row.id].shape] === 0) ? 'none' : 'block';
 			}
 		}
 	});
-	lib.addEventListener('mousedown', function (e) {
-		var symbol, placeholder, margin, initialLeft, initialTop;
+	lib.addEventListener(click, function (e) {
+		var status;
 		
-		function moveSymb(e) {
-			var // Что бы не уходило за края страницы:
-				x = (e.pageX - symbol.offsetWidth / 2 > 0 && e.pageX + symbol.offsetWidth / 2 < document.body.offsetWidth),
-				y = (e.pageY - symbol.offsetHeight / 2 > 0 && e.pageY + symbol.offsetHeight / 2 < document.body.offsetHeight);
-			
-			symbol.style.margin = 0;
-			symbol.style.zIndex = 99;
-			
-			if (x && y) { // Если мышь находится в пределах страницы, то символ двигается по обеим осям:
-				symbol.style.left = e.pageX - symbol.offsetWidth / 2 + 'px';
-				symbol.style.top = e.pageY - symbol.offsetHeight / 2 + 'px';
-			} else if (x) { // Если мышь находится за пределами страницы по высоте, то символ может двигаться только по длине:
-				symbol.style.left = e.pageX - symbol.offsetWidth / 2 + 'px';
-			} else if (y) { // Наоборот:
-				symbol.style.top = e.pageY - symbol.offsetHeight / 2 + 'px';
-			}
-		}
-		function stopMoving(e) {
-			var rightPlace, currPad, dropZone = icon.getBoundingClientRect();
-			
-			document.removeEventListener('mousemove', moveSymb);
-			document.removeEventListener('mouseup', stopMoving);
-			
-			rightPlace = e.clientX > dropZone.left &&
-			             e.clientX < dropZone.right &&
-			             e.clientY > dropZone.top &&
-			             e.clientY < dropZone.bottom;
-						
-			if (icon.childNodes.length && rightPlace) {
-				currPad = document.querySelector('.step2-actions-pads-list-rowActive').id;
-				padsDescriptions[currPad][3] = symbol.id;
-				
-				icon.appendChild(symbol);
-				symbol.style.left = '50%';
-				symbol.style.top = '50%';
-				symbol.style.transform = 'translate(-50%, -50%) scaleX(2) scaleY(' + padsDescriptions[currPad][2] * 2 + ')';
-				symbol.style.cursor = 'default';
-				symbol.style.zIndex = 1;
-				padsDescriptions[currPad][1] = icon.innerHTML;
-			} else {
-				symbol.style.transition = ''; // Возвращение значения перехода, заданного в css
-				symbol.style.left = initialLeft; // Перемещение на изначальное место и возвращение отступов
-				symbol.style.top = initialTop;
-				symbol.style.margin = margin;
-				symbol.style.cursor = '';
-				
-				setTimeout(function () { // Возвращение символа в поток как только кончится анимация и удаление заменителя
-					symbol.style.position = '';
-					symbol.style.zIndex = 1;
-					placeholder.remove();
-				}, parseFloat(window.getComputedStyle(symbol).transitionDuration) * 1000);
-			}
-			moving = false;
+		if (!e.target.id.match(/(rnd|rect)\d+/i) || !activeRow) { return; } // Если клик не по символу или нет активной КП
+		if (e.target.id.match(/rnd\d+/i) && (padsDescriptions[activeRow.id].ratio !== 1 || padsDescriptions[activeRow.id].shape === 'rect')) { // При попытке наложения круглого символа на не круглую КП
+			showPopup({
+				header: 'Сообщение',
+				content: msgs[3],
+				buttons: ['ОК'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+			return;
 		}
 		
-		if (moving || e.button !== 0 || !e.target.id.match(/symb[CR]\d+/i)) { return; }
+		if (padsDescriptions[activeRow.id].symbolCode) { // Если символ уже назначен
+			document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
+			freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1; // Увеличиваем количество оставшихся символов, т.к. далее оно уменьшится
+		}
 		
-		symbol = e.target;
-		symbol.style.cursor = '-webkit-grabbing';
-		margin = window.getComputedStyle(symbol).margin;
-		moving = true; // Пока верно, другие символы нельзя переносить
+		e.target.style.display = 'none';
+		autoButton.style.display = 'none';
+		symbol.innerHTML = generateSVG(100, 100 / padsDescriptions[activeRow.id].ratio, e.target.id, 2);
+		clearButton.style.display = 'flex';
 		
-		/* Создается прозрачный див, который заменит переносимый: */
-		placeholder = document.createElement('div');
-		placeholder.style.width = symbol.offsetWidth + 'px';
-		placeholder.style.height = symbol.offsetHeight + 'px';
-		placeholder.style.margin = margin;
+		status = activeRow.firstChild;
+		status.classList.remove('icon-help-1', 'yellow');
+		status.classList.add('green', 'icon-ok');
 		
-		/* Запоминается изначальное положение для плавного возвращения обратно: */
-		initialLeft = symbol.offsetLeft + 'px';
-		initialTop = symbol.offsetTop + 'px';
+		freeSymbolsAm[padsDescriptions[activeRow.id].shape] -= 1; // Уменьшаем количество свободных символов данного типа
 		
-		symbol.style.transition = 'none'; // Временное отключение что бы не работало во время переноса
-		symbol.style.left = initialLeft; // Что бы при изменении position символ не дернулся
-		symbol.style.top = initialTop; // -||-
-		symbol.style.position = 'absolute';
-		symbol.parentNode.insertBefore(placeholder, symbol.nextSibling); // Вставка созданного ранее заменителя
-		
-		document.addEventListener('mousemove', moveSymb);
-		document.addEventListener('mouseup', stopMoving);
+		padsDescriptions[activeRow.id].symbolCode = symbol.innerHTML;
+		padsDescriptions[activeRow.id].symbol = e.target.id;
 	});
 	reader.addEventListener('load', function () {
 		var fileContent, padsLib;
@@ -588,6 +642,17 @@
 						}
 						return find(object, 0);
 					}
+					function compareValues(a, b) {
+						// КП с большим соотношением сторон будет в списке выше, если равны, то выше будет меньшая по площади:
+						console.log(a);
+						console.log(b);
+						console.log(a[1].width / a[1].height < b[1].width / b[1].height);
+						console.log(a[1].width / a[1].height > b[1].width / b[1].height);
+						console.log(a[1].width * a[1].height > b[1].width * b[1].height);
+						return (a[1].width / a[1].height < b[1].width / b[1].height) ? a :
+						         (a[1].width / a[1].height > b[1].width / b[1].height) ? b :
+						           (a[1].width * a[1].height > b[1].width * b[1].height) ? a : b;
+					}
 					function compareNames(a, b) {
 						var arrA, arrB, i, result = -1;
 						
@@ -645,6 +710,18 @@
 							
 							return result;
 						}, []);
+					}
+					function sortObject(object) {
+						var key, sortable = [], result = {};
+						
+						for (key in object) {
+							if (object.hasOwnProperty(key)) { sortable.push([key, object[key]]); }
+						}
+						sortable.sort(compareValues);
+						for (i = 0; i < sortable.length; i += 1) {
+							result[sortable[i][0]] = sortable[i][1];
+						}
+						return result;
 					}
 					
 					try {
@@ -794,8 +871,9 @@
 						setStepStatus(1, 3, false);
 						return;
 					}
-					result.vias = vias;
-					result.pads = pads;
+					
+					result.vias = sortObject(vias);
+					result.pads = sortObject(pads);
 					setStepStatus(1, 3, true);
 					return result;
 				}

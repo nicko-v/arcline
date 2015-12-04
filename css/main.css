@@ -18,13 +18,13 @@
 }
 
 body {
-	min-width: 900px;
-	margin: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	background-color: #364050;
+	min-width: 900px;
+	margin: 0;
 	color: #bbb;
+	background-color: #364050;
 }
 button {
 	outline: none;
@@ -126,7 +126,7 @@ p {
 	display: flex;
 	align-items: flex-start;
 	background-color: #303948;
-	box-shadow: inset 0px 0px 3px 3px rgba(0,0,0,0.1);
+	box-shadow: inset 0 0 3px 3px rgba(0,0,0,0.1);
 	overflow-y: hidden;
 	transition: max-height 500ms ease-in;
 }
@@ -148,7 +148,7 @@ p {
 }
 .step1-actions-fileName {
 	font-size: 1.6rem;
-	margin: 0 15px;
+	margin: 0 10px 0 50px;
 	overflow: hidden;
 }
 .step1-actions-loadFile {
@@ -167,11 +167,11 @@ p {
 }
 .step1-actions-loadFile-button:hover {
 	background-image: linear-gradient(to bottom, #444, #666);
-	box-shadow: inset 0px 0px 10px 5px rgba(0,0,0,0.1);
+	box-shadow: inset 0 0 10px 5px rgba(0,0,0,0.1);
 }
 .step1-actions-loadFile-button:active {
 	background-image: linear-gradient(to bottom, #333, #555);
-	box-shadow: inset 0px 0px 10px 5px rgba(0,0,0,0.1);
+	box-shadow: inset 0 0 10px 5px rgba(0,0,0,0.1);
 }
 .step1-actions-loadFile-choose {
 	border-top-left-radius: 7px;
@@ -209,7 +209,7 @@ p {
 	max-height: 0;
 	margin-top: 30px;
 	background-color: #303948;
-	box-shadow: inset 0px 0px 2px 1px rgba(0,0,0,0.2);
+	box-shadow: inset 0 0 2px 1px rgba(0,0,0,0.2);
 	overflow-y: hidden;
 	transition: max-height 500ms ease-in; /* При изменении времени изменить так же задержку перед началом чтения файла */
 }
@@ -232,7 +232,7 @@ p {
 	transition: box-shadow 100ms linear;
 }
 .step2-actions-open:active {
-	box-shadow: inset 0px 2px 2px 2px rgba(0, 0, 0, 0.1);
+	box-shadow: inset 0 2px 2px 2px rgba(0, 0, 0, 0.1);
 }
 .step2-actions-pads {
 	display: flex;
@@ -242,17 +242,17 @@ p {
 }
 .step2-actions-pads-list {
 	flex-grow: 1;
-	height: 298px; /* высота вьювера - 2 бордера */
+	height: 443px; /* высота вьювера - 2 бордера */
 	background-color: #303948;
 	border-top: 1px solid #262d39;
 	border-bottom: 1px solid #262d39;
 	/* Сокрытие скроллбара: */
 	position: absolute;
 	overflow-y: auto;
-	top: 0px;
+	top: 0;
 	right: 30px;
-	bottom: 0px;
-	left: 192px;
+	bottom: 0;
+	left: 202px;
 	z-index: 1;
 }
 .step2-actions-pads-list-row {
@@ -277,14 +277,14 @@ p {
 	position: absolute;
 	margin-left: -20px;
 }
-.step2-actions-pads-viewer {
-	height: 300px;
-	min-width: 190px; /* Менять вместе с left у step2-actions-pads-list */
+.step2-actions-pads-info {
+	height: 445px;
+	min-width: 200px; /* Менять вместе с left у step2-actions-pads-list */
 	border-right: 2px solid #262d39;  /* -||- */
 	background-color: #303948;
-	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+	box-shadow: inset 0 0 3px 3px rgba(0, 0, 0, 0.1);
 }
-.step2-actions-pads-viewer-descr {
+.step2-actions-pads-info-descr {
 	width: 130px;
 	height: 90px;
 	margin: 20px auto;
@@ -295,32 +295,68 @@ p {
 	flex-direction: column;
 	justify-content: center;
 }
-.step2-actions-pads-viewer-icon {
+.step2-actions-pads-info-icons {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	width: 145px;
-	height: 145px;
+	justify-content: space-between;
+	width: 150px;
+	height: 300px;
 	margin: 20px auto;
 	border: 2px dashed #262d39;
 	border-radius: 16px;
 	position: relative;
 }
-.step2-actions-pads-viewer-icon-cross {
+.step2-actions-pads-info-icons-auto {
+	position: absolute;
+	bottom: 5px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 1.3rem;
+	color: #666;
+	cursor: pointer;
+	display: none;
+}
+.step2-actions-pads-info-icons-auto:hover {
+	color: #999;
+}
+.step2-actions-pads-info-icons-auto:active {
+	color: #bbb;
+}
+.step2-actions-pads-info-icons-icon {
+	width: 100%;
+	height: 50%;
 	display: flex;
+	justify-content: center;
+	align-items: center;
+	color: #666;
+	text-align: center;
+	font-size: 1.3rem;
+}
+.step2-actions-pads-info-icons-separator {
+	width: 85%;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	border-top: 1px solid #262d39;
+	border-bottom: 1px solid #262d39;
+}
+.step2-actions-pads-info-icons-cross {
+	display: none;
 	justify-content: center;
 	align-items: center;
 	width: 20px;
 	height: 20px;
 	position: absolute;
 	right: 3px;
-	top: 3px;
+	top: 153px; /* Высота блока верхней иконки + 3 */
 	font-size: 20px;
 	color: rgba(136,0,0,0.5);
-	transition: all 200ms linear;
+	transition: transform 200ms linear;
 	z-index: 2;
 }
-.step2-actions-pads-viewer-icon-cross:hover {
+.step2-actions-pads-info-icons-cross:hover {
 	color: rgba(136,0,0,1);
 	transform: scale(1.1);
 	cursor: pointer;
@@ -342,7 +378,7 @@ p {
 }
 .step2-actions-pads-start:active {
 	color: #006600;
-	box-shadow: inset -2px 0px 2px 2px rgba(0, 0, 0, 0.1);
+	box-shadow: inset -2px 0 2px 2px rgba(0, 0, 0, 0.1);
 }
 .step2-actions-lib {
 	display: flex;
@@ -366,20 +402,16 @@ p {
 	height: 64px;
 	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
-	cursor: move; /* Для IE */
-	cursor: -webkit-grab;
-	transition-property: left, top, transform;
-	transition-duration: 400ms;
-	transition-timing-function: ease-in;
+	cursor: pointer;
 }
 .step2-actions-lib-wrapper {
 	background-color: #303948;
-	box-shadow: inset 0px 0px 3px 3px rgba(0, 0, 0, 0.1);
+	box-shadow: inset 0 0 3px 3px rgba(0, 0, 0, 0.1);
 	transition-property: max-height, margin-bottom;
 	transition-duration: 500ms;
 	transition-timing-function: ease-in;
 	overflow-y: hidden;
-	max-height: 0px;
+	max-height: 0;
 }
 .step2-actions-lib-wrapper-JS_toggle_margin {
 	margin-bottom: 30px;
