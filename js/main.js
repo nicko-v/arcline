@@ -34,26 +34,13 @@
 		cover.style.opacity = 0;
 		setTimeout(function () { cover.innerHTML = ''; }, 100);
 		setTimeout(function () {
-			document.documentElement.classList.remove('lock');
 			document.body.classList.remove('lock');
 			cover.classList.remove('popup-cover');
 		}, 300);
 	}
 	function showPopup(params) { // (02)
-		var
-			close = (params.closeable) ? '<div class="popup-close"><div class="popup-close-cross"></div></div>' : '',
-			cover = document.getElementById('cover'),
-			clickOffset, popup, popupHeader, moving;
+		var cover = document.getElementById('cover'), clickOffset, popup, close, header, content, moving;
 		
-		function createButtons() {
-			var result = '';
-			if (params.buttons) {
-				params.buttons.forEach(function (button, index) {
-					result += '<button class="popup-button"type="button" id="popup-btn' + index + '">' + button + '</button>';
-				});
-			}
-			return result;
-		}
 		function tryToClose(e) { // (10)
 			if (!moving) {
 				if (e.target.className.match(/popup-cover|popup-close/)) {
@@ -88,29 +75,49 @@
 			setTimeout(function () { moving = false; }, 100);
 		}
 		
-		if (!document.getElementById('popup')) {
-			document.documentElement.classList.add('lock');
-			document.body.classList.add('lock');
-			cover.classList.add('popup-cover');
-			cover.innerHTML = '<div class="popup" id="popup">' + close +
-												'<div class="popup-header uppercase" id="popupHeader">' + params.header + '</div>' +
-												'<div class="popup-content">' + params.content + '</div>' +
-												createButtons() + '</div>';
-			cover.style.opacity = 1;
-			cover.addEventListener(click, tryToClose);
-			if (params.buttons) {
-				params.buttons.forEach(function (item, index) {
-					document.getElementById('popup-btn' + index).addEventListener(click, function () {
-						params.funcs[index]();
-						hidePopup();
-					});
+		if (!cover.innerHTML) { // Предотвращает появление нового окошка пока существует другое
+			cover.classList.add('popup-cover'); // Класс с затемненным фоном и блокировкой прокрутки
+			
+			popup = document.createElement('div');
+			popup.classList.add('popup');
+			
+			header = document.createElement('div');
+			header.classList.add('popup-header', 'uppercase');
+			header.innerHTML = params.header;
+			
+			content = document.createElement('div');
+			content.classList.add('popup-content');
+			content.innerHTML = params.content;
+			
+			popup.appendChild(header);
+			popup.appendChild(content);
+			
+			if (params.buttons) { // Если у окошка должны быть кнопки
+				params.buttons.forEach(function (name, index) {
+					var button = document.createElement('button');
+					
+					button.classList.add('popup-button');
+					button.innerHTML = name;
+					button.addEventListener(click, function () { params.funcs[index](); hidePopup(); });
+					popup.appendChild(button);
 				});
 			}
+			if (params.closeable) { // Если нужен закрывающий крестик
+				close = document.createElement('div');
+				close.classList.add('popup-close');
+				close.appendChild(document.createElement('div'));
+				close.firstChild.classList.add('popup-close-cross');
+				popup.appendChild(close);
+			}
 			
-			popup = document.getElementById('popup');
+			document.body.classList.add('lock');
+			cover.style.opacity = 1;
+			cover.appendChild(popup);
+			popup.style.top = window.scrollY + window.innerHeight / 3 + 'px'; // Что бы показывалось относительно прокрученной страницы
 			popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
-			popupHeader = document.getElementById('popupHeader');
-			popupHeader.addEventListener('mousedown', function (e) {
+			
+			cover.addEventListener(click, tryToClose);
+			header.addEventListener('mousedown', function (e) {
 				if (e.button === 0) {
 					moving = true;
 					clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
@@ -132,14 +139,22 @@
 		}
 	}
 	function setStepStatus(step, operation, status, restore) {
-		var icon = document.getElementById('stp' + step + operation), i = 1, opsAmount;
-		if (restore) {
-			while (document.getElementById('stp' + step + i)) {
-				icon = document.getElementById('stp' + step + i);
-				icon.className = 'yellow icon-spin5 animate-spin';
-				i += 1;
+		var icon = document.getElementById('stp' + step + operation), opsAmount;
+		
+		function setToAll(n, cls) { // Ставит классы cls всем элементам, начиная с заданного n
+			while (document.getElementById('stp' + step + n)) {
+				icon = document.getElementById('stp' + step + n);
+				icon.className = cls;
+				n += 1;
 			}
-		} else { icon.className = (status) ? 'green icon-ok' : 'red icon-cancel'; }
+		}
+		
+		if (restore) { // Если передан флаг восстановления статусов (например при выборе нового файла)
+			setToAll(1, 'yellow icon-spin5 animate-spin');
+		} else {
+			icon.className = (status) ? 'green icon-ok' : 'red icon-cancel';
+			if (!status) { setToAll(operation + 1, 'red icon-stop'); }
+		}
 	}
 	function parseInputFile(string) { // (03)
 		var arr, obj = {}, currLevel = obj;
@@ -331,7 +346,7 @@
 					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
 					
 					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="icon-help-1 step2-actions-pads-list-row-status yellow"></span>' + key + usage +
+					          '<span class="icon-help step2-actions-pads-list-row-status yellow"></span>' + key + usage +
 					          '</div>';
 					i += 1;
 				}
@@ -343,9 +358,11 @@
 		padsList.innerHTML = getNames(lib.vias, 1) + getNames(lib.pads);
 		icon.innerHTML = 'Выберите контактную площадку из списка.';
 	}
-	function resetPadsInfo() {
+	function resetChanges() {
 		var i = 1;
 		
+		clearButton.style.display = 'none';
+		autoButton.style.display = 'none';
 		padsList.innerHTML = '';
 		symbol.innerHTML = '';
 		descr.innerHTML = '';
@@ -357,7 +374,6 @@
 		i = 1;
 		while (document.getElementById('rect' + i)) { document.getElementById('rect' + i).style.display = 'block'; i += 1; }
 	}
-	
 	
 	if (!allSupported) {
 		showPopup({
@@ -381,13 +397,13 @@
 		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
 		
 		result = '<div class="step2-actions-lib-group">';
-		for (i = 1; i <= 30; i += 1) {
+		for (i = 1; i <= symbolsAmount[0]; i += 1) {
 			result += '<div id="rnd' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
 			x -= 70;
 		}
 		result += '</div><div class="step2-actions-lib-group">';
 		x = -13;
-		for (i = 1; i <= 30; i += 1) {
+		for (i = 1; i <= symbolsAmount[1]; i += 1) {
 			result += '<div id="rect' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
 			x -= 70;
 		}
@@ -408,7 +424,7 @@
 	uploadButton.addEventListener(click, function () {
 		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
 		
-		if (padsList.innerHTML) { resetPadsInfo(); }
+		if (padsList.innerHTML) { resetChanges(); }
 		
 		if (file) {
 			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), false);
@@ -435,7 +451,7 @@
 		autoButton.style.display = 'block';
 		symbol.innerHTML = 'Выберите символ из библиотеки.';
 		status.classList.remove('green', 'icon-ok');
-		status.classList.add('icon-help-1', 'yellow');
+		status.classList.add('icon-help', 'yellow');
 		
 		freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1;
 		
@@ -443,7 +459,7 @@
 		delete padsDescriptions[activeRow.id].symbolCode;
 	});
 	autoButton.addEventListener(click, function () {
-		var i = 1, freeSymbols = { rnd: [], rect: [] };
+		var i = 1, noSymbs, freeSymbols = { rnd: [], rect: [] };
 		
 		for (i = 1; i <= symbolsAmount[0]; i += 1) { // Поиск еще не занятых символов
 			if (document.getElementById('rnd' + i).style.display !== 'none') { freeSymbols.rnd.push('rnd' + i); }
@@ -461,7 +477,7 @@
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100, freeSymbols.rnd[0], 2); // Генерируем для него svg
 					document.getElementById(freeSymbols.rnd[0]).style.display = 'none'; // Прячем выбранный символ в библиотеке
 					freeSymbols.rnd.shift(); // Удаляем из массива уже не свободный символ
-					document.getElementById('r' + i).firstChild.classList.remove('icon-help-1', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
 					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
 					freeSymbolsAm.rnd -= 1; // Уменьшаем остаток символов
 					
@@ -471,23 +487,25 @@
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100 / padsDescriptions['r' + i].ratio, freeSymbols.rect[0], 2);
 					document.getElementById(freeSymbols.rect[0]).style.display = 'none';
 					freeSymbols.rect.shift();
-					document.getElementById('r' + i).firstChild.classList.remove('icon-help-1', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
 					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
 					freeSymbolsAm.rect -= 1; // Уменьшаем остаток символов
 					
-				} else if (freeSymbols.rnd.length === 0 || freeSymbols.rect.length === 0) {
-					showPopup({
-						header: 'Предупреждение',
-						content: msgs[4],
-						buttons: ['OK'],
-						funcs: [hidePopup],
-						closeable: true
-					});
-				}
+				} else if (freeSymbols.rnd.length === 0 || freeSymbols.rect.length === 0) { noSymbs = true; }
 			}
 			i += 1;
 		}
+		if (noSymbs) {
+			showPopup({
+				header: 'Предупреждение',
+				content: msgs[4],
+				buttons: ['OK'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+		}
 		autoButton.style.display = 'none';
+		clearButton.style.display = (padsDescriptions[activeRow.id].symbolCode) ? 'flex' : 'none';
 		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
 	});
 	padsList.addEventListener(click, function (e) {
@@ -543,7 +561,7 @@
 		clearButton.style.display = 'flex';
 		
 		status = activeRow.firstChild;
-		status.classList.remove('icon-help-1', 'yellow');
+		status.classList.remove('icon-help', 'yellow');
 		status.classList.add('green', 'icon-ok');
 		
 		freeSymbolsAm[padsDescriptions[activeRow.id].shape] -= 1; // Уменьшаем количество свободных символов данного типа
@@ -642,17 +660,6 @@
 						}
 						return find(object, 0);
 					}
-					function compareValues(a, b) {
-						// КП с большим соотношением сторон будет в списке выше, если равны, то выше будет меньшая по площади:
-						console.log(a);
-						console.log(b);
-						console.log(a[1].width / a[1].height < b[1].width / b[1].height);
-						console.log(a[1].width / a[1].height > b[1].width / b[1].height);
-						console.log(a[1].width * a[1].height > b[1].width * b[1].height);
-						return (a[1].width / a[1].height < b[1].width / b[1].height) ? a :
-						         (a[1].width / a[1].height > b[1].width / b[1].height) ? b :
-						           (a[1].width * a[1].height > b[1].width * b[1].height) ? a : b;
-					}
 					function compareNames(a, b) {
 						var arrA, arrB, i, result = -1;
 						
@@ -714,10 +721,21 @@
 					function sortObject(object) {
 						var key, sortable = [], result = {};
 						
+						function compare(a, b) {
+							var sqA, sqB;
+							
+							sqA = (a[1].shape.match(/ellipse|oval|mthole|target/i) && a[1].width === a[1].height) ?
+							       Math.PI * (a[1].width / 2) : a[1].width * a[1].height;
+							sqB = (b[1].shape.match(/ellipse|oval|mthole|target/i) && b[1].width === b[1].height) ?
+							       Math.PI * (b[1].width / 2) : b[1].width * b[1].height;
+							
+							return sqA - sqB;
+						}
+						
 						for (key in object) {
 							if (object.hasOwnProperty(key)) { sortable.push([key, object[key]]); }
 						}
-						sortable.sort(compareValues);
+						sortable.sort(compare);
 						for (i = 0; i < sortable.length; i += 1) {
 							result[sortable[i][0]] = sortable[i][1];
 						}
@@ -872,7 +890,7 @@
 						return;
 					}
 					
-					result.vias = sortObject(vias);
+					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
 					result.pads = sortObject(pads);
 					setStepStatus(1, 3, true);
 					return result;

@@ -13,99 +13,106 @@
 		<script src="js/main.js" defer></script>
 	</head>
 	<body class="noselect">
-		<div id="cover"></div>
-		<div style="width: 80%;">
-			<header>
-				<div class="header-text">P-CAD PCB tools</div>
-				<div class="header-icon" id="helpButton"><i class="icon-help-circled"></i></div>
-			</header>
-		</div>
-			<div class="help-wrapper" id="help-wrapper">
-				<div class="help-borders" id="help-borders">
-					<div class="help">
-						<h1 class="uppercase" style="text-align: center;">Инструкция</h1>
-						<ol class="help-list">
-							<li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
-							Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
-							Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.
-							Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut,
-							imperdiet a, venenatis vitae, justo.</li>
-							<li>
-							Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi.
-							Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim.
-							Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.
-							Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui.</li>
-							<li>
-							Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing
-							sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et
-							ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci
-							eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh.</li>
-							<li>
-							Donec sodales sagittis magna. Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida
-							magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus.
-							Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla. Vestibulum ante ipsum primis in faucibus
-							orci luctus et ultrices posuere cubilia Curae.</li>
-						</ol>
-					</div>
-				</div>
-		</div>
-		<div class="wrapper" id="mainWrapper">
-			<div class="step-wrapper">
-				<h1 class="step-header">Шаг 1. Загрузка файла</h1>
-				<h2 class="step-header">Загрузите .pcb файл, сохраненный в формате ASCII</h2>
-				<div class="step1-actions">
-					<div class="step1-actions-loadFile">
-						<input type="file" id="file" required>
-						<label for="file">
-							<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-choose">Выбрать&nbsp;файл</div>
-						</label>
-						<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-upload" id="upload"><i class="icon-upload"></i></div>
-					</div>
-					<div class="step1-actions-fileName" id="fileName"></div>
-				</div>
-				<div class="step1Progress-wrapper" id="step1Progress-wrapper">
-					<div class="step1Progress" id="step1Progress">
-						<h2 class="uppercase" style="text-align: center;">Обработка файла</h2>
-						<div class="step1Progress-content">
-							<div class="step1Progress-content-text">
-								<div class="icon-dot">Проверка полученного файла</div>
-								<div class="icon-dot">Построение структуры данных</div>
-								<div class="icon-dot">Поиск контактных площадок</div>
-							</div>
-							<div class="step1Progress-content-status">
-								<!-- При изменении числа операций изменить так же их количество во всех вызовах setStepStatus() -->
-								<div class="yellow icon-spin5 animate-spin" id="stp11"></div>
-								<div class="yellow icon-spin5 animate-spin" id="stp12"></div>
-								<div class="yellow icon-spin5 animate-spin" id="stp13"></div>
-							</div>
-						</div>
-					</div>
-				</div>
+		<div class="mainWrapper" id="mainWrapper">
+			<div id="cover"></div>
+			<div style="width: 80%;">
+				<header>
+					<div class="header-text">P-CAD PCB tools</div>
+					<div class="header-icon" id="helpButton"><i class="icon-help-circled"></i></div>
+				</header>
 			</div>
-			<div class="step-wrapper" id="step2">
-				<h1 class="step-header">Шаг 2. Настройка параметров</h1>
-				<h2 class="step-header">Настройте соответствия между контактными площадками и их символами</h2>
-				<div class="step2-actions">
-					<div style="text-align: right;">
-						<div class="icon-down-open step2-actions-open uppercase" id="libButton">Библиотека символов</div>
-					</div>
-					<div class="step2-actions-lib-wrapper" id="libWrapper">
-						<div class="step2-actions-lib" id="lib"></div>
-					</div>
-					<div class="step2-actions-pads">
-						<div class="step2-actions-pads-info" id="padsViewer">
-							<div class="step2-actions-pads-info-icons">
-								<div class="step2-actions-pads-info-icons-icon" id="padsIcon"></div>
-								<div class="step2-actions-pads-info-icons-separator"></div>
-								<div class="step2-actions-pads-info-icons-icon" id="padsSymbol"></div>
-								<div class="step2-actions-pads-info-icons-cross icon-cancel" id="clearSymbol" title="Удалить символ"></div>
-								<div class="step2-actions-pads-info-icons-auto" id="auto">Автоподбор</div>
-							</div>
-							<div class="step2-actions-pads-info-descr" id="padsDescr"></div>
+			<div class="help-wrapper" id="help-wrapper">
+					<div class="help-borders" id="help-borders">
+						<div class="help">
+							<h1 class="uppercase" style="text-align: center;">Инструкция</h1>
+							<ol class="help-list">
+								<li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
+								Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+								Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.
+								Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut,
+								imperdiet a, venenatis vitae, justo.</li>
+								<li>
+								Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi.
+								Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim.
+								Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.
+								Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui.</li>
+								<li>
+								Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing
+								sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et
+								ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci
+								eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh.</li>
+								<li>
+								Donec sodales sagittis magna. Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida
+								magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus.
+								Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla. Vestibulum ante ipsum primis in faucibus
+								orci luctus et ultrices posuere cubilia Curae.</li>
+							</ol>
 						</div>
-						<div class="step2-actions-pads-list" id="padsList"></div>
-						<div class="step2-actions-pads-start icon-right-fat" title="Начать отрисовку"></div>
 					</div>
+			</div>
+			<div class="wrapper">
+				<div class="step-wrapper">
+					<h1 class="step-header">Шаг 1. Загрузка файла</h1>
+					<h2 class="step-header">Загрузите .pcb файл, сохраненный в формате ASCII.</h2>
+					<div class="step1-actions">
+						<div class="step1-actions-loadFile">
+							<input type="file" id="file" required>
+							<label for="file">
+								<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-choose">Выбрать&nbsp;файл</div>
+							</label>
+							<div class="uppercase step1-actions-loadFile-button step1-actions-loadFile-upload" id="upload"><i class="icon-upload"></i></div>
+						</div>
+						<div class="step1-actions-fileName" id="fileName"></div>
+					</div>
+					<div class="step1Progress-wrapper" id="step1Progress-wrapper">
+						<div class="step1Progress" id="step1Progress">
+							<h2 class="uppercase" style="text-align: center;">Обработка файла</h2>
+							<div class="step1Progress-content">
+								<div class="step1Progress-content-text">
+									<div class="icon-dot">Проверка полученного файла</div>
+									<div class="icon-dot">Построение структуры данных</div>
+									<div class="icon-dot">Поиск контактных площадок</div>
+								</div>
+								<div class="step1Progress-content-status">
+									<!-- При изменении числа операций изменить так же их количество во всех вызовах setStepStatus() -->
+									<div class="yellow icon-spin5 animate-spin" id="stp11"></div>
+									<div class="yellow icon-spin5 animate-spin" id="stp12"></div>
+									<div class="yellow icon-spin5 animate-spin" id="stp13"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="step-wrapper">
+					<h1 class="step-header">Шаг 2. Настройка параметров</h1>
+					<h2 class="step-header">Настройте соответствия между контактными площадками и их символами.</h2>
+					<div class="step2-actions">
+						<div style="text-align: right;">
+							<div class="icon-down-open step2-actions-open uppercase" id="libButton">Библиотека символов</div>
+						</div>
+						<div class="step2-actions-lib-wrapper" id="libWrapper">
+							<div class="step2-actions-lib" id="lib"></div>
+						</div>
+						<div class="step2-actions-pads">
+							<div class="step2-actions-pads-info" id="padsViewer">
+								<div class="step2-actions-pads-info-icons">
+									<div class="step2-actions-pads-info-icons-icon" id="padsIcon"></div>
+									<div class="step2-actions-pads-info-icons-separator"></div>
+									<div class="step2-actions-pads-info-icons-icon" id="padsSymbol"></div>
+									<div class="step2-actions-pads-info-icons-cross icon-cancel" id="clearSymbol" title="Удалить символ"></div>
+									<div class="step2-actions-pads-info-icons-auto" id="auto">Автоподбор</div>
+								</div>
+								<div class="step2-actions-pads-info-descr" id="padsDescr"></div>
+							</div>
+							<div class="step2-actions-pads-list" id="padsList"></div>
+							<div class="step2-actions-pads-start icon-right-fat" title="Начать отрисовку"></div>
+						</div>
+					</div>
+				</div>
+				<div class="step-wrapper">
+					<h1 class="step-header">Шаг 3. Результат</h1>
+					<h2 class="step-header">Получите результат обработки файла.</h2>
+					<div class="step3-actions"></div>
 				</div>
 			</div>
 		</div>
