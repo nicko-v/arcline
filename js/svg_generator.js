@@ -12,11 +12,11 @@ function generateSVG(x, y, n, stroke, color) { // Длина, высота, но
 		center = x / 2;
 		radius = (x - stroke) / 2;
 		d = {
+			x05y05: center + ',' + center + ' ',
 			x0y05: stroke / 2 + ',' + center + ' ',
 			x1y05: x - stroke / 2 + ',' + center + ' ',
 			x05y0: center + ',' + stroke / 2 + ' ',
 			x05y1: center + ',' + (y - stroke / 2) + ' ',
-			x05y05: center + ',' + center + ' ',
 			x025y05: radius * 0.5 + stroke / 2 + ',' + center + ' ',
 			x075y05: radius * 1.5 + stroke / 2 + ',' + center + ' ',
 			x05y025: center + ',' + (radius * 0.5 + stroke / 2) + ' ',

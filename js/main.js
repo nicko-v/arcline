@@ -1,4 +1,4 @@
-/*global FileReader, generateSVG */
+/*global FileReader, generateSVG, generateLayers */
 
 (function () {
 	'use strict';
@@ -7,6 +7,7 @@
 		lib           = document.getElementById('lib'),
 		autoButton    = document.getElementById('auto'),
 		input         = document.getElementById('file'),
+		startButton   = document.getElementById('start'),
 		uploadButton  = document.getElementById('upload'),
 		padsList      = document.getElementById('padsList'),
 		icon          = document.getElementById('padsIcon'),
@@ -26,7 +27,7 @@
 									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости показа кнопки автоподбора
-		padsDescriptions, activeRow, file;
+		padsDescriptions, activeRow, padsLib, file;
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -181,8 +182,8 @@
 			setStepStatus(1, 1, true);
 		} else {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[0],
+				header: 'Ошибка',
+				content: msgs[0],
 				closeable: true
 			});
 			setStepStatus(1, 1, false);
@@ -215,8 +216,8 @@
 			});
 		} catch (err) {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[1],
+				header: 'Ошибка',
+				content: msgs[1],
 				closeable: true
 			});
 			setStepStatus(1, 2, false);
@@ -226,8 +227,8 @@
 			setStepStatus(1, 2, true);
 		} else {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[1],
+				header: 'Ошибка',
+				content: msgs[1],
 				closeable: true
 			});
 			setStepStatus(1, 2, false);
@@ -241,7 +242,7 @@
 			bgdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
 			result = {}, i = 0;
 		
-		function collectInfo(object) {
+		function collectInfo(object, type) {
 			var key, width, height, hole, amount, border, radius, color;
 
 			for (key in object) {
@@ -302,7 +303,6 @@
 						}
 					}
 					
-					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
 					result['r' + i].imageCode = '<div style="display: flex;' +
 					                                        'align-items: center;' +
 					                                        'justify-content: center;' +
@@ -319,16 +319,19 @@
 					                                        'border: ' + border + ';' +
 					                                        'border-radius: 50px;' +
 						                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
-						                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;" id="padCenter">' +
+						                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
 						                          '</div></div>';
 					result['r' + i].ratio = width / height; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
+					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
+					result['r' + i].type = type;
+					result['r' + i].name = key;
 					i += 1;
 				}
 			}
 		}
 		
-		collectInfo(lib.vias);
-		collectInfo(lib.pads);
+		collectInfo(lib.vias, 'vias');
+		collectInfo(lib.pads, 'pads');
 		return result;
 	}
 	function createPadsList(lib) {
@@ -508,6 +511,17 @@
 		clearButton.style.display = (padsDescriptions[activeRow.id].symbolCode) ? 'flex' : 'none';
 		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
 	});
+	startButton.addEventListener(click, function () {
+		var key, result;
+		
+		for (key in padsDescriptions) { // Записываем выбранные символы в объект с информацией о КП
+			if (padsDescriptions.hasOwnProperty(key)) {
+				padsLib[padsDescriptions[key].type][padsDescriptions[key].name].symbol = padsDescriptions[key].symbol;
+			}
+		}
+		result = generateLayers(padsLib);
+		console.log(result);
+	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
 		
@@ -570,7 +584,7 @@
 		padsDescriptions[activeRow.id].symbol = e.target.id;
 	});
 	reader.addEventListener('load', function () {
-		var fileContent, padsLib;
+		var fileContent;
 		
 		fileContent = parseInputFile(this.result);
 		if (!fileContent) { return; }
