@@ -55,6 +55,11 @@ p {
 	-webkit-user-select: none;
 	cursor: default;
 }
+.selectable {
+	-ms-user-select: auto;
+	-moz-user-select: auto;
+	-webkit-user-select: auto;
+}
 .uppercase {
 	text-transform: uppercase;
 }
@@ -221,7 +226,7 @@ p {
 }
 .step2-actions-open {
 	display: inline-block;
-	margin-top: 10px;
+	margin-top: 30px;
 	font-size: 1.4rem;
 	padding: 8px 13px;
 	border-top-left-radius: 5px;
@@ -402,7 +407,6 @@ p {
 .step2-actions-lib-group-symbol {
 	width: 64px;
 	height: 64px;
-	background-image: url('../img/symbols.svg');
 	margin: 10px 5px;
 	cursor: pointer;
 }
@@ -421,6 +425,18 @@ p {
 .step3-actions {
 	margin-top: 13px;
 	border-top: 1px dashed #bbb;
+}
+.step3-actions-result {
+	width: 100%;
+	height: 500px;
+	margin-top: 30px;
+	padding: 10px;
+	background-color: #303948;
+	border: 1px solid #262d39;
+	font-size: 1.2rem;
+	box-shadow: inset 0 0 1px 1px rgba(0, 0, 0, 0.1);
+	cursor: text;
+	overflow: auto;
 }
 .wrapper {
 	width: 80%;

@@ -23,11 +23,12 @@
 	                   'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 										 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
 										 'Закончились доступные для использования символы. Попробуйте уменьшить количество контактных площадок на плате.',
+										 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
 										 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
-		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости показа кнопки автоподбора
-		padsDescriptions, activeRow, padsLib, file;
+		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
+		padsDescriptions, activeRow, padsLib, file, fileContent;
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -43,14 +44,13 @@
 		var cover = document.getElementById('cover'), clickOffset, popup, close, header, content, moving;
 		
 		function tryToClose(e) { // (10)
-			if (!moving) {
-				if (e.target.className.match(/popup-cover|popup-close/)) {
-					if (params.closeable) {
-						hidePopup();
-					} else {
-						popup.style.animation = 'reset 0 linear normal';
-						setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
-					}
+			if (!moving && e.target.className.match(/popup-cover|popup-close/)) {
+				if (params.closeable) {
+					hidePopup();
+					cover.removeEventListener(click, tryToClose);
+				} else {
+					popup.style.animation = 'reset 0 linear normal';
+					setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
 				}
 			}
 		}
@@ -397,21 +397,30 @@
 		});
 	});
 	window.addEventListener('load', function () { // Добавление символов в библиотеку
-		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
+		var rndGroup, rectGroup, symbol, i;
 		
-		result = '<div class="step2-actions-lib-group">';
+		rndGroup = document.createElement('div');
+		rndGroup.classList.add('step2-actions-lib-group');
+		rectGroup = document.createElement('div');
+		rectGroup.classList.add('step2-actions-lib-group');
+		
 		for (i = 1; i <= symbolsAmount[0]; i += 1) {
-			result += '<div id="rnd' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
-			x -= 70;
+			symbol = document.createElement('div');
+			symbol.classList.add('step2-actions-lib-group-symbol');
+			symbol.innerHTML = generateSVG(50, 50, 'rnd' + i, 1);
+			symbol.id = 'rnd' + i;
+			rndGroup.appendChild(symbol);
 		}
-		result += '</div><div class="step2-actions-lib-group">';
-		x = -13;
 		for (i = 1; i <= symbolsAmount[1]; i += 1) {
-			result += '<div id="rect' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
-			x -= 70;
+			symbol = document.createElement('div');
+			symbol.classList.add('step2-actions-lib-group-symbol');
+			symbol.innerHTML = generateSVG(50, 50, 'rect' + i, 1);
+			symbol.id = 'rect' + i;
+			rectGroup.appendChild(symbol);
 		}
-		result += '</div>';
-		lib.innerHTML = result;
+		
+		lib.appendChild(rndGroup);
+		lib.appendChild(rectGroup);
 	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
@@ -512,15 +521,31 @@
 		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
 	});
 	startButton.addEventListener(click, function () {
-		var key, result;
+		var key, layers;
+		
+		if (freeSymbolsAm.rnd === symbolsAmount[0] && freeSymbolsAm.rect === symbolsAmount[1]) { return; } // Ничего не делать если не было назначено ни одного символа
 		
 		for (key in padsDescriptions) { // Записываем выбранные символы в объект с информацией о КП
 			if (padsDescriptions.hasOwnProperty(key)) {
 				padsLib[padsDescriptions[key].type][padsDescriptions[key].name].symbol = padsDescriptions[key].symbol;
 			}
 		}
-		result = generateLayers(padsLib);
-		console.log(result);
+		layers = generateLayers(padsLib);
+		if (layers.skipped) {
+			showPopup({
+				header: 'Предупреждение',
+				content: msgs[5] + layers.skipped,
+				buttons: ['OK'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+		}
+		
+		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
+		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
+		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
+		
+		document.getElementById('result').innerHTML = '<pre>' + fileContent.asArray().join(String.fromCharCode(10)) + '</pre>';
 	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
@@ -584,8 +609,6 @@
 		padsDescriptions[activeRow.id].symbol = e.target.id;
 	});
 	reader.addEventListener('load', function () {
-		var fileContent;
-		
 		fileContent = parseInputFile(this.result);
 		if (!fileContent) { return; }
 		
@@ -610,10 +633,10 @@
 					return array;
 				}
 			},
-			getPads: {
+			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
 					var comp = {}, cosA, currPath, height, i, j, key, name, pads = {},
-						prop, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
+						prop, rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
 					function parser(type, string) {
@@ -755,6 +778,21 @@
 						}
 						return result;
 					}
+					function writeSideForLonePads(coordsArray, defaultSide) {
+						var k, coords, side;
+						
+						if (coordsArray.length) {
+							for (k = 0; k < coordsArray.length; k += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
+								coords = coordsArray[k].split(' ');
+								if (coords[2]) { // Если у набора координат есть третье значение - это отдельная КП
+									if (coords[2] === 'flipped') { side = (defaultSide === 'top') ? 'bot' : 'top'; } else { side = defaultSide; } // Меняем сторону если у текущих координат есть флаг flipped
+									if (+coords[2] || +coords[2] === 0) { coords[3] = coords[2]; } // Если третье значение - угол поворота - делаем его четвертым
+									coords[2] = side;
+									coordsArray[k] = coords.join(' ');
+								}
+							}
+						}
+					}
 					
 					try {
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
@@ -777,7 +815,7 @@
 								case 'padStyleRef':
 									name = parser(type, currPath[i]);
 									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
-									pads[name].coords.push(parser('pt', currPath[i]));
+									pads[name].coords.push(parser('pt', currPath[i]) + ' ' + parser('rotation', currPath[i]));
 									break;
 								}
 							} else {
@@ -831,6 +869,7 @@
 										}
 									}
 								}
+								writeSideForLonePads(currPath[name].coords, currPath[name].side);
 							}
 							type = null;
 						}
@@ -876,9 +915,13 @@
 														'bot' : (pads[name].side === 'bot') ?
 														'top' : 'thru';
 											}
+											// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
+											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[2]) : (+comp[key].pads[name][i].split(' ')[2]);
+											while (rotation >= 360) { rotation -= 360; }
+											
 											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
 																						 (+zero[1] + y).toFixed(3) + ' ' +
-																						 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
+																						 side + ' ' + rotation);
 										}
 										// Записывает в каких компонентах использована площадка:
 										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
@@ -911,7 +954,7 @@
 				}
 			},
 			addLayer: {
-				value: function (layerName) { // (09)
+				value: function (layerName, layerContent) { // (09)
 					var i, j, layerNum, layers = [];
 					
 					function compareNumeric(a, b) {
@@ -924,53 +967,67 @@
 						}
 						return result || array.length;
 					}
-					
-					Object.defineProperty(Object.prototype, 'shiftProperties', {
-						value: function (from, step) {
-							var i;
-							if (Object.keys(this).length > 0) {
-								for (i = Object.keys(this).length - 1; i >= from; i -= 1) {
-									this[i + step] = this[i];
-									delete this[i];
-								}
-							}
+					function shiftPropsLeft(object, n) {
+						var size = Object.keys(object).length;
+						
+						for (n; n < size; n += 1) {
+							object[n] = object[n + 1];
 						}
-					});
-					
-					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-						if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerDef') + 1) {
-							if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) {
-								layerNum = +this['4'][i][0].slice(10, -1);
-							} else {
-								layers[+this['4'][i][0].slice(10, -1)] = true;
-								if (typeof this['4'][i + 1] === 'object' && this['4'][i + 1].header.indexOf('(multiLayer') + 1) {
-									layerNum = getFreeLayerNum(layers);
-									this['4'].shiftProperties(i + 1, 1);
-									this['4'][i + 1] = {};
-									Object.defineProperties(this['4'][i + 1], {
-										header: { value: '(layerDef \"' + layerName + '\"' },
-										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
-										1:			{ value: '(layerType NonSignal)', enumerable: true },
-										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
-									});
-									i += 1;
-								}
-							}
-						} else if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerContents') + 1) {
-							this['4'].shiftProperties(i, 1);
-							this['4'][i] = {};
-							Object.defineProperty(this['4'][i], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
-							for (j = i + 1; j < Object.keys(this['4']).length; j += 1) {
-								if (typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) {
-									delete this['4'][j];
-									break;
-								}
-							}
-							break;
+						if (!object[size]) { delete object[size]; }
+					}
+					function shiftPropsRight(object, n) {
+						var size = Object.keys(object).length, i;
+						
+						for (i = size; i >= n; i -= 1) {
+							object[i + 1] = object[i];
+							delete object[i];
 						}
 					}
 					
-					delete Object.prototype.shiftProperties;
+					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+						if (typeof this['4'][i] === 'object') {
+							
+							if (this['4'][i].header.indexOf('(layerDef') + 1) { // Находим блок layerDef
+								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
+									layerNum = +this['4'][i][0].slice(10, -1);
+								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
+									layers[+this['4'][i][0].slice(10, -1)] = true;
+								}
+							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
+								/* Создаем блок с описанием слоя */
+								if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
+								shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
+								this['4'][i] = {};
+								Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
+									header: { value: '(layerDef \"' + layerName + '\"' },
+									0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
+									1:			{ value: '(layerType NonSignal)', enumerable: true },
+									2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
+								});
+								i += 1; // Снова указывает на multilayer
+								
+								/* Создаем блок с содержимым слоя */
+								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
+								this['4'][i + 1] = {};
+								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
+								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
+									this['4'][i + 1][j] = layerContent[j];
+								}
+								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
+								
+								/* Удаляем предыдущее содержимое слоя */
+								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
+									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
+									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
+										delete this['4'][j];
+										shiftPropsLeft(this['4'], j);
+									}
+								}
+								break;
+							}
+							
+						}
+					}
 				}
 			}
 		});
