@@ -405,9 +405,12 @@ p {
 	width: 45%;
 }
 .step2-actions-lib-group-symbol {
+	display: flex;
+	justify-content: center;
+	align-items: center;
 	width: 64px;
 	height: 64px;
-	margin: 10px 5px;
+	margin: 10px 5px 0;
 	cursor: pointer;
 }
 .step2-actions-lib-wrapper {

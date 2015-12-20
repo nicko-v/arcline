@@ -1,0 +1,138 @@
+/*
+* Используемые коды:
+*		7 - стиль текста
+*		8 - имя слоя
+*		10 - x
+*		11 - x1
+*		20 - y
+*		21 - y1
+*		40 - высота текста
+*		41 - коэффициент сжатия текста
+*		50 - угол наклона текста
+*		62 - цвет линии (1 - red, 2 - yellow, 3 - green, 256 - ByLayer)
+*		72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
+*		73 - вертикальное выравнивание текста (0 - baseline, 1 - bottom, 2 - middle, 3 - top)
+*/
+function generateDXF(lib) {
+	'use strict';
+	var
+		result = [0, 'SECTION',
+							2, 'TABLES',
+							0, 'TABLE',
+							2, 'LAYER',
+							70, 3,
+							0, 'LAYER',
+							2, 'Drill_Table',
+							70, 64,
+							62, 1,
+							6, 'CONTINUOUS',
+							0, 'ENDTAB',
+							0, 'TABLE',
+							2, 'STYLE',
+							0, 'STYLE',
+							2, 'win_eskd',
+							70, 64,
+							40, 0,
+							41, 1,
+							50, 15,
+							71, 0,
+							42, 0.2,
+							3, 'win_eskd.shx',
+							4, '',
+							0, 'ENDTAB',
+							0, 'ENDSEC',
+							0, 'SECTION',
+							2, 'ENTITIES'],
+		headers = ['\\U+041E\\U+0431\\U+043E\\U+0437\\U+043D\\U+0430\\U+0447\\U+0435\\U+043D\\U+0438\\U+0435', // [0] Обозначение
+							 '\\U+041A\\U+043E\\U+043B\\U+0438\\U+0447\\U+0435\\U+0441\\U+0442\\U+0432\\U+043E', // [1] Количество
+							 '\\U+0414\\U+0438\\U+0430\\U+043C\\U+0435\\U+0442\\U+0440', // [2] Диаметр
+							 '\\U+043E\\U+0442\\U+0432\\U+0435\\U+0440\\U+0441\\U+0442\\U+0438\\U+044F, \\U+043C\\U+043C', // [3] отверстия, мм
+							 '\\U+0420\\U+0430\\U+0437\\U+043C\\U+0435\\U+0440\\U+044B', // [4] Размеры
+							 '\\U+043A\\U+043E\\U+043D\\U+0442. \\U+043F\\U+043B\\U+043E\\U+0449., \\U+043C\\U+043C', // [5] конт. площ., мм
+							 '\\U+043C\\U+043E\\U+043D\\U+0442. \\U+043E\\U+043A\\U+043D\\U+0430, \\U+043C\\U+043C', // [6] монт. окна, мм
+							 '\\U+0423\\U+043A\\U+0430\\U+0437\\U+0430\\U+043D\\U+0438\\U+0435', // [7] Указание
+							 '\\U+043E \\U+043C\\U+0435\\U+0442\\U+0430\\U+043B\\U+043B\\U+0438\\U+0437\\U+0430\\U+0446\\U+0438\\U+0438', // [8] о металлизации
+							 '\\U+0415\\U+0441\\U+0442\\U+044C', // [9] Есть
+							 '\\U+041D\\U+0435\\U+0442', // [10] Нет
+							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2' // [11] ТАБЛИЦА 2
+							 ],
+		text = [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2],
+		redLn = [0, 'LINE', 8, 'Drill_Table', 62, 1],
+		colHeight = 15,
+		colWidth = 25,
+		rows = 6,
+		pth = Object.keys(lib.metallized).length,
+		npth = Object.keys(lib.nonMetallized).length + Object.keys(lib.holes).length,
+		columns = pth + npth,
+		w = colWidth * columns,
+		h = colHeight * rows, // Общая высота таблицы
+		currCol = 0, i, j;
+	
+	function fillTheTable(object) {
+		var key;
+		
+		for (key in object) {
+			if (object.hasOwnProperty(key)) {
+				if (object[key].mount) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount]); }
+				if (object[key].pad) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad]); }
+				if (object[key].hole) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole]); }
+				result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount]);
+				currCol += 1;
+			}
+		}
+	}
+	
+	/* Построение таблицы */
+	// Ячейки заголовков
+	result = result.concat(redLn, [10,   0, 20, 0,  11, -42,  21, 0]);
+	result = result.concat(redLn, [10, -42, 20, 0,  11, -42,  21, h]);
+	result = result.concat(redLn, [10, -42, 20, h,  11,   0,  21, h]);
+	result = result.concat(redLn, [10,   0, 20, h,  11,   0,  21, 0]);
+	result = result.concat(redLn, [10, -42, 20, 15, 11,   0,  21, 15]);
+	result = result.concat(redLn, [10, -42, 20, 30, 11,   0,  21, 30]);
+	result = result.concat(redLn, [10, -42, 20, 45, 11,   0,  21, 45]);
+	result = result.concat(redLn, [10, -42, 20, 60, 11,   0,  21, 60]);
+	result = result.concat(redLn, [10, -42, 20, 75, 11,   0,  21, 75]);
+	
+	// Ячейки данных
+	for (i = 0; i < columns; i += 1) {
+		for (j = 0; j <= rows; j += 1) { // Горизонатльные
+			result = result.concat(redLn, [10, (colWidth * i),  20, (colHeight * j),  11, (colWidth * i) + colWidth,  21, (colHeight * j)]);
+		}
+		for (j = 1; j < rows; j += 1) { // Вертикальные
+			result = result.concat(redLn, [10, (colWidth * i + colWidth),  20, (colHeight * j),  11, (colWidth * i + colWidth),  21, (colHeight * j) + colHeight]);
+		}
+	}
+	result = result.concat(redLn, [10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight]);
+	result = result.concat(redLn, [10, w, 20, 0, 11, w, 21, colHeight]);
+	/* -=-=-=- */
+	
+	/* Заполнение таблицы */
+	// Название таблицы
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (w - colWidth), 20, (h + colHeight), 11, w, 21, (h + 5), 1, headers[11]);
+	
+	// Тексты заголовков
+	result = result.concat(text, [10, -42, 20, h,                   11, -21, 21, h - colHeight * 0.5, 1], headers[0]);
+	result = result.concat(text, [10, -42, 20, h - colHeight,       11, -21, 21, h - colHeight * 1.5, 1], headers[1]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 2,   11, -21, 21, h - colHeight * 2.33, 1], headers[2]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 2.5, 11, -21, 21, h - colHeight * 2.66, 1], headers[3]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 3,   11, -21, 21, h - colHeight * 3.33, 1], headers[4]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 3.5, 11, -21, 21, h - colHeight * 3.66, 1], headers[5]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 4,   11, -21, 21, h - colHeight * 4.33, 1], headers[4]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 4.5, 11, -21, 21, h - colHeight * 4.66, 1], headers[6]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 5,   11, -21, 21, h - colHeight * 5.33, 1], headers[7]);
+	result = result.concat(text, [10, -42, 20, h - colHeight * 5.5, 11, -21, 21, h - colHeight * 5.66, 1], headers[8]);
+	
+	// Значения ячеек
+	if (pth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1], headers[9]); } // Металлизация - "Есть"
+	if (npth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1], headers[10]); } // Металлизация - "Нет"
+	
+	fillTheTable(lib.metallized);
+	fillTheTable(lib.nonMetallized);
+	fillTheTable(lib.holes);
+	
+	/* -=-=-=- */
+	
+	result.push(0, 'ENDSEC', 0, 'EOF');
+	document.getElementById('result').innerHTML = '<pre>' + result.join(String.fromCharCode(10)) + '</pre>';
+}
