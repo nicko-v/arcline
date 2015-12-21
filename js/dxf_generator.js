@@ -4,10 +4,12 @@
 *		8 - имя слоя
 *		10 - x
 *		11 - x1
+*		12 - центр вьюпорта по X
 *		20 - y
 *		21 - y1
-*		40 - высота текста
-*		41 - коэффициент сжатия текста
+*		22 - центр вьюпорта по y
+*		40 - высота текста / высота вьюпорта
+*		41 - коэффициент сжатия текста / соотношение сторон вьюпорта
 *		50 - угол наклона текста
 *		62 - цвет линии (1 - red, 2 - yellow, 3 - green, 256 - ByLayer)
 *		72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
@@ -16,33 +18,81 @@
 function generateDXF(lib) {
 	'use strict';
 	var
+		pth = Object.keys(lib.metallized).length,
+		npth = Object.keys(lib.nonMetallized).length + Object.keys(lib.holes).length,
+		colHeight = 15,
+		colWidth = 25,
+		rows = 6,
+		columns = pth + npth,
+		w = colWidth * columns,
+		h = colHeight * rows, // Общая высота таблицы
+		dashSize = colWidth / 2,
 		result = [0, 'SECTION',
-							2, 'TABLES',
-							0, 'TABLE',
-							2, 'LAYER',
-							70, 3,
-							0, 'LAYER',
-							2, 'Drill_Table',
-							70, 64,
-							62, 1,
-							6, 'CONTINUOUS',
-							0, 'ENDTAB',
-							0, 'TABLE',
-							2, 'STYLE',
-							0, 'STYLE',
-							2, 'win_eskd',
-							70, 64,
-							40, 0,
-							41, 1,
-							50, 15,
-							71, 0,
-							42, 0.2,
-							3, 'win_eskd.shx',
-							4, '',
-							0, 'ENDTAB',
-							0, 'ENDSEC',
-							0, 'SECTION',
-							2, 'ENTITIES'],
+						2, 'TABLES',
+						0, 'TABLE',
+						2, 'VPORT',
+						0, 'VPORT',
+						2, '*ACTIVE',
+						12, (w / 2 - 21), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
+						22, (h / 2),
+						40, (h + 15),
+						41, ((w + 42) / 100),
+						70, 0,
+						10, 0,
+						20, 0,
+						11, 1,
+						21, 1,
+						13, 0,
+						23, 0,
+						14, 1,
+						24, 1,
+						15, 0,
+						25, 0,
+						16, 0,
+						26, 0,
+						36, 1,
+						17, 0,
+						27, 0,
+						37, 0,
+						42, 1,
+						43, 0,
+						44, 0,
+						50, 0,
+						51, 0,
+						71, 0,
+						72, 100,
+						73, 2,
+						74, 1,
+						75, 0,
+						76, 0,
+						77, 0,
+						78, 0,
+						0, 'ENDTAB',
+						0, 'TABLE',
+						2, 'LAYER',
+						70, 3,
+						0, 'LAYER',
+						2, 'Drill_Table',
+						70, 64,
+						62, 1,
+						6, 'CONTINUOUS',
+						0, 'ENDTAB',
+						0, 'TABLE',
+						2, 'STYLE',
+						0, 'STYLE',
+						2, 'win_eskd',
+						70, 64,
+						40, 0,
+						41, 1,
+						50, 15,
+						71, 0,
+						42, 0.2,
+						3, 'win_eskd.shx',
+						4, '',
+						0, 'ENDTAB',
+						0, 'ENDSEC',
+						0, 'SECTION',
+						2, 'ENTITIES'],
 		headers = ['\\U+041E\\U+0431\\U+043E\\U+0437\\U+043D\\U+0430\\U+0447\\U+0435\\U+043D\\U+0438\\U+0435', // [0] Обозначение
 							 '\\U+041A\\U+043E\\U+043B\\U+0438\\U+0447\\U+0435\\U+0441\\U+0442\\U+0432\\U+043E', // [1] Количество
 							 '\\U+0414\\U+0438\\U+0430\\U+043C\\U+0435\\U+0442\\U+0440', // [2] Диаметр
@@ -58,15 +108,6 @@ function generateDXF(lib) {
 							 ],
 		text = [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2],
 		redLn = [0, 'LINE', 8, 'Drill_Table', 62, 1],
-		colHeight = 15,
-		colWidth = 25,
-		rows = 6,
-		pth = Object.keys(lib.metallized).length,
-		npth = Object.keys(lib.nonMetallized).length + Object.keys(lib.holes).length,
-		columns = pth + npth,
-		w = colWidth * columns,
-		h = colHeight * rows, // Общая высота таблицы
-		dashSize = colWidth / 2,
 		currCol = 0, skippedCells, i, j;
 	
 	function fillTheTable(object) {
@@ -154,7 +195,7 @@ function generateDXF(lib) {
 	
 	/* Заполнение таблицы */
 	// Название таблицы
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (w - colWidth), 20, (h + colHeight), 11, w, 21, (h + 5), 1, headers[11]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (w - colWidth * 2), 20, (h + colHeight), 11, w, 21, (h + 5), 1, headers[11]);
 	
 	// Тексты заголовков
 	result = result.concat(text, [10, -42, 20, h,                   11, -21, 21, h - colHeight * 0.5, 1], headers[0]);
