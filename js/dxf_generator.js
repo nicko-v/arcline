@@ -66,12 +66,13 @@ function generateDXF(lib) {
 		columns = pth + npth,
 		w = colWidth * columns,
 		h = colHeight * rows, // Общая высота таблицы
-		currCol = 0, i, j;
+		dashSize = colWidth / 2,
+		currCol = 0, skippedCells, i, j;
 	
 	function fillTheTable(object) {
-		var key;
+		var startPoint, lineStart, key;
 		
-		for (key in object) {
+		for (key in object) { // Проставляет значения
 			if (object.hasOwnProperty(key)) {
 				if (object[key].mount) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount]); }
 				if (object[key].pad) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad]); }
@@ -80,7 +81,47 @@ function generateDXF(lib) {
 				currCol += 1;
 			}
 		}
+		skippedCells.row1.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (размеры КП и окна)
+			if (!startPoint && startPoint !== 0) { startPoint = position; }
+			if (position + 1 !== arr[i + 1]) {
+				lineStart = (position - startPoint + 1) * colWidth / 2 - dashSize / 2 + startPoint * colWidth;
+				result = result.concat(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 2), 11, (lineStart + dashSize), 21, (colHeight * 2));
+				startPoint = false;
+			}
+		});
+		startPoint = false;
+		skippedCells.row3.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (диаметр отверстия)
+			if (!startPoint && startPoint !== 0) { startPoint = position; }
+			if (position + 1 !== arr[i + 1]) {
+				lineStart = (position - startPoint + 1) * colWidth / 2 - colWidth / 4 + startPoint * colWidth;
+				result = result.concat(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 3.5), 11, (lineStart + dashSize), 21, (colHeight * 3.5));
+				startPoint = false;
+			}
+		});
 	}
+	function determineEmptyCells(object) {
+		var position = 0, result = { row1: [], row2: [], row3: [] };
+		
+		function checkLib(obj) {
+			var key;
+			
+			for (key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					if (!obj[key].hole) { result.row3.push(position); }
+					if (!obj[key].pad) { result.row2.push(position); }
+					if (!obj[key].mount) { result.row1.push(position); }
+					position += 1;
+				}
+			}
+		}
+		
+		checkLib(object.metallized);
+		checkLib(object.nonMetallized);
+		checkLib(object.holes);
+		return result;
+	}
+	
+	skippedCells = determineEmptyCells(lib); // Ячейки без значений
 	
 	/* Построение таблицы */
 	// Ячейки заголовков
@@ -97,10 +138,14 @@ function generateDXF(lib) {
 	// Ячейки данных
 	for (i = 0; i < columns; i += 1) {
 		for (j = 0; j <= rows; j += 1) { // Горизонатльные
-			result = result.concat(redLn, [10, (colWidth * i),  20, (colHeight * j),  11, (colWidth * i) + colWidth,  21, (colHeight * j)]);
+			if (!(j === 2 && skippedCells.row1.indexOf(i) + 1 && skippedCells.row2.indexOf(i) + 1)) { // Не рисовать линию если эта ячейка и та, что под ней, пусты
+				result = result.concat(redLn, [10, (colWidth * i),  20, (colHeight * j),  11, (colWidth * i) + colWidth,  21, (colHeight * j)]);
+			}
 		}
 		for (j = 1; j < rows; j += 1) { // Вертикальные
-			result = result.concat(redLn, [10, (colWidth * i + colWidth),  20, (colHeight * j),  11, (colWidth * i + colWidth),  21, (colHeight * j) + colHeight]);
+			if (!(j > 0 && j < 4 && skippedCells['row' + j].indexOf(i) + 1 && skippedCells['row' + j].indexOf(i + 1) + 1)) {
+				result = result.concat(redLn, [10, (colWidth * i + colWidth),  20, (colHeight * j),  11, (colWidth * i + colWidth),  21, (colHeight * j) + colHeight]);
+			}
 		}
 	}
 	result = result.concat(redLn, [10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight]);

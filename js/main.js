@@ -24,6 +24,7 @@
 										 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
 										 'Закончились доступные символы. Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
 										 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
+										 'Не удалось сформировать таблицу отверстий.',
 										 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
@@ -526,12 +527,6 @@
 	startButton.addEventListener(click, function () {
 		var key, layers, fileName, symbols = { metallized: {}, nonMetallized: {}, holes: {} };
 		
-		function calcMountingWindowSize(a) {
-			return (a.hole < a.width) ? a.width + 0.2 : 0;
-		}
-		function calcPadSize(a) {
-			return (a.hole < a.width) ? a.width : 0;
-		}
 		function dotToComma(a) {
 			if (a) { // Если 0 - не форматирует
 				a = (Math.round(a * 100) / 100).toString().split('.').join(',');
@@ -539,12 +534,39 @@
 			}
 			return a;
 		}
+		function calcMountSize(pad, padSize) {
+			if (padSize) {
+				return (pad.shape.match(/ellipse|oval/i)) ? '%%C' + dotToComma(pad.width + 0.2) : dotToComma(pad.width + 0.2) + 'x' + dotToComma(pad.height + 0.2);
+			} else { return false; }
+		}
+		function calcHoleSize(pad) {
+			return (pad.shape.match(/mthole|target/i)) ? '%%C' + dotToComma(pad.width) : (pad.hole) ? '%%C' + dotToComma(pad.hole) : false;
+		}
+		function calcPadSize(pad) {
+			switch (pad.shape) {
+			case 'ellipse':
+			case 'oval':
+				if (pad.width === pad.height) {
+					return (pad.hole < pad.width) ? '%%C' + dotToComma(pad.width) : false;
+				} else {
+					return dotToComma(pad.width) + 'x' + dotToComma(pad.height);
+				}
+			case 'mthole':
+			case 'target':
+				return false;
+			case 'rect':
+			case 'rndrect':
+				return dotToComma(pad.width) + 'x' + dotToComma(pad.height);
+			default:
+				return false;
+			}
+		}
 		function prepareSymbolsInfo(lib, newLib) {
 			var key, path;
 			
 			for (key in lib) {
 				if (lib.hasOwnProperty(key) && lib[key].symbol) {
-					path = (lib[key].hole && lib[key].hole < lib[key].width) ? newLib.metallized : (lib[key].hole === lib[key].width) ? newLib.holes : newLib.nonMetallized;
+					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
 					
 					if (path[lib[key].symbol]) {
 						path[lib[key].symbol].amount += lib[key].coords.length;
@@ -552,14 +574,12 @@
 						path[lib[key].symbol] = {};
 						Object.defineProperties(path[lib[key].symbol], {
 							amount: { value: lib[key].coords.length, writable: true },
-							hole:   { value: (lib[key].hole) ? '%%C' + dotToComma(lib[key].hole) : 0 },
-							pad:    { value: (lib[key].shape.match(/ellipse|oval|mthole|target/i) && lib[key].width === lib[key].height) ?
-							                  dotToComma(calcPadSize(lib[key])) : dotToComma(lib[key].width) + 'x' + dotToComma(lib[key].height), writable: true },
-							mount:  { value: (lib[key].shape.match(/ellipse|oval|mthole|target/i) && lib[key].width === lib[key].height) ?
-							                  dotToComma(calcMountingWindowSize(lib[key])) : dotToComma(lib[key].width + 0.2) + 'x' + dotToComma(lib[key].height + 0.2), writable: true }
+							hole:   { value: calcHoleSize(lib[key]) },
+							pad:    { value: calcPadSize(lib[key]) }
 						});
-						if (path[lib[key].symbol].pad && !path[lib[key].symbol].pad.match(/x/i)) { path[lib[key].symbol].pad = '%%C' + path[lib[key].symbol].pad; }
-						if (path[lib[key].symbol].mount && !path[lib[key].symbol].mount.match(/x/i)) { path[lib[key].symbol].mount = '%%C' + path[lib[key].symbol].mount; }
+						Object.defineProperty(path[lib[key].symbol], 'mount', {
+							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
+						});
 					}
 				}
 			}
@@ -594,7 +614,15 @@
 		
 		prepareSymbolsInfo(padsLib.vias, symbols);
 		prepareSymbolsInfo(padsLib.pads, symbols);
-		generateDXF(symbols);
+		try {
+			generateDXF(symbols);
+		} catch (err) {
+			showPopup({
+				header:    'Ошибка',
+				content:   msgs[6],
+				closeable: true
+			});
+		}
 	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
@@ -694,7 +722,7 @@
 			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, cosA, currPath, height, i, j, key, name, npth, pads = {},
+					var comp = {}, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
 						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
@@ -903,14 +931,14 @@
 								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
 									if (typeof this['2'][i][j] === 'string') {
 										
-										if (this['2'][i][j].match(/isHolePlated False/i)) { npth = true; }
+										if (this['2'][i][j].match(/isHolePlated False/i)) { pth = false; }
 										
 										if (this['2'][i][j].match(/holeDiam/i)) {
 											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
 										}
 										
 										if (this['2'][i][j].match(/layerNumRef 1/i)) {
-											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]);
+											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]).toLowerCase();
 											currPath[name].width = parser('shapeWidth', this['2'][i][j]);
 											currPath[name].height = parser('shapeHeight', this['2'][i][j]);
 										}
@@ -929,11 +957,11 @@
 									}
 								}
 								
-								if (currPath[name].hole && npth) { currPath[name].hole = currPath[name].width; } // Если есть отверстие и оно не металлизировано - это простое отверстие. Иногда такое встречается
+								currPath[name].pth = (currPath[name].hole < currPath[name].width) ? pth : false;
 								writeSideForLonePads(currPath[name].coords, currPath[name].side);
 							}
 							type = null;
-							npth = false;
+							pth = true;
 						}
 						for (key in comp) {
 							if (comp.hasOwnProperty(key)) {
