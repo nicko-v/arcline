@@ -140,9 +140,15 @@ function generateDXF(lib) {
 				if (object[key].pad) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad]); }
 				if (object[key].hole) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole]); }
 				result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount]);
+				
+				if (object[key].ratio >= (colWidth - cellPadding * 2) / (colHeight - cellPadding * 2)) {
+					w = colWidth - cellPadding * 2;
+					h = w / object[key].ratio;
+				} else {
+					h = colHeight - cellPadding * 2;
+					w = h * object[key].ratio;
+				}
 				x = currCol * colWidth + colWidth / 2;
-				w = (colWidth - cellPadding * 2);
-				h = (colWidth - cellPadding * 2) / object[key].width * object[key].height;
 				symbol[key]();
 				
 				currCol += 1;

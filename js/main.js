@@ -535,31 +535,38 @@
 			return a;
 		}
 		function calcMountSize(pad, padSize) {
+			var width = (pad.width > pad.height) ? pad.width : pad.height, height = (pad.width > pad.height) ? pad.height : pad.width;
+			
 			if (padSize) {
-				return (pad.shape.match(/ellipse|oval/i)) ? '%%C' + dotToComma(pad.width + 0.2) : dotToComma(pad.width + 0.2) + 'x' + dotToComma(pad.height + 0.2);
+				return (pad.shape.match(/ellipse|oval/i) && width === height) ? '%%C' + dotToComma(width + 0.2) : dotToComma(width + 0.2) + 'x' + dotToComma(height + 0.2);
 			} else { return false; }
 		}
 		function calcHoleSize(pad) {
 			return (pad.shape.match(/mthole|target/i)) ? '%%C' + dotToComma(pad.width) : (pad.hole) ? '%%C' + dotToComma(pad.hole) : false;
 		}
 		function calcPadSize(pad) {
+			var width = (pad.width > pad.height) ? pad.width : pad.height, height = (pad.width > pad.height) ? pad.height : pad.width;
+			
 			switch (pad.shape) {
 			case 'ellipse':
 			case 'oval':
-				if (pad.width === pad.height) {
-					return (pad.hole < pad.width) ? '%%C' + dotToComma(pad.width) : false;
+				if (width === height) {
+					return (pad.hole < width) ? '%%C' + dotToComma(width) : false;
 				} else {
-					return dotToComma(pad.width) + 'x' + dotToComma(pad.height);
+					return dotToComma(width) + 'x' + dotToComma(height);
 				}
 			case 'mthole':
 			case 'target':
 				return false;
 			case 'rect':
 			case 'rndrect':
-				return dotToComma(pad.width) + 'x' + dotToComma(pad.height);
+				return dotToComma(width) + 'x' + dotToComma(height);
 			default:
 				return false;
 			}
+		}
+		function calcRatio(pad) {
+			return (pad.width > pad.height) ? pad.width / pad.height : pad.height / pad.width;
 		}
 		function prepareSymbolsInfo(lib, newLib) {
 			var key, path;
@@ -576,8 +583,7 @@
 							amount: { value: lib[key].coords.length, writable: true },
 							hole:   { value: calcHoleSize(lib[key]) },
 							pad:    { value: calcPadSize(lib[key]) },
-							width:  { value: (lib[key].width > lib[key].height) ? lib[key].width : lib[key].height },
-							height: { value: (lib[key].width > lib[key].height) ? lib[key].height : lib[key].width }
+							ratio:  { value: calcRatio(lib[key]) }
 						});
 						Object.defineProperty(path[lib[key].symbol], 'mount', {
 							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
