@@ -575,7 +575,9 @@
 						Object.defineProperties(path[lib[key].symbol], {
 							amount: { value: lib[key].coords.length, writable: true },
 							hole:   { value: calcHoleSize(lib[key]) },
-							pad:    { value: calcPadSize(lib[key]) }
+							pad:    { value: calcPadSize(lib[key]) },
+							width:  { value: (lib[key].width > lib[key].height) ? lib[key].width : lib[key].height },
+							height: { value: (lib[key].width > lib[key].height) ? lib[key].height : lib[key].width }
 						});
 						Object.defineProperty(path[lib[key].symbol], 'mount', {
 							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
@@ -620,6 +622,8 @@
 			showPopup({
 				header:    'Ошибка',
 				content:   msgs[6],
+				buttons: ['OK'],
+				funcs: [hidePopup],
 				closeable: true
 			});
 		}

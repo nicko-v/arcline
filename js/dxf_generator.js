@@ -8,7 +8,7 @@
 *		20 - y
 *		21 - y1
 *		22 - центр вьюпорта по y
-*		40 - высота текста / высота вьюпорта
+*		40 - высота текста / высота вьюпорта / радиус круга
 *		41 - коэффициент сжатия текста / соотношение сторон вьюпорта
 *		50 - угол наклона текста
 *		62 - цвет линии (1 - red, 2 - yellow, 3 - green, 256 - ByLayer)
@@ -24,8 +24,8 @@ function generateDXF(lib) {
 		colWidth = 25,
 		rows = 6,
 		columns = pth + npth,
-		w = colWidth * columns,
-		h = colHeight * rows, // Общая высота таблицы
+		tw = colWidth * columns,
+		th = colHeight * rows, // Общая высота таблицы
 		dashSize = colWidth / 2,
 		result = [0, 'SECTION',
 						2, 'TABLES',
@@ -33,10 +33,10 @@ function generateDXF(lib) {
 						2, 'VPORT',
 						0, 'VPORT',
 						2, '*ACTIVE',
-						12, (w / 2 - 21), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
-						22, (h / 2),
-						40, (h + 15),
-						41, ((w + 42) / 100),
+						12, (tw / 2 - 21), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
+						22, (th / 2),
+						40, (th + 15),
+						41, ((tw + 42) / 100),
 						70, 0,
 						10, 0,
 						20, 0,
@@ -108,8 +108,29 @@ function generateDXF(lib) {
 							 ],
 		text = [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2],
 		redLn = [0, 'LINE', 8, 'Drill_Table', 62, 1],
-		currCol = 0, skippedCells, i, j;
+		greenLn = [0, 'LINE', 8, 'Drill_Table', 62, 3],
+		cellPadding = 3, // Расстояние от границы ячейки до символа
+		radius = (colHeight / 2 - cellPadding), // Радиус символа
+		y = (th - colHeight / 2), // Центр символа в ячейке
+		currCol = 0, d = {}, symbol, skippedCells, i, j, w, h, x;
 	
+	function baseRnd() {
+		result = result.concat(0, 'CIRCLE', 8, 'Drill_Table', 62, 3, 10, x, 20, y, 40, radius);
+		d.rnd.x0y05(0);
+		d.rnd.x1y05(1);
+		d.rnd.x05y0(0);
+		d.rnd.x05y1(1);
+	}
+	function baseRect() {
+		d.rect.x0y0(0);
+		d.rect.x1y0(1);
+		d.rect.x1y0(0);
+		d.rect.x1y1(1);
+		d.rect.x1y1(0);
+		d.rect.x0y1(1);
+		d.rect.x0y1(0);
+		d.rect.x0y0(1);
+	}
 	function fillTheTable(object) {
 		var startPoint, lineStart, key;
 		
@@ -119,6 +140,11 @@ function generateDXF(lib) {
 				if (object[key].pad) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad]); }
 				if (object[key].hole) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole]); }
 				result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount]);
+				x = currCol * colWidth + colWidth / 2;
+				w = (colWidth - cellPadding * 2);
+				h = (colWidth - cellPadding * 2) / object[key].width * object[key].height;
+				symbol[key]();
+				
 				currCol += 1;
 			}
 		}
@@ -162,14 +188,766 @@ function generateDXF(lib) {
 		return result;
 	}
 	
-	skippedCells = determineEmptyCells(lib); // Ячейки без значений
+	d.rnd = { // Аргумент p - точка, для которой нужны координаты. 0 - первая, 2 - вторая. Для первой добавляется заголовок блока
+		x05y05:   function (p) { var a = [10, x, 20, y];                           if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y0:    function (p) { var a = [10, x, 20, y + radius];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y1:    function (p) { var a = [10, x, 20, y - radius];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y05:    function (p) { var a = [10, x - radius, 20, y];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y05:    function (p) { var a = [10, x + radius, 20, y];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y025:  function (p) { var a = [10, x, 20, y + radius / 2];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y075:  function (p) { var a = [10, x, 20, y - radius / 2];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y05:  function (p) { var a = [10, x - radius / 2, 20, y];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y05:  function (p) { var a = [10, x + radius / 2, 20, y];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y025: function (p) { var a = [10, x - radius / 2, 20, y + radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y025: function (p) { var a = [10, x + radius / 2, 20, y + radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y075: function (p) { var a = [10, x - radius / 2, 20, y - radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y075: function (p) { var a = [10, x + radius / 2, 20, y - radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		deg45:    function (p) { var a = [10, x + Math.cos(Math.PI * 0.25) * radius, 20, y + Math.sin(Math.PI * 0.25) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		deg135:   function (p) { var a = [10, x + Math.cos(Math.PI * 0.75) * radius, 20, y + Math.sin(Math.PI * 0.75) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		deg225:   function (p) { var a = [10, x + Math.cos(Math.PI * 1.25) * radius, 20, y + Math.sin(Math.PI * 1.25) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		deg315:   function (p) { var a = [10, x + Math.cos(Math.PI * 1.75) * radius, 20, y + Math.sin(Math.PI * 1.75) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
+	};
+	d.rect = {
+		x05y05:   function (p) { var a = [10, x, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y0:    function (p) { var a = [10, x, 20, y + h / 2];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y1:    function (p) { var a = [10, x, 20, y - h / 2];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y05:    function (p) { var a = [10, x + w / 2, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y05:    function (p) { var a = [10, x - w / 2, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y05:  function (p) { var a = [10, x - w / 4, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y05:  function (p) { var a = [10, x + w / 4, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y0:     function (p) { var a = [10, x - w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y0:     function (p) { var a = [10, x + w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y1:     function (p) { var a = [10, x + w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y1:     function (p) { var a = [10, x - w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y0:   function (p) { var a = [10, x - w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y0:   function (p) { var a = [10, x + w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y025:   function (p) { var a = [10, x + w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y075:   function (p) { var a = [10, x + w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y1:   function (p) { var a = [10, x + w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y1:   function (p) { var a = [10, x - w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y075:   function (p) { var a = [10, x - w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y025:   function (p) { var a = [10, x - w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y025: function (p) { var a = [10, x - w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y025: function (p) { var a = [10, x + w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y075: function (p) { var a = [10, x + w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y075: function (p) { var a = [10, x - w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
+	};
+	
+	symbol = {
+		rnd1: function () {
+			baseRnd();
+		},
+		rnd2: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg225(0);
+			d.rnd.deg315(1);
+		},
+		rnd3: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+		  d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+		},
+		rnd4: function () {
+		  baseRnd();
+		  d.rnd.x025y05(0);
+			d.rnd.x05y1(1);
+		  d.rnd.x05y1(0);
+			d.rnd.x075y05(1);
+		},
+		rnd5: function () {
+		  baseRnd();
+		  d.rnd.x025y05(0);
+			d.rnd.deg135(1);
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+			d.rnd.deg45(0);
+			d.rnd.x075y05(1);
+		},
+		rnd6: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.deg135(1);
+		},
+		rnd7: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		  d.rnd.x05y1(0);
+			d.rnd.x1y05(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y075(1);
+		},
+		rnd8: function () {
+		  baseRnd();
+		  d.rnd.x025y025(0);
+			d.rnd.x075y025(1);
+		  d.rnd.x075y025(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x025y075(1);
+			d.rnd.x025y075(0);
+			d.rnd.x025y025(1);
+		},
+		rnd9: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.deg135(1);
+		},
+		rnd10: function () {
+		  baseRnd();
+		  d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+		  d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+		},
+		rnd11: function () {
+		  baseRnd();
+		  d.rnd.x05y0(0);
+			d.rnd.x1y05(1);
+		  d.rnd.x1y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x0y05(1);
+			d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		},
+		rnd12: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+		  d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x0y05(1);
+		},
+		rnd13: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.x05y05(1);
+		  d.rnd.x05y05(0);
+			d.rnd.deg45(1);
+			d.rnd.deg45(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.deg135(1);
+		},
+		rnd14: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+		  d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x075y05(1);
+		},
+		rnd15: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg225(0);
+			d.rnd.deg315(1);
+			d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+		},
+		rnd16: function () {
+		  baseRnd();
+		  d.rnd.x025y05(0);
+			d.rnd.x025y025(1);
+		  d.rnd.x025y025(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y075(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x075y05(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y075(1);
+		},
+		rnd17: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.deg135(1);
+		},
+		rnd18: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.x05y05(1);
+		  d.rnd.x05y05(0);
+			d.rnd.deg45(1);
+			d.rnd.deg45(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.deg135(1);
+		},
+		rnd19: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.x025y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.deg135(1);
+		},
+		rnd20: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg135(1);
+		},
+		rnd21: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg225(0);
+			d.rnd.deg315(1);
+			d.rnd.x025y05(0);
+			d.rnd.x025y025(1);
+			d.rnd.x025y025(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y075(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x075y05(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y075(1);
+		},
+		rnd22: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+		  d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x0y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+		},
+		rnd23: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		  d.rnd.x05y0(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x0y05(1);
+			d.rnd.x0y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x0y05(1);
+		},
+		rnd24: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		  d.rnd.x05y0(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x0y05(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y025(1);
+			d.rnd.x075y025(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x025y075(1);
+			d.rnd.x025y075(0);
+			d.rnd.x025y025(1);
+		},
+		rnd25: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.deg135(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y025(1);
+			d.rnd.x075y025(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x025y075(1);
+			d.rnd.x025y075(0);
+			d.rnd.x025y025(1);
+		},
+		rnd26: function () {
+		  baseRnd();
+		  d.rnd.x025y025(0);
+			d.rnd.x075y025(1);
+		  d.rnd.x075y025(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x025y075(1);
+			d.rnd.x025y075(0);
+			d.rnd.x025y025(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+		},
+		rnd27: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.deg135(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+		},
+		rnd28: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		  d.rnd.x05y0(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x0y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+		},
+		rnd29: function () {
+		  baseRnd();
+		  d.rnd.x0y05(0);
+			d.rnd.x05y0(1);
+		  d.rnd.x05y0(0);
+			d.rnd.x1y05(1);
+			d.rnd.x1y05(0);
+			d.rnd.x05y1(1);
+			d.rnd.x05y1(0);
+			d.rnd.x0y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.x025y025(1);
+			d.rnd.x025y025(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y075(0);
+			d.rnd.x075y075(1);
+			d.rnd.x075y075(0);
+			d.rnd.x075y05(1);
+			d.rnd.x025y025(0);
+			d.rnd.x075y075(1);
+		},
+		rnd30: function () {
+		  baseRnd();
+		  d.rnd.deg135(0);
+			d.rnd.deg45(1);
+		  d.rnd.deg45(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.deg315(1);
+			d.rnd.deg315(0);
+			d.rnd.deg225(1);
+			d.rnd.deg225(0);
+			d.rnd.x025y05(1);
+			d.rnd.x025y05(0);
+			d.rnd.deg135(1);
+			d.rnd.x025y05(0);
+			d.rnd.x05y025(1);
+			d.rnd.x05y025(0);
+			d.rnd.x075y05(1);
+			d.rnd.x075y05(0);
+			d.rnd.x05y075(1);
+			d.rnd.x05y075(0);
+			d.rnd.x025y05(1);
+		},
+		rect1: function () {
+			baseRect();
+		},
+		rect2: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x1y1(1);
+		},
+		rect3: function () {
+			baseRect();
+			d.rect.x05y0(0);
+			d.rect.x05y1(1);
+		},
+		rect4: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x1y1(1);
+			d.rect.x0y1(0);
+			d.rect.x1y0(1);
+		},
+		rect5: function () {
+			baseRect();
+			d.rect.x05y0(0);
+			d.rect.x05y1(1);
+			d.rect.x0y05(0);
+			d.rect.x1y05(1);
+		},
+		rect6: function () {
+			baseRect();
+			d.rect.x0y05(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x1y05(1);
+		},
+		rect7: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x05y05(1);
+			d.rect.x05y05(0);
+			d.rect.x075y0(1);
+		},
+		rect8: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x1y0(1);
+		},
+		rect9: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x025y1(1);
+			d.rect.x075y0(0);
+			d.rect.x075y1(1);
+		},
+		rect10: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x1y025(1);
+			d.rect.x0y075(0);
+			d.rect.x1y1(1);
+		},
+		rect11: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x025y1(1);
+			d.rect.x05y0(0);
+			d.rect.x05y1(1);
+			d.rect.x075y0(0);
+			d.rect.x075y1(1);
+		},
+		rect12: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x025y1(1);
+			d.rect.x075y0(0);
+			d.rect.x075y1(1);
+			d.rect.x0y05(0);
+			d.rect.x1y05(1);
+		},
+		rect13: function () {
+			baseRect();
+			d.rect.x0y05(0);
+			d.rect.x05y1(1);
+			d.rect.x0y0(0);
+			d.rect.x1y1(1);
+			d.rect.x05y0(0);
+			d.rect.x1y05(1);
+		},
+		rect14: function () {
+			baseRect();
+			d.rect.x1y025(0);
+			d.rect.x0y0(1);
+			d.rect.x0y0(0);
+			d.rect.x1y1(1);
+			d.rect.x1y1(0);
+			d.rect.x0y075(1);
+		},
+		rect15: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x05y05(1);
+			d.rect.x05y05(0);
+			d.rect.x1y0(1);
+			d.rect.x0y05(0);
+			d.rect.x1y05(1);
+		},
+		rect16: function () {
+			baseRect();
+			d.rect.x0y025(0);
+			d.rect.x025y05(1);
+			d.rect.x025y05(0);
+			d.rect.x025y1(1);
+			d.rect.x1y025(0);
+			d.rect.x075y05(1);
+			d.rect.x075y05(0);
+			d.rect.x075y1(1);
+		},
+		rect17: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x1y025(1);
+			d.rect.x0y025(0);
+			d.rect.x1y05(1);
+			d.rect.x0y05(0);
+			d.rect.x1y075(1);
+			d.rect.x0y075(0);
+			d.rect.x1y1(1);
+		},
+		rect18: function () {
+			baseRect();
+			d.rect.x0y025(0);
+			d.rect.x025y0(1);
+			d.rect.x075y0(0);
+			d.rect.x1y025(1);
+			d.rect.x1y075(0);
+			d.rect.x075y1(1);
+			d.rect.x025y1(0);
+			d.rect.x0y075(1);
+		},
+		rect19: function () {
+			baseRect();
+			d.rect.x0y05(0);
+			d.rect.x05y0(1);
+			d.rect.x05y0(0);
+			d.rect.x1y05(1);
+			d.rect.x1y05(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x0y05(1);
+		},
+		rect20: function () {
+			baseRect();
+			d.rect.x075y0(0);
+			d.rect.x1y05(1);
+			d.rect.x1y05(0);
+			d.rect.x075y1(1);
+			d.rect.x025y1(0);
+			d.rect.x0y05(1);
+			d.rect.x0y05(0);
+			d.rect.x025y0(1);
+		},
+		rect21: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x025y05(1);
+			d.rect.x025y05(0);
+			d.rect.x0y1(1);
+			d.rect.x1y0(0);
+			d.rect.x075y05(1);
+			d.rect.x075y05(0);
+			d.rect.x1y1(1);
+		},
+		rect22: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x1y0(1);
+			d.rect.x025y0(0);
+			d.rect.x05y05(1);
+			d.rect.x05y05(0);
+			d.rect.x075y0(1);
+		},
+		rect23: function () {
+			baseRect();
+			d.rect.x05y0(0);
+			d.rect.x1y05(1);
+			d.rect.x1y05(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x0y05(1);
+			d.rect.x0y05(0);
+			d.rect.x05y0(1);
+			d.rect.x05y0(0);
+			d.rect.x05y1(1);
+		},
+		rect24: function () {
+			baseRect();
+			d.rect.x05y0(0);
+			d.rect.x1y05(1);
+			d.rect.x1y05(0);
+			d.rect.x05y1(1);
+			d.rect.x05y1(0);
+			d.rect.x0y05(1);
+			d.rect.x0y05(0);
+			d.rect.x05y0(1);
+			d.rect.x05y0(0);
+			d.rect.x05y1(1);
+			d.rect.x0y05(0);
+			d.rect.x1y05(1);
+		},
+		rect25: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x025y05(1);
+			d.rect.x025y05(0);
+			d.rect.x0y1(1);
+			d.rect.x025y0(0);
+			d.rect.x025y1(1);
+			d.rect.x075y0(0);
+			d.rect.x075y1(1);
+			d.rect.x1y0(0);
+			d.rect.x075y05(1);
+			d.rect.x075y05(0);
+			d.rect.x1y1(1);
+		},
+		rect26: function () {
+			baseRect();
+			d.rect.x0y0(0);
+			d.rect.x025y05(1);
+			d.rect.x025y05(0);
+			d.rect.x0y1(1);
+			d.rect.x025y0(0);
+			d.rect.x05y05(1);
+			d.rect.x05y05(0);
+			d.rect.x075y0(1);
+			d.rect.x1y0(0);
+			d.rect.x075y05(1);
+			d.rect.x075y05(0);
+			d.rect.x1y1(1);
+		},
+		rect27: function () {
+			baseRect();
+			d.rect.x0y025(0);
+			d.rect.x025y0(1);
+			d.rect.x025y0(0);
+			d.rect.x05y05(1);
+			d.rect.x05y05(0);
+			d.rect.x075y0(1);
+			d.rect.x075y0(0);
+			d.rect.x1y025(1);
+			d.rect.x0y075(0);
+			d.rect.x025y1(1);
+			d.rect.x075y1(0);
+			d.rect.x1y075(1);
+		},
+		rect28: function () {
+			baseRect();
+			d.rect.x0y025(0);
+			d.rect.x025y0(1);
+			d.rect.x025y0(0);
+			d.rect.x025y1(1);
+			d.rect.x025y1(0);
+			d.rect.x0y075(1);
+			d.rect.x1y025(0);
+			d.rect.x075y0(1);
+			d.rect.x075y0(0);
+			d.rect.x075y1(1);
+			d.rect.x075y1(0);
+			d.rect.x1y075(1);
+		},
+		rect29: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x0y025(1);
+			d.rect.x0y025(0);
+			d.rect.x1y075(1);
+			d.rect.x1y075(0);
+			d.rect.x075y1(1);
+			d.rect.x075y0(0);
+			d.rect.x1y025(1);
+			d.rect.x1y025(0);
+			d.rect.x0y075(1);
+			d.rect.x0y075(0);
+			d.rect.x025y1(1);
+		},
+		rect30: function () {
+			baseRect();
+			d.rect.x025y0(0);
+			d.rect.x025y025(1);
+			d.rect.x025y025(0);
+			d.rect.x0y025(1);
+			d.rect.x075y0(0);
+			d.rect.x075y025(1);
+			d.rect.x075y025(0);
+			d.rect.x1y025(1);
+			d.rect.x1y075(0);
+			d.rect.x075y075(1);
+			d.rect.x075y075(0);
+			d.rect.x075y1(1);
+			d.rect.x0y075(0);
+			d.rect.x025y075(1);
+			d.rect.x025y075(0);
+			d.rect.x025y1(1);
+		}
+	};
 	
 	/* Построение таблицы */
 	// Ячейки заголовков
 	result = result.concat(redLn, [10,   0, 20, 0,  11, -42,  21, 0]);
-	result = result.concat(redLn, [10, -42, 20, 0,  11, -42,  21, h]);
-	result = result.concat(redLn, [10, -42, 20, h,  11,   0,  21, h]);
-	result = result.concat(redLn, [10,   0, 20, h,  11,   0,  21, 0]);
+	result = result.concat(redLn, [10, -42, 20, 0,  11, -42,  21, th]);
+	result = result.concat(redLn, [10, -42, 20, th, 11,   0,  21, th]);
+	result = result.concat(redLn, [10,   0, 20, th, 11,   0,  21, 0]);
 	result = result.concat(redLn, [10, -42, 20, 15, 11,   0,  21, 15]);
 	result = result.concat(redLn, [10, -42, 20, 30, 11,   0,  21, 30]);
 	result = result.concat(redLn, [10, -42, 20, 45, 11,   0,  21, 45]);
@@ -177,6 +955,7 @@ function generateDXF(lib) {
 	result = result.concat(redLn, [10, -42, 20, 75, 11,   0,  21, 75]);
 	
 	// Ячейки данных
+	skippedCells = determineEmptyCells(lib); // Ячейки без значений
 	for (i = 0; i < columns; i += 1) {
 		for (j = 0; j <= rows; j += 1) { // Горизонатльные
 			if (!(j === 2 && skippedCells.row1.indexOf(i) + 1 && skippedCells.row2.indexOf(i) + 1)) { // Не рисовать линию если эта ячейка и та, что под ней, пусты
@@ -190,24 +969,24 @@ function generateDXF(lib) {
 		}
 	}
 	result = result.concat(redLn, [10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight]);
-	result = result.concat(redLn, [10, w, 20, 0, 11, w, 21, colHeight]);
+	result = result.concat(redLn, [10, tw, 20, 0, 11, tw, 21, colHeight]);
 	/* -=-=-=- */
 	
 	/* Заполнение таблицы */
 	// Название таблицы
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (w - colWidth * 2), 20, (h + colHeight), 11, w, 21, (h + 5), 1, headers[11]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, headers[11]);
 	
 	// Тексты заголовков
-	result = result.concat(text, [10, -42, 20, h,                   11, -21, 21, h - colHeight * 0.5, 1], headers[0]);
-	result = result.concat(text, [10, -42, 20, h - colHeight,       11, -21, 21, h - colHeight * 1.5, 1], headers[1]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 2,   11, -21, 21, h - colHeight * 2.33, 1], headers[2]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 2.5, 11, -21, 21, h - colHeight * 2.66, 1], headers[3]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 3,   11, -21, 21, h - colHeight * 3.33, 1], headers[4]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 3.5, 11, -21, 21, h - colHeight * 3.66, 1], headers[5]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 4,   11, -21, 21, h - colHeight * 4.33, 1], headers[4]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 4.5, 11, -21, 21, h - colHeight * 4.66, 1], headers[6]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 5,   11, -21, 21, h - colHeight * 5.33, 1], headers[7]);
-	result = result.concat(text, [10, -42, 20, h - colHeight * 5.5, 11, -21, 21, h - colHeight * 5.66, 1], headers[8]);
+	result = result.concat(text, [10, -42, 20, th,                   11, -21, 21, th - colHeight * 0.5, 1], headers[0]);
+	result = result.concat(text, [10, -42, 20, th - colHeight,       11, -21, 21, th - colHeight * 1.5, 1], headers[1]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 2,   11, -21, 21, th - colHeight * 2.33, 1], headers[2]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 2.5, 11, -21, 21, th - colHeight * 2.66, 1], headers[3]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 3,   11, -21, 21, th - colHeight * 3.33, 1], headers[4]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 3.5, 11, -21, 21, th - colHeight * 3.66, 1], headers[5]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 4,   11, -21, 21, th - colHeight * 4.33, 1], headers[4]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 4.5, 11, -21, 21, th - colHeight * 4.66, 1], headers[6]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 5,   11, -21, 21, th - colHeight * 5.33, 1], headers[7]);
+	result = result.concat(text, [10, -42, 20, th - colHeight * 5.5, 11, -21, 21, th - colHeight * 5.66, 1], headers[8]);
 	
 	// Значения ячеек
 	if (pth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1], headers[9]); } // Металлизация - "Есть"
@@ -216,7 +995,6 @@ function generateDXF(lib) {
 	fillTheTable(lib.metallized);
 	fillTheTable(lib.nonMetallized);
 	fillTheTable(lib.holes);
-	
 	/* -=-=-=- */
 	
 	result.push(0, 'ENDSEC', 0, 'EOF');
