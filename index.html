@@ -115,7 +115,17 @@
 					<h1 class="step-header">Шаг 3. Результат</h1>
 					<h2 class="step-header">Получите результат обработки файла.</h2>
 					<div class="step3-actions">
-						<div class="step3-actions-result selectable" id="result"></div>
+						<div class="step3-actions-headers" id="tabs">
+							<div class="step3-actions-headers-header step3-actions-headers-header-active" id="tabPCB">PCB</div>
+							<div class="step3-actions-headers-header" id="tabDXF">Таблица</div>
+						</div>
+						<div class="step3-actions-tabContent">
+							<div id="link" style="padding: 10px;"></div>
+							<div class="step3-actions-tabContent-separator"></div>
+							<div class="step3-actions-tabContent-hideScroll">
+								<div class="step3-actions-tabContent-text selectable" id="result"></div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

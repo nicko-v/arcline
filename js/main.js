@@ -5,10 +5,14 @@
 	var
 		reader        = new FileReader(),
 		lib           = document.getElementById('lib'),
+		tabs          = document.getElementById('tabs'),
 		autoButton    = document.getElementById('auto'),
 		input         = document.getElementById('file'),
+		link          = document.getElementById('link'),
 		startButton   = document.getElementById('start'),
 		uploadButton  = document.getElementById('upload'),
+		tabPCB        = document.getElementById('tabPCB'),
+		tabDXF        = document.getElementById('tabDXF'),
 		padsList      = document.getElementById('padsList'),
 		icon          = document.getElementById('padsIcon'),
 		descr         = document.getElementById('padsDescr'),
@@ -29,7 +33,7 @@
 									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		padsDescriptions, padsLib, activeRow, file, fileContent;
+		padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -304,24 +308,28 @@
 						}
 					}
 					
-					result['r' + i].imageCode = '<div style="display: flex;' +
-					                                        'align-items: center;' +
-					                                        'justify-content: center;' +
-					                                        'position: relative;' +
-						                                      'background-color: #7c4e22;' +
-						                                      'width: 100px;' +
-					                                        'height: ' + (100 / width * height).toFixed(3) + 'px;' +
-					                                        'border-radius: ' + radius + 'px;">' +
-						                          '<div style="background-color: ' + color + ';' +
-					                                        'display: flex;' +
-					                                        'align-items: center;' +
-					                                        'justify-content: center;' +
-					                                        'box-sizing: border-box;' +
-					                                        'border: ' + border + ';' +
-					                                        'border-radius: 50px;' +
-						                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
-						                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
-						                          '</div></div>';
+					if (width > 0 && height > 0) {
+						result['r' + i].imageCode = '<div style="display: flex;' +
+						                                        'align-items: center;' +
+						                                        'justify-content: center;' +
+						                                        'position: relative;' +
+							                                      'background-color: #7c4e22;' +
+							                                      'width: 100px;' +
+						                                        'height: ' + (100 / width * height).toFixed(3) + 'px;' +
+						                                        'border-radius: ' + radius + 'px;">' +
+							                          '<div style="background-color: ' + color + ';' +
+						                                        'display: flex;' +
+						                                        'align-items: center;' +
+						                                        'justify-content: center;' +
+						                                        'box-sizing: border-box;' +
+						                                        'border: ' + border + ';' +
+						                                        'border-radius: 50px;' +
+							                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
+							                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
+							                          '</div></div>';
+					} else {
+						result['r' + i].imageCode = '<i class="icon-help" style="font-size: 90px;"></i>';
+					}
 					result['r' + i].ratio = width / height; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
 					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
 					result['r' + i].type = type;
@@ -339,7 +347,7 @@
 		var i = 0;
 		
 		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
-			var key, usage, result = '';
+			var key, usage, status, result = '';
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
@@ -349,8 +357,10 @@
 					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
 					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
 					
+					status = (object[key].width > 0 && object[key].height > 0) ? 'icon-help step2-actions-pads-list-row-status yellow' : 'icon-cancel step2-actions-pads-list-row-status red';
+					
 					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="icon-help step2-actions-pads-list-row-status yellow"></span>' + key + usage +
+					          '<span class="' + status + '"></span>' + key + usage +
 					          '</div>';
 					i += 1;
 				}
@@ -380,6 +390,9 @@
 		while (document.getElementById('rnd' + i)) { document.getElementById('rnd' + i).style.display = 'block'; i += 1; }
 		i = 1;
 		while (document.getElementById('rect' + i)) { document.getElementById('rect' + i).style.display = 'block'; i += 1; }
+	}
+	function toB64(string) {
+		return window.btoa(unescape(encodeURIComponent(string)));
 	}
 	
 	if (!allSupported) {
@@ -487,7 +500,7 @@
 		i = 0;
 		while (padsDescriptions['r' + i]) {
 			if (!padsDescriptions['r' + i].symbolCode) { // Если еще не назначен символ
-				if (padsDescriptions['r' + i].shape === 'rnd' && freeSymbols.rnd.length) { // Если круглая КП
+				if (padsDescriptions['r' + i].shape === 'rnd' && freeSymbols.rnd.length && padsDescriptions['r' + i].ratio > 0) { // Если круглая КП
 					
 					padsDescriptions['r' + i].symbol = freeSymbols.rnd[0]; // Берем первый свободный символ нужного типа
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100, freeSymbols.rnd[0], 2); // Генерируем для него svg
@@ -497,7 +510,7 @@
 					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
 					freeSymbolsAm.rnd -= 1; // Уменьшаем остаток символов
 					
-				} else if (padsDescriptions['r' + i].shape === 'rect' && freeSymbols.rect.length) {
+				} else if (padsDescriptions['r' + i].shape === 'rect' && freeSymbols.rect.length && padsDescriptions['r' + i].ratio) {
 					
 					padsDescriptions['r' + i].symbol = freeSymbols.rect[0];
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100 / padsDescriptions['r' + i].ratio, freeSymbols.rect[0], 2);
@@ -508,6 +521,7 @@
 					freeSymbolsAm.rect -= 1; // Уменьшаем остаток символов
 					
 				} else if (freeSymbols.rnd.length === 0 || freeSymbols.rect.length === 0) { noSymbs = true; }
+				
 			}
 			i += 1;
 		}
@@ -616,14 +630,13 @@
 		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
 		
 		fileName = (file.name.indexOf('.pcb') + 1) ? file.name.slice(0, -4) : file.name;
-		fileName += '_DRILL.pcb';
-		document.getElementById('result').innerHTML = '<a href="data:text/plain;charset=utf-8;base64,' + fileContent.asB64() + '" download="' + fileName + '">Скачать</a>';
-		//document.getElementById('result').innerHTML = '<pre>' + fileContent.asArray().join(String.fromCharCode(10)) + '</pre>';
+		
+		pcbOutputContent = fileContent.asArray().join(String.fromCharCode(10));
 		
 		prepareSymbolsInfo(padsLib.vias, symbols);
 		prepareSymbolsInfo(padsLib.pads, symbols);
 		try {
-			generateDXF(symbols);
+			dxfOutputContent = generateDXF(symbols).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header:    'Ошибка',
@@ -633,6 +646,20 @@
 				closeable: true
 			});
 		}
+		
+		pcbLink = '<a href="data:text/plain;charset=utf-8;base64,' + toB64(pcbOutputContent) + '" download="' + fileName + '_DRILL.pcb" class="step3-actions-tabContent-link">Сохранить .pcb файл</a>';
+		dxfLink = '<a href="data:text/plain;charset=utf-8;base64,' + toB64(dxfOutputContent) + '" download="' + fileName + '_TABLE.dxf" class="step3-actions-tabContent-link">Сохранить .dxf файл</a>';
+		
+		output.pcb = document.createElement('div');
+		output.dxf = document.createElement('div');
+		output.pcb.innerHTML = '<pre>' + pcbOutputContent + '</pre>';
+		output.dxf.innerHTML = '<pre>' + dxfOutputContent + '</pre>';
+		output.dxf.style.display = 'none';
+		document.getElementById('result').appendChild(output.pcb);
+		document.getElementById('result').appendChild(output.dxf);
+		
+		link.innerHTML = pcbLink;
+		link.nextElementSibling.style.display = 'block';
 	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
@@ -653,11 +680,15 @@
 			} else {
 				row.classList.add('step2-actions-pads-list-rowActive');
 				icon.innerHTML = padsDescriptions[row.id].imageCode;
-				symbol.innerHTML = padsDescriptions[row.id].symbolCode || 'Выберите символ из библиотеки.';
+				if (padsDescriptions[row.id].symbolCode) {
+					symbol.innerHTML = padsDescriptions[row.id].symbolCode;
+				} else {
+					symbol.innerHTML = (padsDescriptions[row.id].ratio > 0) ? 'Выберите символ из библиотеки.' : 'Не удалось распознать размеры КП.';
+				}
 				descr.innerHTML = padsDescriptions[row.id].descr;
 				activeRow = row;
 				clearButton.style.display = (padsDescriptions[row.id].symbolCode) ? 'flex' : 'none';
-				autoButton.style.display = (padsDescriptions[row.id].symbolCode || freeSymbolsAm[padsDescriptions[row.id].shape] === 0) ? 'none' : 'block';
+				autoButton.style.display = (!padsDescriptions[row.id].symbolCode && freeSymbolsAm[padsDescriptions[row.id].shape] > 0 && padsDescriptions[row.id].ratio > 0) ? 'block' : 'none';
 			}
 		}
 	});
@@ -700,6 +731,25 @@
 		padsDescriptions[activeRow.id].symbolCode = symbol.innerHTML;
 		padsDescriptions[activeRow.id].symbol = libSymbol.id;
 	});
+	tabs.addEventListener(click, function (e) {
+		if (e.target === tabPCB) {
+			tabPCB.classList.add('step3-actions-headers-header-active');
+			tabDXF.classList.remove('step3-actions-headers-header-active');
+			if (pcbOutputContent) {
+				link.innerHTML = pcbLink;
+				output.dxf.style.display = 'none';
+				output.pcb.style.display = 'block';
+			}
+		} else if (e.target === tabDXF) {
+			tabDXF.classList.add('step3-actions-headers-header-active');
+			tabPCB.classList.remove('step3-actions-headers-header-active');
+			if (dxfOutputContent) {
+				link.innerHTML = dxfLink;
+				output.pcb.style.display = 'none';
+				output.dxf.style.display = 'block';
+			}
+		}
+	});
 	reader.addEventListener('load', function () {
 		fileContent = parseInputFile(this.result);
 		if (!fileContent) { return; }
@@ -723,11 +773,6 @@
 					}
 					walker(a || this);
 					return array;
-				}
-			},
-			asB64: {
-				value: function () {
-					return window.btoa(unescape(encodeURIComponent(this.asArray().join(String.fromCharCode(10)))));
 				}
 			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
@@ -947,13 +992,13 @@
 											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
 										}
 										
-										if (this['2'][i][j].match(/layerNumRef 1/i)) {
+										if (this['2'][i][j].match(/layerNumRef 1\)/i)) {
 											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]).toLowerCase();
 											currPath[name].width = parser('shapeWidth', this['2'][i][j]);
 											currPath[name].height = parser('shapeHeight', this['2'][i][j]);
 										}
 										
-										if (this['2'][i][j].match(/layerNumRef 2/i)) {
+										if (this['2'][i][j].match(/layerNumRef 2\)/i)) {
 											width = parser('shapeWidth', this['2'][i][j]);
 											height = parser('shapeHeight', this['2'][i][j]);
 											if (width && !currPath[name].width) { // Если на слое bot у КП есть размеры, но не было на top
@@ -1135,8 +1180,6 @@
 			}
 		});
 		padsLib = fileContent.getPads();
-		if (!padsLib) { return; }
-		
 		createPadsList(padsLib);
 	});
 }());

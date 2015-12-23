@@ -6,6 +6,8 @@ function generateSVG(x, y, n, stroke, color) { // Длина, высота, но
 		return Math.round(a * 1000) / 1000;
 	}
 	
+	if (!(x > 0 && y > 0)) { return '<i class="icon-help" style="font-size: 90px;"></i>'; }
+	
 	stroke = stroke || 1;
 	style = 'stroke-width="' + stroke + '" stroke="' + (color || '#008800') + '"';
 	

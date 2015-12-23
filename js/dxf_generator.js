@@ -1004,5 +1004,5 @@ function generateDXF(lib) {
 	/* -=-=-=- */
 	
 	result.push(0, 'ENDSEC', 0, 'EOF');
-	document.getElementById('result').innerHTML = '<pre>' + result.join(String.fromCharCode(10)) + '</pre>';
+	return result;
 }
