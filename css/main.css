@@ -56,9 +56,9 @@ p {
 	cursor: default;
 }
 .selectable {
-	-ms-user-select: auto;
-	-moz-user-select: auto;
-	-webkit-user-select: auto;
+	-ms-user-select: text;
+	-moz-user-select: text;
+	-webkit-user-select: text;
 }
 .uppercase {
 	text-transform: uppercase;
@@ -110,7 +110,6 @@ p {
 	display: flex;
 	justify-content: center;
 	width: 100%;
-	height: 100%;
 	margin: 8px 0;
 	border-top: 2px dashed #262d39;
 	border-bottom: 2px dashed #262d39;
@@ -472,8 +471,9 @@ p {
 	height: 400px;
 	width: 100%;
 	overflow-y: auto;
+	overflow-x: hidden;
 	position: absolute;
-	right: -25px;
+	right: -26px;
 }
 .step3-actions-tabContent-link {
 	font-size: 1.6rem;
@@ -484,6 +484,11 @@ p {
 }
 .step3-actions-tabContent-link:active {
 	transform: scale(0.95);
+}
+.step3-actions-tabContent-linkWrapper {
+	display: flex;
+	justify-content: space-between;
+	padding: 10px;
 }
 .step3-actions-tabContent-separator {
 	display: none;

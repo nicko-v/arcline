@@ -1,6 +1,6 @@
 function generateLayers(lib) {
 	'use strict';
-	var x, y, w, h, rotation, side, symbol, d = {}, result = { top: [], bot: [], thru: [], skipped: 0 }, lineWidth = '(width 0.08) )', line = '(line ', arc = '(triplePointArc ';
+	var x, y, w, h, rotation, side, symbol, d = {}, result = { top: [], bot: [], thru: [], skipped: 0 }, lineWidth = '(width 0.05) )', line = '(line ', arc = '(triplePointArc ';
 	
 	function baseRnd() {
 		result[side].push(arc + d.rnd.x05y05() + d.rnd.x1y05() + d.rnd.x1y05() + lineWidth);
@@ -21,13 +21,31 @@ function generateLayers(lib) {
 				for (i = 0; i < object[key].coords.length; i += 1) {
 					coords = object[key].coords[i].split(' ');
 					side = coords[2] || object[key].side;
-					rotation = (coords[3]) ? (+coords[3] !== 90 && +coords[3] !== 270) : true; // true если поворот на 0/180 или отсутствует (via), false - 90/270
 					x = +coords[0];
 					y = +coords[1];
-					w = (rotation) ? object[key].width : object[key].height;
-					h = (rotation) ? object[key].height : object[key].width;
 					
-					if (!coords[3] || [0, 90, 180, 270, 360].indexOf(+coords[3]) + 1) { // Если КП повернута под прямым углом или вообще не повернута (via) - создаем для нее символ
+					// Поворот нужен в случае, если КП повернута на четный угол (0, 180):
+					rotation = (+coords[3] / 90 % 2 > 0) ? true : false;
+					
+					if (object[key].width > object[key].height && rotation) { // Изначально горизонатльная КП, но повернута на 90/270
+						w = object[key].height;
+						h = object[key].width;
+					} else if (object[key].width < object[key].height) { // Изначально вертикальная
+						if (rotation) { // Если повернута на 90/270 - меняем длину с высотой, но флаг поворота уже не нужен
+							w = object[key].height;
+							h = object[key].width;
+							rotation = false;
+						} else { // Если не повернута или повернута на 180 - сохраняем значения длины и высоты и добавляем поворот
+							w = object[key].width;
+							h = object[key].height;
+							rotation = true;
+						}
+					} else { // Длина больше ширины и нет поворота либо длина равна ширине - сохраняем значения как есть
+						w = object[key].width;
+						h = object[key].height;
+					}
+					
+					if (!coords[3] || [0, 90, 180, 270, 360].indexOf(+coords[3]) >= 0) { // Если КП повернута под прямым углом или вообще не повернута (via) - создаем для нее символ
 						symbol[object[key].symbol]();
 					} else { // Иначе увеличиваем число пропущенных
 						result.skipped += 1;
@@ -61,28 +79,28 @@ function generateLayers(lib) {
 	};
 	d.rect = {
 		x05y05:   function () { return '(pt ' + rnd(x) + ' ' + rnd(y) + ') '; },
-		x05y0:    function () { return (rotation) ? '(pt ' + rnd(x) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y) + ') '; },
-		x05y1:    function () { return (rotation) ? '(pt ' + rnd(x) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y) + ') '; },
-		x1y05:    function () { return (rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y + h / 2) + ') '; },
-		x0y05:    function () { return (rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y - h / 2) + ') '; },
-		x025y05:  function () { return (rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y - h / 4) + ') '; },
-		x075y05:  function () { return (rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y + h / 4) + ') '; },
-		x0y0:     function () { return (rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 2) + ') '; },
-		x1y0:     function () { return (rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 2) + ') '; },
-		x1y1:     function () { return (rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 2) + ') '; },
-		x0y1:     function () { return (rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 2) + ') '; },
-		x025y0:   function () { return (rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 4) + ') '; },
-		x075y0:   function () { return (rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 4) + ') '; },
-		x1y025:   function () { return (rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 2) + ') '; },
-		x1y075:   function () { return (rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 2) + ') '; },
-		x075y1:   function () { return (rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 4) + ') '; },
-		x025y1:   function () { return (rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 4) + ') '; },
-		x0y075:   function () { return (rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 2) + ') '; },
-		x0y025:   function () { return (rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 2) + ') '; },
-		x025y025: function () { return (rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 4) + ') '; },
-		x075y025: function () { return (rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 4) + ') '; },
-		x075y075: function () { return (rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 4) + ') '; },
-		x025y075: function () { return (rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 4) + ') '; }
+		x05y0:    function () { return (!rotation) ? '(pt ' + rnd(x) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y) + ') '; },
+		x05y1:    function () { return (!rotation) ? '(pt ' + rnd(x) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y) + ') '; },
+		x1y05:    function () { return (!rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y + h / 2) + ') '; },
+		x0y05:    function () { return (!rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y - h / 2) + ') '; },
+		x025y05:  function () { return (!rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y - h / 4) + ') '; },
+		x075y05:  function () { return (!rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y) + ') ' : '(pt ' + rnd(x) + ' ' + rnd(y + h / 4) + ') '; },
+		x0y0:     function () { return (!rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 2) + ') '; },
+		x1y0:     function () { return (!rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 2) + ') '; },
+		x1y1:     function () { return (!rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 2) + ') '; },
+		x0y1:     function () { return (!rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 2) + ') '; },
+		x025y0:   function () { return (!rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 4) + ') '; },
+		x075y0:   function () { return (!rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 2) + ') ' : '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 4) + ') '; },
+		x1y025:   function () { return (!rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 2) + ') '; },
+		x1y075:   function () { return (!rotation) ? '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 2) + ') '; },
+		x075y1:   function () { return (!rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y + h / 4) + ') '; },
+		x025y1:   function () { return (!rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 2) + ') ' : '(pt ' + rnd(x + w / 2) + ' ' + rnd(y - h / 4) + ') '; },
+		x0y075:   function () { return (!rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 2) + ') '; },
+		x0y025:   function () { return (!rotation) ? '(pt ' + rnd(x - w / 2) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 2) + ') '; },
+		x025y025: function () { return (!rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 4) + ') '; },
+		x075y025: function () { return (!rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 4) + ') ' : '(pt ' + rnd(x - w / 4) + ' ' + rnd(y + h / 4) + ') '; },
+		x075y075: function () { return (!rotation) ? '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y + h / 4) + ') '; },
+		x025y075: function () { return (!rotation) ? '(pt ' + rnd(x - w / 4) + ' ' + rnd(y - h / 4) + ') ' : '(pt ' + rnd(x + w / 4) + ' ' + rnd(y - h / 4) + ') '; }
 	};
 	symbol = {
 		rnd1: function () {
