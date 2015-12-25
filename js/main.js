@@ -1,13 +1,18 @@
-/*global FileReader, generateSVG */
+/*global FileReader, unescape, generateSVG, generateDXF, generateLayers */
 
 (function () {
 	'use strict';
 	var
 		reader        = new FileReader(),
 		lib           = document.getElementById('lib'),
+		tabs          = document.getElementById('tabs'),
 		autoButton    = document.getElementById('auto'),
 		input         = document.getElementById('file'),
+		link          = document.getElementById('link'),
+		startButton   = document.getElementById('start'),
 		uploadButton  = document.getElementById('upload'),
+		tabPCB        = document.getElementById('tabPCB'),
+		tabDXF        = document.getElementById('tabDXF'),
 		padsList      = document.getElementById('padsList'),
 		icon          = document.getElementById('padsIcon'),
 		descr         = document.getElementById('padsDescr'),
@@ -18,15 +23,18 @@
 		allSupported  = window.FileReader && document.body.style.flex !== undefined,
 		click         = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
 		msgs          = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-	                   'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-	                   'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-										 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
-										 'Закончились доступные для использования символы. Попробуйте уменьшить количество контактных площадок на плате.',
-										 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-									   'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
+		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+		                 'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+		                 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
+		                 'Закончились доступные символы. Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
+		                 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
+		                 'Не удалось сформировать таблицу отверстий. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
+		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
-		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости показа кнопки автоподбора
-		padsDescriptions, activeRow, file;
+		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
+		padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
 
 	function hidePopup() {
 		var cover = document.getElementById('cover');
@@ -38,18 +46,17 @@
 			cover.classList.remove('popup-cover');
 		}, 300);
 	}
-	function showPopup(params) { // (02)
+	function showPopup(params) {
 		var cover = document.getElementById('cover'), clickOffset, popup, close, header, content, moving;
 		
-		function tryToClose(e) { // (10)
-			if (!moving) {
-				if (e.target.className.match(/popup-cover|popup-close/)) {
-					if (params.closeable) {
-						hidePopup();
-					} else {
-						popup.style.animation = 'reset 0 linear normal';
-						setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
-					}
+		function tryToClose(e) {
+			if (!moving && e.target.className.match(/popup-cover|popup-close/)) {
+				if (params.closeable) {
+					hidePopup();
+					cover.removeEventListener(click, tryToClose);
+				} else {
+					popup.style.animation = 'reset 0 linear normal';
+					setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
 				}
 			}
 		}
@@ -82,7 +89,8 @@
 			popup.classList.add('popup');
 			
 			header = document.createElement('div');
-			header.classList.add('popup-header', 'uppercase');
+			header.classList.add('uppercase');
+			header.classList.add('popup-header');
 			header.innerHTML = params.header;
 			
 			content = document.createElement('div');
@@ -142,22 +150,32 @@
 		var icon = document.getElementById('stp' + step + operation), opsAmount;
 		
 		function setToAll(n, cls) { // Ставит классы cls всем элементам, начиная с заданного n
+			var i;
+			
 			while (document.getElementById('stp' + step + n)) {
 				icon = document.getElementById('stp' + step + n);
-				icon.className = cls;
+				icon.className = 'cleanstate';
+				for (i = 0; i < cls.length; i += 1) { icon.classList.add(cls[i]); }
 				n += 1;
 			}
 		}
 		
 		if (restore) { // Если передан флаг восстановления статусов (например при выборе нового файла)
-			setToAll(1, 'yellow icon-spin5 animate-spin');
+			setToAll(1, ['yellow', 'icon-spin5', 'animate-spin']);
 		} else {
-			icon.className = (status) ? 'green icon-ok' : 'red icon-cancel';
-			if (!status) { setToAll(operation + 1, 'red icon-stop'); }
+			icon.className = 'cleanstate';
+			if (status) {
+				icon.classList.add('green');
+				icon.classList.add('icon-ok');
+			} else {
+				icon.classList.add('red');
+				icon.classList.add('icon-cancel');
+				setToAll(operation + 1, ['red', 'icon-stop']);
+			}
 		}
 	}
-	function parseInputFile(string) { // (03)
-		var arr, obj = {}, currLevel = obj;
+	function parseInputFile(string) {
+		var arr, replacements = {}, obj = {}, currLevel = obj;
 		
 		function Branch(string) {
 			Object.defineProperties(this, {
@@ -166,23 +184,76 @@
 			});
 		}
 		function calcBrackets(string) {
-			var brackets = 0, quote = 0, i;
+			var leftBrackets = 0, quote = 0, bracketsPositions = [], result = { down: 0, strings: [] }, noCyrillicString = '', i;
+			
 			for (i = 0; i < string.length; i += 1) {
+				// Неэкранированная кавычка - начало или конец какого-то названия, экранированная - его часть, т.е. находится внутри другой пары кавычек:
 				if (string[i] === '\"' && string[i - 1] !== '\\') { quote += 1; }
-				if (quote % 2 === 0) {
-					if (string[i] === '(') { brackets += 1; }
-					if (string[i] === ')') { brackets -= 1; }
+				// Если символ кириллический - заменяет на транслит, иначе файл может не открыться
+				if (replacements[string[i].toLowerCase()]) { noCyrillicString += replacements[string[i].toLowerCase()]; } else { noCyrillicString += string[i]; }
+				
+				if (quote % 2 === 0) { // Говорит о том, что скобка находится вне кавычек, т.е. является частью разметки, а не названия
+					if (string[i] === '(') {
+						leftBrackets += 1;
+						bracketsPositions.push(i);
+					} else if (string[i] === ')') {
+						leftBrackets -= 1;
+						bracketsPositions.pop();
+					}
 				}
 			}
-			return brackets;
+			
+			bracketsPositions.forEach(function (pos, index) {
+				result.strings.push(noCyrillicString.slice(pos, bracketsPositions[index + 1] || noCyrillicString.length));
+			});
+			
+			if (!result.strings.length) { result.strings.push(noCyrillicString); } // Если строку не пришлось делить - записываем изначальную (с заменой на транслит где надо)
+			result.down = leftBrackets; // На столько шагов надо подняться по списку вверх (если закрывающих скобок было больше)
+			return result;
 		}
+		
+		Object.defineProperties(replacements, {
+			'а': { value: 'a' },
+			'б': { value: 'b' },
+			'в': { value: 'v' },
+			'г': { value: 'g' },
+			'д': { value: 'd' },
+			'е': { value: 'e' },
+			'ё': { value: 'e' },
+			'ж': { value: 'z' },
+			'з': { value: 'z' },
+			'и': { value: 'i' },
+			'й': { value: 'i' },
+			'к': { value: 'k' },
+			'л': { value: 'l' },
+			'м': { value: 'm' },
+			'н': { value: 'n' },
+			'о': { value: 'o' },
+			'п': { value: 'p' },
+			'р': { value: 'r' },
+			'с': { value: 's' },
+			'т': { value: 't' },
+			'у': { value: 'u' },
+			'ф': { value: 'f' },
+			'х': { value: 'h' },
+			'ц': { value: 'c' },
+			'ч': { value: 'h' },
+			'ш': { value: 's' },
+			'щ': { value: 'h' },
+			'ъ': { value: 'b' },
+			'ы': { value: 'i' },
+			'ь': { value: 'b' },
+			'э': { value: 'e' },
+			'ю': { value: 'u' },
+			'я': { value: 'a' }
+		});
 		
 		if (string.indexOf('ACCEL_ASCII') + 1) {
 			setStepStatus(1, 1, true);
 		} else {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[0],
+				header: 'Ошибка',
+				content: msgs[0],
 				closeable: true
 			});
 			setStepStatus(1, 1, false);
@@ -201,13 +272,18 @@
 				return result;
 			}, []);
 			arr.forEach(function (string) {
-				var brackets = calcBrackets(string), n = Object.keys(currLevel).length, i = 1;
-				if (brackets > 0) {
-					currLevel[n] = new Branch(string);
-					currLevel = currLevel[n];
+				var n = Object.keys(currLevel).length, i = 1, levels;
+				
+				levels = calcBrackets(string);
+				if (levels.down > 0) {
+					levels.strings.forEach(function (str) {
+						currLevel[n] = new Branch(str);
+						currLevel = currLevel[n];
+						n = Object.keys(currLevel).length;
+					});
 				} else {
-					currLevel[n] = string;
-					while (i <= Math.abs(brackets)) {
+					currLevel[n] = levels.strings[0];
+					while (i <= Math.abs(levels.down)) {
 						currLevel = currLevel.parent;
 						i += 1;
 					}
@@ -215,8 +291,8 @@
 			});
 		} catch (err) {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[1],
+				header: 'Ошибка',
+				content: msgs[1],
 				closeable: true
 			});
 			setStepStatus(1, 2, false);
@@ -226,8 +302,8 @@
 			setStepStatus(1, 2, true);
 		} else {
 			showPopup({
-				header:    'Ошибка',
-				content:   msgs[1],
+				header: 'Ошибка',
+				content: msgs[1],
 				closeable: true
 			});
 			setStepStatus(1, 2, false);
@@ -241,7 +317,7 @@
 			bgdColor = window.getComputedStyle(document.getElementById('padsViewer')).backgroundColor,
 			result = {}, i = 0;
 		
-		function collectInfo(object) {
+		function collectInfo(object, type) {
 			var key, width, height, hole, amount, border, radius, color;
 
 			for (key in object) {
@@ -302,40 +378,46 @@
 						}
 					}
 					
-					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
-					result['r' + i].imageCode = '<div style="display: flex;' +
-					                                        'align-items: center;' +
-					                                        'justify-content: center;' +
-					                                        'position: relative;' +
-						                                      'background-color: #7c4e22;' +
-						                                      'width: 100px;' +
-					                                        'height: ' + (100 / width * height).toFixed(3) + 'px;' +
-					                                        'border-radius: ' + radius + 'px;">' +
-						                          '<div style="background-color: ' + color + ';' +
-					                                        'display: flex;' +
-					                                        'align-items: center;' +
-					                                        'justify-content: center;' +
-					                                        'box-sizing: border-box;' +
-					                                        'border: ' + border + ';' +
-					                                        'border-radius: 50px;' +
-						                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
-						                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;" id="padCenter">' +
-						                          '</div></div>';
+					if (width > 0 && height > 0) {
+						result['r' + i].imageCode = '<div style="display: flex;' +
+						                                        'align-items: center;' +
+						                                        'justify-content: center;' +
+						                                        'position: relative;' +
+							                                      'background-color: #7c4e22;' +
+							                                      'width: 100px;' +
+						                                        'height: ' + (100 / width * height).toFixed(3) + 'px;' +
+						                                        'border-radius: ' + radius + 'px;">' +
+							                          '<div style="background-color: ' + color + ';' +
+						                                        'display: flex;' +
+						                                        'align-items: center;' +
+						                                        'justify-content: center;' +
+						                                        'box-sizing: border-box;' +
+						                                        'border: ' + border + ';' +
+						                                        'border-radius: 50px;' +
+							                                      'width: ' + (100 / width * hole).toFixed(3) + 'px;' +
+							                                      'height: ' + (100 / width * hole).toFixed(3) + 'px;">' +
+							                          '</div></div>';
+					} else {
+						result['r' + i].imageCode = '<i class="icon-help" style="font-size: 90px;"></i>';
+					}
 					result['r' + i].ratio = width / height; // Сохраняется соотношение сторон (или диаметров) для дальнейшего масштабирования символа
+					result['r' + i].shape = (!object[key].shape.match(/rect|rndrect/i) && width / height === 1) ? 'rnd' : 'rect';
+					result['r' + i].type = type;
+					result['r' + i].name = key;
 					i += 1;
 				}
 			}
 		}
 		
-		collectInfo(lib.vias);
-		collectInfo(lib.pads);
+		collectInfo(lib.vias, 'vias');
+		collectInfo(lib.pads, 'pads');
 		return result;
 	}
 	function createPadsList(lib) {
 		var i = 0;
 		
 		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
-			var key, usage, result = '';
+			var key, usage, status, result = '';
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
@@ -345,8 +427,10 @@
 					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
 					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
 					
+					status = (object[key].width > 0 && object[key].height > 0) ? 'icon-help step2-actions-pads-list-row-status yellow' : 'icon-cancel step2-actions-pads-list-row-status red';
+					
 					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="icon-help step2-actions-pads-list-row-status yellow"></span>' + key + usage +
+					          '<span class="' + status + '"></span>' + key + usage +
 					          '</div>';
 					i += 1;
 				}
@@ -368,11 +452,27 @@
 		descr.innerHTML = '';
 		icon.innerHTML = '';
 		activeRow = null;
+		padsLib = {};
+		fileContent = {};
 		padsDescriptions = {};
+		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] };
 		
 		while (document.getElementById('rnd' + i)) { document.getElementById('rnd' + i).style.display = 'block'; i += 1; }
 		i = 1;
 		while (document.getElementById('rect' + i)) { document.getElementById('rect' + i).style.display = 'block'; i += 1; }
+		
+		if (output.pcb) { document.getElementById('result').removeChild(output.pcb); }
+		if (output.dxf) { document.getElementById('result').removeChild(output.dxf); }
+		link.innerHTML = '';
+		pcbOutputContent = '';
+		dxfOutputContent = '';
+		output = {};
+		link.nextElementSibling.style.display = 'none';
+		tabDXF.classList.remove('step3-actions-headers-header-active');
+		tabPCB.classList.add('step3-actions-headers-header-active');
+	}
+	function toB64(string) {
+		return window.btoa(unescape(encodeURIComponent(string)));
 	}
 	
 	if (!allSupported) {
@@ -383,7 +483,6 @@
 		});
 		return;
 	}
-	
 	window.addEventListener('error', function () {
 		showPopup({
 			header:    'Ошибка',
@@ -394,21 +493,40 @@
 		});
 	});
 	window.addEventListener('load', function () { // Добавление символов в библиотеку
-		var result, i, x = -13; // 13 = 20 (расстояние между символами в svg) - 7 (расстояние от символа до края div)
+		var rndGroup, rectGroup, symbol, i, favicon;
 		
-		result = '<div class="step2-actions-lib-group">';
+		favicon = document.createElement('link');
+		favicon.rel = 'icon';
+		favicon.type = 'image/x-icon';
+		favicon.href = 'data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAA' +
+		               'AAAAAAAEAAAAAAAAAAAAAAAh0YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+		               'AAAAAAAAAAAAAAAABEREQAAAAAREBEBEQAAARAAEQABEAARAAARAAARABAAABEAAAEBEAAAEQAAAREAAAARAAAAERE' +
+		               'REREREREREREREREREREAAAARAAAAERAAABEAAAEQEAAAEQAAAQARAAARAAARAAEQABEAARAAABEQEQERAAAAABERE' +
+		               'QAAD4HwAA4kcAAM5zAACeeQAAvn0AAD58AAB+fgAAAAAAAAAAAAB+fgAAPnwAAL59AACeeQAAznMAAOJHAAD4HwAA';
+		document.getElementsByTagName('head')[0].appendChild(favicon);
+		
+		rndGroup = document.createElement('div');
+		rndGroup.classList.add('step2-actions-lib-group');
+		rectGroup = document.createElement('div');
+		rectGroup.classList.add('step2-actions-lib-group');
+		
 		for (i = 1; i <= symbolsAmount[0]; i += 1) {
-			result += '<div id="rnd' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -13px;"></div>';
-			x -= 70;
+			symbol = document.createElement('div');
+			symbol.classList.add('step2-actions-lib-group-symbol');
+			symbol.innerHTML = generateSVG(50, 50, 'rnd' + i, 1);
+			symbol.id = 'rnd' + i;
+			rndGroup.appendChild(symbol);
 		}
-		result += '</div><div class="step2-actions-lib-group">';
-		x = -13;
 		for (i = 1; i <= symbolsAmount[1]; i += 1) {
-			result += '<div id="rect' + i + '" class="step2-actions-lib-group-symbol" style="background-position: ' + x + 'px -83px;"></div>';
-			x -= 70;
+			symbol = document.createElement('div');
+			symbol.classList.add('step2-actions-lib-group-symbol');
+			symbol.innerHTML = generateSVG(50, 50, 'rect' + i, 1);
+			symbol.id = 'rect' + i;
+			rectGroup.appendChild(symbol);
 		}
-		result += '</div>';
-		lib.innerHTML = result;
+		
+		lib.appendChild(rndGroup);
+		lib.appendChild(rectGroup);
 	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
@@ -418,7 +536,7 @@
 			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
 		}
 	});
-	helpButton.addEventListener(click, function () { // (01)
+	helpButton.addEventListener(click, function () {
 		rollBlock(document.getElementById('help-wrapper'), document.getElementById('help-borders'), true);
 	});
 	uploadButton.addEventListener(click, function () {
@@ -446,12 +564,14 @@
 		
 		status = activeRow.firstChild;
 		
-		document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
+		document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'flex';
 		clearButton.style.display = 'none';
 		autoButton.style.display = 'block';
 		symbol.innerHTML = 'Выберите символ из библиотеки.';
-		status.classList.remove('green', 'icon-ok');
-		status.classList.add('icon-help', 'yellow');
+		status.classList.remove('icon-ok');
+		status.classList.remove('green');
+		status.classList.add('icon-help');
+		status.classList.add('yellow');
 		
 		freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1;
 		
@@ -471,27 +591,34 @@
 		i = 0;
 		while (padsDescriptions['r' + i]) {
 			if (!padsDescriptions['r' + i].symbolCode) { // Если еще не назначен символ
-				if (padsDescriptions['r' + i].shape === 'rnd' && freeSymbols.rnd.length) { // Если круглая КП
+				if (padsDescriptions['r' + i].shape === 'rnd' && freeSymbols.rnd.length && padsDescriptions['r' + i].ratio > 0) { // Если круглая КП
 					
 					padsDescriptions['r' + i].symbol = freeSymbols.rnd[0]; // Берем первый свободный символ нужного типа
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100, freeSymbols.rnd[0], 2); // Генерируем для него svg
 					document.getElementById(freeSymbols.rnd[0]).style.display = 'none'; // Прячем выбранный символ в библиотеке
 					freeSymbols.rnd.shift(); // Удаляем из массива уже не свободный символ
-					document.getElementById('r' + i).firstChild.classList.remove('icon-help', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
-					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
+					
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help'); // Добавляем галочку на соответствующую строку списка КП
+					document.getElementById('r' + i).firstChild.classList.remove('yellow');
+					document.getElementById('r' + i).firstChild.classList.add('icon-ok');
+					document.getElementById('r' + i).firstChild.classList.add('green');
 					freeSymbolsAm.rnd -= 1; // Уменьшаем остаток символов
 					
-				} else if (padsDescriptions['r' + i].shape === 'rect' && freeSymbols.rect.length) {
+				} else if (padsDescriptions['r' + i].shape === 'rect' && freeSymbols.rect.length && padsDescriptions['r' + i].ratio) {
 					
 					padsDescriptions['r' + i].symbol = freeSymbols.rect[0];
 					padsDescriptions['r' + i].symbolCode = generateSVG(100, 100 / padsDescriptions['r' + i].ratio, freeSymbols.rect[0], 2);
 					document.getElementById(freeSymbols.rect[0]).style.display = 'none';
 					freeSymbols.rect.shift();
-					document.getElementById('r' + i).firstChild.classList.remove('icon-help', 'yellow'); // Добавляем галочку на соответствующую строку списка КП
-					document.getElementById('r' + i).firstChild.classList.add('green', 'icon-ok');
+					
+					document.getElementById('r' + i).firstChild.classList.remove('icon-help');
+					document.getElementById('r' + i).firstChild.classList.remove('yellow');
+					document.getElementById('r' + i).firstChild.classList.add('icon-ok');
+					document.getElementById('r' + i).firstChild.classList.add('green');
 					freeSymbolsAm.rect -= 1; // Уменьшаем остаток символов
 					
 				} else if (freeSymbols.rnd.length === 0 || freeSymbols.rect.length === 0) { noSymbs = true; }
+				
 			}
 			i += 1;
 		}
@@ -507,6 +634,163 @@
 		autoButton.style.display = 'none';
 		clearButton.style.display = (padsDescriptions[activeRow.id].symbolCode) ? 'flex' : 'none';
 		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
+	});
+	startButton.addEventListener(click, function () {
+		var key, layers, fileName, selectText, symbols = { metallized: {}, nonMetallized: {}, holes: {} };
+		
+		function dotToComma(a) {
+			if (a) { // Если 0 - не форматирует
+				a = (Math.round(a * 100) / 100).toString().split('.').join(',');
+				if (!a.match(/\,|\./)) { a += ',0'; }
+			}
+			return a;
+		}
+		function calcMountSize(pad, padSize) {
+			var width = (pad.width > pad.height) ? pad.width : pad.height, height = (pad.width > pad.height) ? pad.height : pad.width;
+			
+			if (padSize) {
+				return (pad.shape.match(/ellipse|oval/i) && width === height) ? '%%C' + dotToComma(width + 0.2) : dotToComma(width + 0.2) + 'x' + dotToComma(height + 0.2);
+			} else { return false; }
+		}
+		function calcHoleSize(pad) {
+			return (pad.shape.match(/mthole|target/i)) ? '%%C' + dotToComma(pad.width) : (pad.hole) ? '%%C' + dotToComma(pad.hole) : false;
+		}
+		function calcPadSize(pad) {
+			var width = (pad.width > pad.height) ? pad.width : pad.height, height = (pad.width > pad.height) ? pad.height : pad.width;
+			
+			switch (pad.shape) {
+			case 'ellipse':
+			case 'oval':
+				if (width === height) {
+					return (pad.hole < width) ? '%%C' + dotToComma(width) : false;
+				} else {
+					return dotToComma(width) + 'x' + dotToComma(height);
+				}
+			case 'mthole':
+			case 'target':
+				return false;
+			case 'rect':
+			case 'rndrect':
+				return dotToComma(width) + 'x' + dotToComma(height);
+			default:
+				return false;
+			}
+		}
+		function calcRatio(pad) {
+			return (pad.width > pad.height) ? pad.width / pad.height : pad.height / pad.width;
+		}
+		function prepareSymbolsInfo(lib, newLib) {
+			var key, path;
+			
+			for (key in lib) {
+				if (lib.hasOwnProperty(key) && lib[key].symbol) {
+					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
+					
+					if (path[lib[key].symbol]) {
+						path[lib[key].symbol].amount += lib[key].coords.length;
+					} else {
+						path[lib[key].symbol] = {};
+						Object.defineProperties(path[lib[key].symbol], {
+							amount: { value: lib[key].coords.length, writable: true },
+							hole:   { value: calcHoleSize(lib[key]) },
+							pad:    { value: calcPadSize(lib[key]) },
+							ratio:  { value: calcRatio(lib[key]) }
+						});
+						Object.defineProperty(path[lib[key].symbol], 'mount', {
+							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
+						});
+					}
+				}
+			}
+		}
+		
+		if (freeSymbolsAm.rnd === symbolsAmount[0] && freeSymbolsAm.rect === symbolsAmount[1]) { return; } // Ничего не делать если не было назначено ни одного символа
+		
+		for (key in padsDescriptions) { // Записываем выбранные символы в объект с информацией о КП
+			if (padsDescriptions.hasOwnProperty(key)) {
+				padsLib[padsDescriptions[key].type][padsDescriptions[key].name].symbol = padsDescriptions[key].symbol;
+			}
+		}
+		layers = generateLayers(padsLib);
+		if (layers.skipped) {
+			showPopup({
+				header: 'Предупреждение',
+				content: msgs[5] + layers.skipped,
+				buttons: ['OK'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+		}
+		
+		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
+		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
+		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
+		
+		fileName = (file.name.match(/\.pcb$/i)) ? file.name.slice(0, -4) : file.name;
+		
+		try {
+			pcbOutputContent = document.createElement('pre');
+			pcbOutputContent.innerHTML = fileContent.asArray().join(String.fromCharCode(10));
+		} catch (error) {
+			showPopup({
+				header: 'Ошибка',
+				content: msgs[7],
+				buttons: ['OK'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+			return;
+		}
+		
+		try {
+			prepareSymbolsInfo(padsLib.vias, symbols);
+			prepareSymbolsInfo(padsLib.pads, symbols);
+			dxfOutputContent = document.createElement('pre');
+			dxfOutputContent.innerHTML = generateDXF(symbols).join(String.fromCharCode(10));
+		} catch (err) {
+			showPopup({
+				header: 'Ошибка',
+				content: msgs[6],
+				buttons: ['OK'],
+				funcs: [hidePopup],
+				closeable: true
+			});
+			return;
+		}
+		
+		pcbLink = document.createElement('a');
+		pcbLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(pcbOutputContent.innerHTML);
+		pcbLink.download = fileName + '_DRILL.pcb';
+		pcbLink.classList.add('step3-actions-tabContent-link');
+		pcbLink.innerHTML = 'Сохранить .pcb файл';
+		
+		dxfLink = document.createElement('a');
+		dxfLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(dxfOutputContent.innerHTML);
+		dxfLink.download = fileName + '_TABLE.dxf';
+		dxfLink.classList.add('step3-actions-tabContent-link');
+		dxfLink.innerHTML = 'Сохранить .dxf файл';
+		
+		output.pcb = document.createElement('div');
+		output.dxf = document.createElement('div');
+		output.pcb.appendChild(pcbOutputContent);
+		output.dxf.appendChild(dxfOutputContent);
+		
+		output.dxf.style.display = 'none';
+		
+		tabDXF.classList.remove('step3-actions-headers-header-active');
+		tabPCB.classList.add('step3-actions-headers-header-active');
+		
+		document.getElementById('result').appendChild(output.pcb);
+		document.getElementById('result').appendChild(output.dxf);
+		
+		selectText = document.createElement('span');
+		selectText.style.fontSize = '1.4rem';
+		selectText.style.color = '#666';
+		selectText.innerHTML = 'Выделить текст: Ctrl+A';
+		
+		link.appendChild(pcbLink);
+		link.appendChild(selectText);
+		link.nextElementSibling.style.display = 'block';
 	});
 	padsList.addEventListener(click, function (e) {
 		var row = e.target;
@@ -527,19 +811,28 @@
 			} else {
 				row.classList.add('step2-actions-pads-list-rowActive');
 				icon.innerHTML = padsDescriptions[row.id].imageCode;
-				symbol.innerHTML = padsDescriptions[row.id].symbolCode || 'Выберите символ из библиотеки.';
+				if (padsDescriptions[row.id].symbolCode) {
+					symbol.innerHTML = padsDescriptions[row.id].symbolCode;
+				} else {
+					symbol.innerHTML = (padsDescriptions[row.id].ratio > 0) ? 'Выберите символ из библиотеки.' : 'Не удалось распознать размеры КП.';
+				}
 				descr.innerHTML = padsDescriptions[row.id].descr;
 				activeRow = row;
 				clearButton.style.display = (padsDescriptions[row.id].symbolCode) ? 'flex' : 'none';
-				autoButton.style.display = (padsDescriptions[row.id].symbolCode || freeSymbolsAm[padsDescriptions[row.id].shape] === 0) ? 'none' : 'block';
+				autoButton.style.display = (!padsDescriptions[row.id].symbolCode && freeSymbolsAm[padsDescriptions[row.id].shape] > 0 && padsDescriptions[row.id].ratio > 0) ? 'block' : 'none';
 			}
 		}
 	});
 	lib.addEventListener(click, function (e) {
-		var status;
+		var status, libSymbol = e.target, i = 0;
 		
-		if (!e.target.id.match(/(rnd|rect)\d+/i) || !activeRow) { return; } // Если клик не по символу или нет активной КП
-		if (e.target.id.match(/rnd\d+/i) && (padsDescriptions[activeRow.id].ratio !== 1 || padsDescriptions[activeRow.id].shape === 'rect')) { // При попытке наложения круглого символа на не круглую КП
+		while (i < 3) { // Клик может попасть на path, svg или div - ищем именно div с нужным id
+			if (libSymbol.id && libSymbol.id.match(/(rnd|rect)\d+/i)) { break; } else { libSymbol = libSymbol.parentNode; }
+			i += 1;
+		}
+		
+		if (!activeRow || !libSymbol.id || !libSymbol.id.match(/(rnd|rect)\d+/i)) { return; } // Если клик не по символу или нет активной КП
+		if (libSymbol.id.match(/rnd\d+/i) && (padsDescriptions[activeRow.id].ratio !== 1 || padsDescriptions[activeRow.id].shape === 'rect')) { // При попытке наложения круглого символа на не круглую КП
 			showPopup({
 				header: 'Сообщение',
 				content: msgs[3],
@@ -551,27 +844,46 @@
 		}
 		
 		if (padsDescriptions[activeRow.id].symbolCode) { // Если символ уже назначен
-			document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
+			document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'flex';
 			freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1; // Увеличиваем количество оставшихся символов, т.к. далее оно уменьшится
 		}
 		
-		e.target.style.display = 'none';
+		libSymbol.style.display = 'none';
 		autoButton.style.display = 'none';
-		symbol.innerHTML = generateSVG(100, 100 / padsDescriptions[activeRow.id].ratio, e.target.id, 2);
+		symbol.innerHTML = generateSVG(100, 100 / padsDescriptions[activeRow.id].ratio, libSymbol.id, 2);
 		clearButton.style.display = 'flex';
 		
 		status = activeRow.firstChild;
-		status.classList.remove('icon-help', 'yellow');
-		status.classList.add('green', 'icon-ok');
+		status.classList.remove('icon-help');
+		status.classList.remove('yellow');
+		status.classList.add('icon-ok');
+		status.classList.add('green');
 		
 		freeSymbolsAm[padsDescriptions[activeRow.id].shape] -= 1; // Уменьшаем количество свободных символов данного типа
 		
 		padsDescriptions[activeRow.id].symbolCode = symbol.innerHTML;
-		padsDescriptions[activeRow.id].symbol = e.target.id;
+		padsDescriptions[activeRow.id].symbol = libSymbol.id;
+	});
+	tabs.addEventListener(click, function (e) {
+		if (e.target === tabPCB) {
+			tabPCB.classList.add('step3-actions-headers-header-active');
+			tabDXF.classList.remove('step3-actions-headers-header-active');
+			if (pcbOutputContent && link.contains(dxfLink)) {
+				link.replaceChild(pcbLink, dxfLink);
+				output.dxf.style.display = 'none';
+				output.pcb.style.display = 'block';
+			}
+		} else if (e.target === tabDXF) {
+			tabDXF.classList.add('step3-actions-headers-header-active');
+			tabPCB.classList.remove('step3-actions-headers-header-active');
+			if (dxfOutputContent && link.contains(pcbLink)) {
+				link.replaceChild(dxfLink, pcbLink);
+				output.pcb.style.display = 'none';
+				output.dxf.style.display = 'block';
+			}
+		}
 	});
 	reader.addEventListener('load', function () {
-		var fileContent, padsLib;
-		
 		fileContent = parseInputFile(this.result);
 		if (!fileContent) { return; }
 		
@@ -596,10 +908,10 @@
 					return array;
 				}
 			},
-			getPads: {
+			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, cosA, currPath, height, i, j, key, name, pads = {},
-						prop, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
+					var comp = {}, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
+						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
 					function parser(type, string) {
@@ -624,7 +936,7 @@
 							values = string.match(regStandardValue);
 							if (values) {
 								return (string.indexOf('isFlipped True') === -1) ?
-												values[0].slice(type.length + 2) :
+												values[0].slice(type.length + 2) + ' noflip' :
 												values[0].slice(type.length + 2) + ' flipped';
 							} else {
 								return null;
@@ -640,10 +952,11 @@
 							return (values) ? values[0].slice(type.length + 3) : null;
 						}
 					}
-					function finder(array, object) { // (06)
+					function finder(array, object) {
 						var i = 0, nextBranch;
 						function find(obj, start) {
 							var j;
+							
 							for (j = start; j < Object.keys(obj).length; j += 1) {
 								if (typeof obj[j] === 'object' && obj[j].header === array[i]) {
 									i += 1;
@@ -725,9 +1038,9 @@
 							var sqA, sqB;
 							
 							sqA = (a[1].shape.match(/ellipse|oval|mthole|target/i) && a[1].width === a[1].height) ?
-							       Math.PI * (a[1].width / 2) : a[1].width * a[1].height;
+							       Math.PI * Math.pow(a[1].width / 2, 2) : a[1].width * a[1].height;
 							sqB = (b[1].shape.match(/ellipse|oval|mthole|target/i) && b[1].width === b[1].height) ?
-							       Math.PI * (b[1].width / 2) : b[1].width * b[1].height;
+							       Math.PI * Math.pow(b[1].width / 2, 2) : b[1].width * b[1].height;
 							
 							return sqA - sqB;
 						}
@@ -741,6 +1054,21 @@
 						}
 						return result;
 					}
+					function writeSideForLonePads(coordsArray, defaultSide) {
+						var k, coords, side;
+						
+						if (coordsArray.length) {
+							for (k = 0; k < coordsArray.length; k += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
+								coords = coordsArray[k].split(' ');
+								if (coords[2]) { // Если у набора координат есть третье значение - это отдельная КП
+									if (coords[2] === 'flipped') { side = (defaultSide === 'top') ? 'bot' : 'top'; } else { side = defaultSide; } // Меняем сторону если у текущих координат есть флаг flipped
+									if (+coords[2] || +coords[2] === 0) { coords[3] = coords[2]; } // Если третье значение - угол поворота - делаем его четвертым
+									coords[2] = side;
+									coordsArray[k] = coords.join(' ');
+								}
+							}
+						}
+					}
 					
 					try {
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
@@ -749,7 +1077,7 @@
 								break;
 							}
 						}
-						for (i = 0; i < Object.keys(currPath).length; i += 1) { // (04)
+						for (i = 0; i < Object.keys(currPath).length; i += 1) {
 							if (typeof currPath[i] === 'string') {
 								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
 										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
@@ -763,7 +1091,7 @@
 								case 'padStyleRef':
 									name = parser(type, currPath[i]);
 									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
-									pads[name].coords.push(parser('pt', currPath[i]));
+									pads[name].coords.push(parser('pt', currPath[i]) + ' ' + parser('rotation', currPath[i]));
 									break;
 								}
 							} else {
@@ -779,7 +1107,7 @@
 								}
 							}
 						}
-						for (i = 0; i < Object.keys(this['2']).length; i += 1) { // (05)
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
 							type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
 									'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
 									'pad' : 0;
@@ -787,40 +1115,44 @@
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
 								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
-								currPath[name].side = 'thru';
+								currPath[name].side = 'thru'; // Вариант по-умолчанию - сквозная КП
+								
 								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
 									if (typeof this['2'][i][j] === 'string') {
-										prop = (this['2'][i][j].indexOf('holeDiam') + 1) ?
-														'hole' : (this['2'][i][j].indexOf('layerNumRef 1') + 1) ?
-														'layer1' : (this['2'][i][j].indexOf('layerNumRef 2') + 1) ?
-														'layer2' : null;
-										switch (prop) {
-										case 'hole':
+										
+										if (this['2'][i][j].match(/isHolePlated False/i)) { pth = false; }
+										
+										if (this['2'][i][j].match(/holeDiam/i)) {
 											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
-											break;
-										case 'layer1':
-											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]);
+										}
+										
+										if (this['2'][i][j].match(/layerNumRef 1\)/i)) {
+											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j]).toLowerCase();
 											currPath[name].width = parser('shapeWidth', this['2'][i][j]);
 											currPath[name].height = parser('shapeHeight', this['2'][i][j]);
-											break;
-										case 'layer2':
+										}
+										
+										if (this['2'][i][j].match(/layerNumRef 2\)/i)) {
 											width = parser('shapeWidth', this['2'][i][j]);
 											height = parser('shapeHeight', this['2'][i][j]);
-											if (width && !currPath[name].width) {
-												currPath[name].side = 'bot';
+											if (width && !currPath[name].width) { // Если на слое bot у КП есть размеры, но не было на top
+												currPath[name].side = 'bot'; // Значит КП на слое bot
 												currPath[name].width = width;
 												currPath[name].height = height;
-											} else if (!width) {
-												currPath[name].side = 'top';
+											} else if (!width) { // Если на слое bot у КП нет размеров
+												currPath[name].side = 'top'; // Значит она на top, иначе вариант по умолчанию - thru
 											}
-											break;
 										}
 									}
 								}
+								
+								currPath[name].pth = (currPath[name].hole < currPath[name].width) ? pth : false;
+								writeSideForLonePads(currPath[name].coords, currPath[name].side);
 							}
 							type = null;
+							pth = true;
 						}
-						for (key in comp) { // (07)
+						for (key in comp) {
 							if (comp.hasOwnProperty(key)) {
 								comp[key].pads = {};
 								currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
@@ -838,7 +1170,7 @@
 								}
 							}
 						}
-						for (key in comp) { // (08)
+						for (key in comp) {
 							if (comp.hasOwnProperty(key)) {
 								zero = comp[key].zero.split(' ');
 								for (name in comp[key].pads) {
@@ -862,9 +1194,13 @@
 														'bot' : (pads[name].side === 'bot') ?
 														'top' : 'thru';
 											}
+											// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
+											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[3]) : (+comp[key].pads[name][i].split(' ')[3]);
+											while (rotation >= 360) { rotation -= 360; }
+											
 											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
 																						 (+zero[1] + y).toFixed(3) + ' ' +
-																						 side + ' ' + (+comp[key].pads[name][i].split(' ')[2]));
+																						 side + ' ' + rotation);
 										}
 										// Записывает в каких компонентах использована площадка:
 										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
@@ -897,8 +1233,8 @@
 				}
 			},
 			addLayer: {
-				value: function (layerName) { // (09)
-					var i, j, layerNum, layers = [];
+				value: function (layerName, layerContent) {
+					var i, j, exists = false, layerNum, layers = [];
 					
 					function compareNumeric(a, b) {
 						return a - b;
@@ -910,59 +1246,74 @@
 						}
 						return result || array.length;
 					}
-					
-					Object.defineProperty(Object.prototype, 'shiftProperties', {
-						value: function (from, step) {
-							var i;
-							if (Object.keys(this).length > 0) {
-								for (i = Object.keys(this).length - 1; i >= from; i -= 1) {
-									this[i + step] = this[i];
-									delete this[i];
-								}
-							}
+					function shiftPropsLeft(object, n) {
+						var size = Object.keys(object).length;
+						
+						for (n; n < size; n += 1) {
+							object[n] = object[n + 1];
 						}
-					});
+						delete object[n];
+					}
+					function shiftPropsRight(object, n) {
+						var size = Object.keys(object).length, i;
+						
+						for (i = size - 1; i >= n; i -= 1) {
+							object[i + 1] = object[i];
+							delete object[i];
+						}
+					}
 					
 					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-						if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerDef') + 1) {
-							if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) {
-								layerNum = +this['4'][i][0].slice(10, -1);
-							} else {
-								layers[+this['4'][i][0].slice(10, -1)] = true;
-								if (typeof this['4'][i + 1] === 'object' && this['4'][i + 1].header.indexOf('(multiLayer') + 1) {
-									layerNum = getFreeLayerNum(layers);
-									this['4'].shiftProperties(i + 1, 1);
-									this['4'][i + 1] = {};
-									Object.defineProperties(this['4'][i + 1], {
+						if (typeof this['4'][i] === 'object') {
+							
+							if (this['4'][i].header.indexOf('(layerDef') + 1 && !layerNum) { // Находим блок layerDef
+								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
+									layerNum = +this['4'][i][0].slice(10, -1);
+									exists = true;
+								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
+									layers[+this['4'][i][0].slice(10, -1)] = true;
+								}
+							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
+								/* Создаем блок с описанием слоя */
+								if (!exists) { // Если слоя не было найдено
+									if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
+									shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
+									this['4'][i] = {};
+									Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
 										header: { value: '(layerDef \"' + layerName + '\"' },
 										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
 										1:			{ value: '(layerType NonSignal)', enumerable: true },
 										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
 									});
-									i += 1;
+									i += 1; // Снова указывает на multilayer
 								}
-							}
-						} else if (typeof this['4'][i] === 'object' && this['4'][i].header.indexOf('(layerContents') + 1) {
-							this['4'].shiftProperties(i, 1);
-							this['4'][i] = {};
-							Object.defineProperty(this['4'][i], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
-							for (j = i + 1; j < Object.keys(this['4']).length; j += 1) {
-								if (typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) {
-									delete this['4'][j];
-									break;
+								
+								/* Создаем блок с содержимым слоя */
+								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
+								this['4'][i + 1] = {};
+								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
+								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
+									this['4'][i + 1][j] = layerContent[j];
 								}
+								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
+								
+								/* Удаляем предыдущее содержимое слоя */
+								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
+									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
+									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
+										delete this['4'][j];
+										shiftPropsLeft(this['4'], j);
+									}
+								}
+								break;
 							}
-							break;
+							
 						}
 					}
-					
-					delete Object.prototype.shiftProperties;
 				}
 			}
 		});
 		padsLib = fileContent.getPads();
-		if (!padsLib) { return; }
-		
 		createPadsList(padsLib);
 	});
 }());

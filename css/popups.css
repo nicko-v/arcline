@@ -76,8 +76,7 @@
 	pointer-events: none;
 }
 .popup-content {
-	padding: 3rem 1.5rem 0;
-	margin-bottom: 3rem;
+	padding: 3rem 1.5rem;
 	font-size: 1.6rem;
 	color: #000;
 	overflow: auto;
@@ -105,5 +104,4 @@
 	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
 	box-shadow: 5px 5px 5px 0px rgba(0,0,0,0.1),
 							-5px 5px 5px 0px rgba(0,0,0,0.1);
-	cursor: move;
 }

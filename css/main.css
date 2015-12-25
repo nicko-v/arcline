@@ -55,6 +55,11 @@ p {
 	-webkit-user-select: none;
 	cursor: default;
 }
+.selectable {
+	-ms-user-select: text;
+	-moz-user-select: text;
+	-webkit-user-select: text;
+}
 .uppercase {
 	text-transform: uppercase;
 }
@@ -105,7 +110,6 @@ p {
 	display: flex;
 	justify-content: center;
 	width: 100%;
-	height: 100%;
 	margin: 8px 0;
 	border-top: 2px dashed #262d39;
 	border-bottom: 2px dashed #262d39;
@@ -221,11 +225,11 @@ p {
 }
 .step2-actions-open {
 	display: inline-block;
-	margin-top: 10px;
+	margin-top: 30px;
 	font-size: 1.4rem;
 	padding: 8px 13px;
-	border-top-left-radius: 5px;
-	border-top-right-radius: 5px;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
 	border-top: 1px solid #262d39;
 	border-right: 1px solid #262d39;
 	border-left: 1px solid #262d39;
@@ -254,7 +258,7 @@ p {
 	top: 0;
 	right: 30px;
 	bottom: 0;
-	left: 202px;
+	left: 222px;
 	z-index: 1;
 }
 .step2-actions-pads-list-row {
@@ -281,7 +285,7 @@ p {
 }
 .step2-actions-pads-info {
 	height: 445px;
-	min-width: 200px; /* Менять вместе с left у step2-actions-pads-list */
+	min-width: 220px; /* Менять вместе с left у step2-actions-pads-list */
 	border-right: 2px solid #262d39;  /* -||- */
 	background-color: #303948;
 	box-shadow: inset 0 0 3px 3px rgba(0, 0, 0, 0.1);
@@ -400,10 +404,12 @@ p {
 	width: 45%;
 }
 .step2-actions-lib-group-symbol {
+	display: flex;
+	justify-content: center;
+	align-items: center;
 	width: 64px;
 	height: 64px;
-	background-image: url('../img/symbols.svg');
-	margin: 10px 5px;
+	margin: 10px 5px 0;
 	cursor: pointer;
 }
 .step2-actions-lib-wrapper {
@@ -420,7 +426,79 @@ p {
 }
 .step3-actions {
 	margin-top: 13px;
+	padding-top: 30px;
 	border-top: 1px dashed #bbb;
+}
+.step3-actions-headers {
+	display: flex;
+	justify-content: space-between;
+	font-size: 1.6rem;
+	border-bottom: 1px solid #262d39;
+}
+.step3-actions-headers-header {
+	width: 50%;
+	height: 40px;
+	line-height: 40px;
+	border-top: 1px solid #262d39;
+	border-right: 1px solid #262d39;
+	border-left: 1px solid #262d39;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	background-color: #303948;
+	text-align: center;
+}
+.step3-actions-headers-header:hover {
+	cursor: pointer;
+	background-color: #2b3340;
+}
+.step3-actions-headers-header:active {
+	box-shadow: inset 0 1px 1px 1px rgba(0, 0, 0, 0.1);
+}
+.step3-actions-headers-header-active {
+	background-color: #2b3340;
+}
+.step3-actions-tabContent {
+	height: 460px;
+	padding: 20px;
+	background-color: #303948;
+	border: 1px solid #262d39;
+	font-size: 1.2rem;
+	box-shadow: inset 0 1px 2px 2px rgba(0, 0, 0, 0.1);
+	overflow-x: hidden;
+	position: relative;
+}
+.step3-actions-tabContent-hideScroll {
+	height: 400px;
+	width: 100%;
+	overflow-y: auto;
+	overflow-x: hidden;
+	position: absolute;
+	right: -26px;
+}
+.step3-actions-tabContent-link {
+	font-size: 1.6rem;
+	color: #008800;
+	cursor: pointer;
+	font-weight: bold;
+	text-decoration: none;
+}
+.step3-actions-tabContent-link:active {
+	transform: scale(0.95);
+}
+.step3-actions-tabContent-linkWrapper {
+	display: flex;
+	justify-content: space-between;
+	padding: 10px;
+}
+.step3-actions-tabContent-separator {
+	display: none;
+	height: 2px;
+	margin: 0px 0 20px;
+	width: 100%;
+	background-color: #262d39;
+}
+.step3-actions-tabContent-text {
+	cursor: text;
 }
 .wrapper {
 	width: 80%;
