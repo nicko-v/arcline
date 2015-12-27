@@ -1,4 +1,4 @@
-/*global FileReader, unescape, generateSVG, generateDXF, generateLayers */
+/*global Blob, FileReader, unescape, generateSVG, generateDXF, generateLayers */
 
 (function () {
 	'use strict';
@@ -471,9 +471,6 @@
 		tabDXF.classList.remove('step3-actions-headers-header-active');
 		tabPCB.classList.add('step3-actions-headers-header-active');
 	}
-	function toB64(string) {
-		return window.btoa(unescape(encodeURIComponent(string)));
-	}
 	
 	if (!allSupported) {
 		showPopup({
@@ -483,6 +480,7 @@
 		});
 		return;
 	}
+	
 	window.addEventListener('error', function () {
 		showPopup({
 			header:    'Ошибка',
@@ -758,17 +756,19 @@
 			return;
 		}
 		
-		pcbLink = document.createElement('a');
-		pcbLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(pcbOutputContent.innerHTML);
-		pcbLink.download = fileName + '_DRILL.pcb';
-		pcbLink.classList.add('step3-actions-tabContent-link');
-		pcbLink.innerHTML = 'Сохранить .pcb файл';
-		
-		dxfLink = document.createElement('a');
-		dxfLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(dxfOutputContent.innerHTML);
-		dxfLink.download = fileName + '_TABLE.dxf';
-		dxfLink.classList.add('step3-actions-tabContent-link');
-		dxfLink.innerHTML = 'Сохранить .dxf файл';
+		if (document.createElement('a').download !== undefined) { // Атрибут download не поддерживают IE и Safari
+			pcbLink = document.createElement('a');
+			pcbLink.href = window.URL.createObjectURL(new Blob([pcbOutputContent.innerHTML], { type: 'text/plain' }));
+			pcbLink.download = fileName + '_DRILL.pcb';
+			pcbLink.classList.add('step3-actions-tabContent-link');
+			pcbLink.innerHTML = 'Сохранить .pcb файл';
+			
+			dxfLink = document.createElement('a');
+			dxfLink.href = window.URL.createObjectURL(new Blob([dxfOutputContent.innerHTML], { type: 'text/plain' }));
+			dxfLink.download = fileName + '_TABLE.dxf';
+			dxfLink.classList.add('step3-actions-tabContent-link');
+			dxfLink.innerHTML = 'Сохранить .dxf файл';
+		}
 		
 		output.pcb = document.createElement('div');
 		output.dxf = document.createElement('div');
@@ -788,7 +788,7 @@
 		selectText.style.color = '#666';
 		selectText.innerHTML = 'Выделить текст: Ctrl+A';
 		
-		link.appendChild(pcbLink);
+		if (pcbLink) { link.appendChild(pcbLink); }
 		link.appendChild(selectText);
 		link.nextElementSibling.style.display = 'block';
 	});
@@ -869,7 +869,7 @@
 			tabPCB.classList.add('step3-actions-headers-header-active');
 			tabDXF.classList.remove('step3-actions-headers-header-active');
 			if (pcbOutputContent && link.contains(dxfLink)) {
-				link.replaceChild(pcbLink, dxfLink);
+				if (pcbLink) { link.replaceChild(pcbLink, dxfLink); }
 				output.dxf.style.display = 'none';
 				output.pcb.style.display = 'block';
 			}
@@ -877,7 +877,7 @@
 			tabDXF.classList.add('step3-actions-headers-header-active');
 			tabPCB.classList.remove('step3-actions-headers-header-active');
 			if (dxfOutputContent && link.contains(pcbLink)) {
-				link.replaceChild(dxfLink, pcbLink);
+				if (pcbLink) { link.replaceChild(dxfLink, pcbLink); }
 				output.pcb.style.display = 'none';
 				output.dxf.style.display = 'block';
 			}
