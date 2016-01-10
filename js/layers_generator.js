@@ -14,18 +14,17 @@ function generateLayers(lib) {
 		result[side].push(line + d.rect.x0y1() + d.rect.x0y0() + lineWidth);
 	}
 	function draw(object) {
-		var i, key, coords;
+		var i, key;
 		
 		for (key in object) {
 			if (object.hasOwnProperty(key) && object[key].symbol) {
 				for (i = 0; i < object[key].coords.length; i += 1) {
-					coords = object[key].coords[i].split(' ');
-					side = coords[2] || object[key].side;
-					x = +coords[0];
-					y = +coords[1];
+					side = object[key].coords[i].side;
+					x = object[key].coords[i].x;
+					y = object[key].coords[i].y;
 					
-					// Поворот нужен в случае, если КП повернута на четный угол (0, 180):
-					rotation = (+coords[3] / 90 % 2 > 0) ? true : false;
+					// Поворот нужен в случае, если КП повернута на прямой угол (90, 270):
+					rotation = (object[key].coords[i].rotation / 90 % 2 > 0) ? true : false;
 					
 					if (object[key].width > object[key].height && rotation) { // Изначально горизонатльная КП, но повернута на 90/270
 						w = object[key].height;
@@ -45,7 +44,7 @@ function generateLayers(lib) {
 						h = object[key].height;
 					}
 					
-					if (!coords[3] || [0, 90, 180, 270, 360].indexOf(+coords[3]) >= 0) { // Если КП повернута под прямым углом или вообще не повернута (via) - создаем для нее символ
+					if ([undefined, 0, 90, 180, 270, 360].indexOf(object[key].coords[i].rotation) >= 0) { // Если КП повернута под прямым углом или вообще не повернута (via) - создаем для нее символ
 						symbol[object[key].symbol]();
 					} else { // Иначе увеличиваем число пропущенных
 						result.skipped += 1;

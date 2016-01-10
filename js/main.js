@@ -10,9 +10,11 @@
 		input         = document.getElementById('file'),
 		link          = document.getElementById('link'),
 		startButton   = document.getElementById('start'),
+		cover         = document.getElementById('cover'),
 		uploadButton  = document.getElementById('upload'),
 		tabPCB        = document.getElementById('tabPCB'),
 		tabDXF        = document.getElementById('tabDXF'),
+		version       = document.getElementById('version'),
 		padsList      = document.getElementById('padsList'),
 		icon          = document.getElementById('padsIcon'),
 		descr         = document.getElementById('padsDescr'),
@@ -20,7 +22,6 @@
 		symbol        = document.getElementById('padsSymbol'),
 		helpButton    = document.getElementById('helpButton'),
 		clearButton   = document.getElementById('clearSymbol'),
-		allSupported  = window.FileReader && document.body.style.flex !== undefined,
 		click         = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
 		msgs          = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
@@ -31,14 +32,13 @@
 		                 'Не удалось сформировать таблицу отверстий. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
+		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                 'Не удалось распознать контур платы, сборочный чертеж не будет построен. <br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
+		drillViews = 1, padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
 
 	function hidePopup() {
-		var cover = document.getElementById('cover');
-		
 		cover.style.opacity = 0;
 		setTimeout(function () { cover.innerHTML = ''; }, 100);
 		setTimeout(function () {
@@ -46,8 +46,8 @@
 			cover.classList.remove('popup-cover');
 		}, 300);
 	}
-	function showPopup(params) {
-		var cover = document.getElementById('cover'), clickOffset, popup, close, header, content, moving;
+	function showPopup(params) { // Принимает объект с ключами: заголовок, текст, кнопки, функции кнопок, закрываемость. Ключи могут отсутствовать.
+		var clickOffset, popup, close, header, content, moving;
 		
 		function tryToClose(e) {
 			if (!moving && e.target.className.match(/popup-cover|popup-close/)) {
@@ -472,10 +472,10 @@
 		tabPCB.classList.add('step3-actions-headers-header-active');
 	}
 	
-	if (!allSupported) {
+	if (!window.FileReader || document.body.style.flex === undefined) {
 		showPopup({
 			header: 'Ошибка',
-			content: msgs[msgs.length - 2],
+			content: msgs[8],
 			closeable: false
 		});
 		return;
@@ -484,7 +484,7 @@
 	window.addEventListener('error', function () {
 		showPopup({
 			header:    'Ошибка',
-			content:   msgs[msgs.length - 1], // Неопределенная ошибка всегда последняя в массиве msgs
+			content:   msgs[9],
 			buttons:   ['Обновить страницу'],
 			funcs:     [location.reload.bind(location, true)],
 			closeable: false
@@ -492,6 +492,8 @@
 	});
 	window.addEventListener('load', function () { // Добавление символов в библиотеку
 		var rndGroup, rectGroup, symbol, i, favicon;
+		
+		setTimeout(function () { document.body.scrollTop = 0; }, 200);
 		
 		favicon = document.createElement('link');
 		favicon.rel = 'icon';
@@ -525,6 +527,18 @@
 		
 		lib.appendChild(rndGroup);
 		lib.appendChild(rectGroup);
+	});
+	version.addEventListener(click, function () {
+		showPopup({
+			header: 'Список изменений',
+			content: 'Версия от 30.12.2015:' +
+			         '<ul>' +
+			         '<li>Завершен основной этап разработки.</li>' +
+			         '<li>Добавлена кнопка информации о версии.</li>' +
+			         '<li>Добавлена инструкция и советы по использованию.</li>' +
+			         '</ul>',
+			closeable: true
+		});
 	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
@@ -684,20 +698,19 @@
 				if (lib.hasOwnProperty(key) && lib[key].symbol) {
 					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
 					
-					if (path[lib[key].symbol]) {
-						path[lib[key].symbol].amount += lib[key].coords.length;
-					} else {
-						path[lib[key].symbol] = {};
-						Object.defineProperties(path[lib[key].symbol], {
-							amount: { value: lib[key].coords.length, writable: true },
-							hole:   { value: calcHoleSize(lib[key]) },
-							pad:    { value: calcPadSize(lib[key]) },
-							ratio:  { value: calcRatio(lib[key]) }
-						});
-						Object.defineProperty(path[lib[key].symbol], 'mount', {
-							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
-						});
-					}
+					path[lib[key].symbol] = {};
+					Object.defineProperties(path[lib[key].symbol], {
+						amount: { value: lib[key].coords.length },
+						hole:   { value: calcHoleSize(lib[key]) },
+						pad:    { value: calcPadSize(lib[key]) },
+						ratio:  { value: calcRatio(lib[key]) },
+						coords: { value: lib[key].coords },
+						width:  { value: lib[key].width },
+						height: { value: lib[key].height }
+					});
+					Object.defineProperty(path[lib[key].symbol], 'mount', {
+						value: calcMountSize(lib[key], path[lib[key].symbol].pad)
+					});
 				}
 			}
 		}
@@ -744,7 +757,7 @@
 			prepareSymbolsInfo(padsLib.vias, symbols);
 			prepareSymbolsInfo(padsLib.pads, symbols);
 			dxfOutputContent = document.createElement('pre');
-			dxfOutputContent.innerHTML = generateDXF(symbols).join(String.fromCharCode(10));
+			dxfOutputContent.innerHTML = generateDXF(symbols, fileContent.getBoardOutline(), drillViews).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header: 'Ошибка',
@@ -765,7 +778,7 @@
 			
 			dxfLink = document.createElement('a');
 			dxfLink.href = window.URL.createObjectURL(new Blob([dxfOutputContent.innerHTML], { type: 'text/plain' }));
-			dxfLink.download = fileName + '_TABLE.dxf';
+			dxfLink.download = fileName + '_SB.dxf';
 			dxfLink.classList.add('step3-actions-tabContent-link');
 			dxfLink.innerHTML = 'Сохранить .dxf файл';
 		}
@@ -910,7 +923,7 @@
 			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
+					var comp = {}, coords, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
 						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
@@ -936,8 +949,8 @@
 							values = string.match(regStandardValue);
 							if (values) {
 								return (string.indexOf('isFlipped True') === -1) ?
-												values[0].slice(type.length + 2) + ' noflip' :
-												values[0].slice(type.length + 2) + ' flipped';
+												values[0].slice(type.length + 2) + ' 0' :
+												values[0].slice(type.length + 2) + ' 1';
 							} else {
 								return null;
 							}
@@ -1054,17 +1067,17 @@
 						}
 						return result;
 					}
-					function writeSideForLonePads(coordsArray, defaultSide) {
-						var k, coords, side;
+					function writeSideForLonePads(coords, defaultSide) {
+						var i;
 						
-						if (coordsArray.length) {
-							for (k = 0; k < coordsArray.length; k += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
-								coords = coordsArray[k].split(' ');
-								if (coords[2]) { // Если у набора координат есть третье значение - это отдельная КП
-									if (coords[2] === 'flipped') { side = (defaultSide === 'top') ? 'bot' : 'top'; } else { side = defaultSide; } // Меняем сторону если у текущих координат есть флаг flipped
-									if (+coords[2] || +coords[2] === 0) { coords[3] = coords[2]; } // Если третье значение - угол поворота - делаем его четвертым
-									coords[2] = side;
-									coordsArray[k] = coords.join(' ');
+						for (i = 0; i < coords.length; i += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
+							if (coords[i].hasOwnProperty('flipped')) { // Если есть такой ключ - это отдельная КП
+								if (coords[i].flipped) { // Меняем сторону если у текущих координат есть флаг flipped
+									coords[i].side = (defaultSide === 'top') ? 'bot' : (defaultSide === 'bot') ? 'top' : 'thru';
+									if (drillViews < 2 && coords[i].side === 'bot') { drillViews = 2; } // Количество необходимых видов передается в функцию построения сборочного чертежа
+								} else {
+									coords[i].side = defaultSide;
+									delete coords[i].flipped;
 								}
 							}
 						}
@@ -1072,45 +1085,53 @@
 					
 					try {
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-							if (this['4'][i].header === '(multiLayer') {
-								currPath = this['4'][i];
+							if (typeof this['4'][i] === 'object' && this['4'][i].header === '(multiLayer') {
+								
+								for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+									if (typeof this['4'][i][j] === 'string') {
+										
+										if (this['4'][i][j].indexOf('(viaStyleRef') + 1) {
+											name = parser('viaStyleRef', this['4'][i][j]);
+											if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
+											coords = parser('pt', this['4'][i][j]).split(' ');
+											vias[name].coords.push({ x: +coords[0],
+											                         y: +coords[1],
+											                         side: 'thru'
+											                       });
+										} else if (this['4'][i][j].indexOf('(padStyleRef') + 1) {
+											name = parser('padStyleRef', this['4'][i][j]);
+											if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
+											coords = parser('pt', this['4'][i][j]).split(' ');
+											pads[name].coords.push({ x: +coords[0],
+											                         y: +coords[1],
+											                         flipped: (+coords[2] === 1) ? true : false,
+											                         rotation: parser('rotation', this['4'][i][j])
+											                       });
+										}
+										
+									} else {
+										if (this['4'][i][j].header.indexOf('(pattern') > -1) {
+											name = parser('refDesRef', this['4'][i][j].header);
+											if (!comp[name]) { comp[name] = {}; }
+											comp[name].pattern = parser('patternRef', this['4'][i][j].header);
+											comp[name].zero = parser('pt', this['4'][i][j].header);
+											comp[name].rotation = parser('rotation', this['4'][i][j].header);
+											comp[name].graphics = (this['4'][i][j].header.indexOf('patternGraphicsNameRef') > -1) ?
+													parser('patternGraphicsNameRef', this['4'][i][j].header) :
+													parser('patternGraphicsNameRef', this['4'][i][j]['0']);
+										}
+									}
+								}
+								
 								break;
 							}
 						}
-						for (i = 0; i < Object.keys(currPath).length; i += 1) {
-							if (typeof currPath[i] === 'string') {
-								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
-										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
-										'padStyleRef' : 0;
-								switch (type) {
-								case 'viaStyleRef':
-									name = parser(type, currPath[i]);
-									if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
-									vias[name].coords.push(parser('pt', currPath[i]));
-									break;
-								case 'padStyleRef':
-									name = parser(type, currPath[i]);
-									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
-									pads[name].coords.push(parser('pt', currPath[i]) + ' ' + parser('rotation', currPath[i]));
-									break;
-								}
-							} else {
-								if (currPath[i].header.indexOf('(pattern') > -1) {
-									name = parser('refDesRef', currPath[i].header);
-									if (!comp[name]) { comp[name] = {}; }
-									comp[name].pattern = parser('patternRef', currPath[i].header);
-									comp[name].zero = parser('pt', currPath[i].header);
-									comp[name].rotation = parser('rotation', currPath[i].header);
-									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
-											parser('patternGraphicsNameRef', currPath[i].header) :
-											parser('patternGraphicsNameRef', currPath[i]['0']);
-								}
-							}
-						}
 						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
-							type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
-									'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
-									'pad' : 0;
+							if (typeof this['2'][i] === 'object') {
+								type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
+										'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
+										'pad' : null;
+							}
 							if (type) {
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
@@ -1120,9 +1141,9 @@
 								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
 									if (typeof this['2'][i][j] === 'string') {
 										
-										if (this['2'][i][j].match(/isHolePlated False/i)) { pth = false; }
-										
-										if (this['2'][i][j].match(/holeDiam/i)) {
+										if (this['2'][i][j].match(/isHolePlated False/i)) {
+											pth = false;
+										} else if (this['2'][i][j].match(/holeDiam/i)) {
 											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
 										}
 										
@@ -1188,19 +1209,22 @@
 												x = shiftX;
 												y = shiftY;
 											}
-											if (zero[2] === 'flipped') {
+											if (+zero[2]) {
 												x = -x;
 												side = (pads[name].side === 'top') ?
 														'bot' : (pads[name].side === 'bot') ?
 														'top' : 'thru';
 											}
+											if (drillViews < 2 && side === 'bot') { drillViews = 2; }
 											// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
 											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[3]) : (+comp[key].pads[name][i].split(' ')[3]);
 											while (rotation >= 360) { rotation -= 360; }
 											
-											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
-																						 (+zero[1] + y).toFixed(3) + ' ' +
-																						 side + ' ' + rotation);
+											pads[name].coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
+											                         y: Math.round((+zero[1] + y) * 1000) / 1000,
+											                         side: side,
+											                         rotation: +rotation
+											                       });
 										}
 										// Записывает в каких компонентах использована площадка:
 										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
@@ -1208,8 +1232,8 @@
 								}
 							}
 						}
-						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
-						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
+						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } else { delete pads[name].side; } } }
+						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } else { delete vias[name].side; } } }
 						for (name in pads) {
 							if (pads.hasOwnProperty(name) && pads[name].comps && pads[name].comps.length > 1) {
 								pads[name].comps.sort(compareNames);
@@ -1218,8 +1242,8 @@
 						}
 					} catch (err) {
 						showPopup({
-							header:    'Ошибка',
-							content:   msgs[2],
+							header: 'Ошибка',
+							content: msgs[2],
 							closeable: true
 						});
 						setStepStatus(1, 3, false);
@@ -1310,6 +1334,74 @@
 							
 						}
 					}
+				}
+			},
+			getBoardOutline: {
+				value: function () {
+					var i, j, result = [], layerNum, minX, minY, coords;
+					
+					function parser(string) {
+						var result = [];
+						
+						while (string.indexOf('(pt') + 1) {
+							coords = string.slice(string.indexOf('(pt') + 4, string.indexOf(')')).split(' ');
+							result.push(+coords[0], +coords[1]);
+							string = string.slice(string.indexOf(')') + 2);
+							// Ищет левую нижнюю точку контура что бы узнать насколько контур смещен от нуля координат:
+							if (result[result.length - 2] < minX || minX === undefined) { minX = result[result.length - 2]; }
+							if (result[result.length - 1] < minY || minY === undefined) { minY = result[result.length - 1]; }
+						}
+						// Если три набора координат - значит арка, переносим координаты центра арки в конец массива что бы порядок координат был таким же, как у линий:
+						if (result.length === 6) { result.push(result[0], result[1]); result.shift(); result.shift(); }
+						
+						return result;
+					}
+					
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object') {
+								
+								if (this['4'][i].header.match(/layerDef \"Board\"/i)) {
+									layerNum = this['4'][i][0].slice(10, -1);
+								} else if (layerNum && this['4'][i].header.indexOf('(layerContents (layerNumRef ' + layerNum + ')') + 1) {
+									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+										if (typeof this['4'][i][j] === 'string' && this['4'][i][j].indexOf('(pt') + 1) {
+											result.push(parser(this['4'][i][j]));
+										}
+									}
+									break;
+								}
+								
+							}
+						}
+						result.forEach(function (coords) {
+							var i;
+							
+							for (i = 0; i < coords.length; i += 1) {
+								if (i % 2) {
+									coords[i] = coords[i] - minY;
+								} else {
+									coords[i] = coords[i] - minX;
+								}
+							}
+						});
+						if (!result.length) {
+							showPopup({
+								header: 'Ошибка',
+								content: msgs[10],
+								closeable: true
+							});
+						}
+					} catch (err) {
+						showPopup({
+							header: 'Ошибка',
+							content: msgs[10],
+							closeable: true
+						});
+					}
+					
+					result.push({ shiftX: minX, shiftY: minY });
+					return result;
 				}
 			}
 		});

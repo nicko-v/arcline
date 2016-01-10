@@ -15,7 +15,7 @@
 *		72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
 *		73 - вертикальное выравнивание текста (0 - baseline, 1 - bottom, 2 - middle, 3 - top)
 */
-function generateDXF(lib) {
+function generateDXF(lib, outline, drillViews) {
 	'use strict';
 	var
 		pth = Object.keys(lib.metallized).length,
@@ -24,6 +24,7 @@ function generateDXF(lib) {
 		colWidth = 25,
 		rows = 6,
 		columns = pth + npth,
+		hw = 42, // Длина ячейки заголовков
 		tw = colWidth * columns,
 		th = colHeight * rows, // Общая высота таблицы
 		dashSize = colWidth / 2,
@@ -33,10 +34,10 @@ function generateDXF(lib) {
 						2, 'VPORT',
 						0, 'VPORT',
 						2, '*ACTIVE',
-						12, (tw / 2 - 21), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
+						12, (tw / 2 - hw / 2), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
 						22, (th / 2),
 						40, (th + 15),
-						41, ((tw + 42) / 100),
+						41, ((tw + hw) / 100),
 						70, 0,
 						10, 0,
 						20, 0,
@@ -76,6 +77,16 @@ function generateDXF(lib) {
 						70, 64,
 						62, 1,
 						6, 'CONTINUOUS',
+						0, 'LAYER',
+						2, 'Board',
+						70, 64,
+						62, 1,
+						6, 'CONTINUOUS',
+						0, 'LAYER',
+						2, 'Grid',
+						70, 64,
+						62, 4,
+						6, 'CONTINUOUS',
 						0, 'ENDTAB',
 						0, 'TABLE',
 						2, 'STYLE',
@@ -108,11 +119,15 @@ function generateDXF(lib) {
 							 ],
 		text = [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2],
 		redLn = [0, 'LINE', 8, 'Drill_Table', 62, 1],
+		cyanLn = [0, 'LINE', 8, 'Grid', 62, 4],
 		greenLn = [0, 'LINE', 8, 'Drill_Table', 62, 3],
 		cellPadding = 3, // Расстояние от границы ячейки до символа
-		radius = (colHeight / 2 - cellPadding), // Радиус символа
 		y = (th - colHeight / 2), // Центр символа в ячейке
-		currCol = 0, d = {}, symbol, skippedCells, i, j, w, h, x;
+		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
+		space = 50, // Расстояние между чертежами
+		shiftX = outline[outline.length - 1].shiftX, // Смещение левого нижнего края платы относительно нуля
+		shiftY = outline[outline.length - 1].shiftY,
+		currCol = 0, d = {}, symbol, skippedCells, boardWidth = 0, boardHeight = 0, radius, rotation, i, j, w, h, x;
 	
 	function baseRnd() {
 		result = result.concat(0, 'CIRCLE', 8, 'Drill_Table', 62, 3, 10, x, 20, y, 40, radius);
@@ -193,6 +208,121 @@ function generateDXF(lib) {
 		checkLib(object.holes);
 		return result;
 	}
+	function drawBoardGrid(x, y, mirrored) {
+		var dashes = 0, dashWidth, i;
+		
+		function drawHorizontalElems() {
+			if (dashes % 4 === 0) {
+				dashWidth = 2.5;
+				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, i, 20, (y - dashWidth - 2), 11, i, 21, (y - dashWidth - 2), 1, dashes);
+				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, i, 20, (y + boardHeight + dashWidth + 2), 11, i, 21, (y + boardHeight + dashWidth + 2), 1, dashes);
+			} else { dashWidth = 1.25; }
+			result = result.concat(cyanLn, [10, i, 20, y, 11, i, 21, y - dashWidth]);
+			result = result.concat(cyanLn, [10, i, 20, y + boardHeight, 11, i, 21, y + boardHeight + dashWidth]);
+			dashes += 1;
+		}
+		
+		result = result.concat(cyanLn, [10, x, 20, y, 11, x + boardWidth, 21, y]);
+		result = result.concat(cyanLn, [10, x + boardWidth, 20, y, 11, x + boardWidth, 21, y + boardHeight]);
+		result = result.concat(cyanLn, [10, x + boardWidth, 20, y + boardHeight, 11, x, 21, y + boardHeight]);
+		result = result.concat(cyanLn, [10, x, 20, y + boardHeight, 11, x, 21, y]);
+		
+		if (mirrored) {
+			for (i = x + boardWidth; i >= x; i -= 1.25) {
+				drawHorizontalElems();
+			}
+		} else {
+			for (i = x; i <= x + boardWidth; i += 1.25) {
+				drawHorizontalElems();
+			}
+		}
+		dashes = 0;
+		for (i = y; i <= y + boardHeight; i += 1.25) {
+			if (dashes % 4 === 0) {
+				dashWidth = 2.5;
+				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, (x - dashWidth - 2), 20, i, 11, (x - dashWidth - 2), 21, i, 1, dashes);
+				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, (x + boardWidth + dashWidth + 2), 20, i, 11, (x + boardWidth + dashWidth + 2), 21, i, 1, dashes);
+			} else { dashWidth = 1.25; }
+			result = result.concat(cyanLn, [10, x, 20, i, 11, x - dashWidth, 21, i]);
+			result = result.concat(cyanLn, [10, x + boardWidth, 20, i, 11, x + boardWidth + dashWidth, 21, i]);
+			dashes += 1;
+		}
+	}
+	function drawBoardOutline(mirrored, grid) {
+		var shift; // Смещение по X в зависимости от количества уже созданных видов
+		
+		shift = (views) ? views * boardWidth - hw + space : -hw;
+		outline.forEach(function (coords) {
+			var start, end, radius, box, x1, x2, x3;
+			// Набор координат в массиве выглядит так: 
+			// [0, 1, 2, 3] для линий. Первая пара - x и y начала, вторая - конца.
+			// [0, 1, 2, 3, 4, 5] для арок. Первая и вторая пара как у линий, последняя - центр.
+			
+			if (coords.length === 4) {
+				x1 = (mirrored) ? shift + boardWidth - coords[0] : coords[0] + shift;
+				x2 = (mirrored) ? shift + boardWidth - coords[2] : coords[2] + shift;
+				result.push(0, 'LINE', 8, 'Board', 62, 1, 10, x1, 20, (coords[1] + th + space), 11, x2, 21, (coords[3] + th + space));
+			} else if (coords.length === 6) {
+				radius = Math.abs(coords[4] - coords[0]) || Math.abs(coords[4] - coords[2]);
+				start  = Math.round(Math.acos((coords[0] - coords[4]) / radius) * 180 / Math.PI * 10000) / 10000;
+				end    = Math.round(Math.acos((coords[2] - coords[4]) / radius) * 180 / Math.PI * 10000) / 10000;
+				if (mirrored) {
+					box = start;
+					start = 180 - end;
+					end = 180 - box;
+					x3 = shift + boardWidth - coords[4];
+				} else { x3 = coords[4] + shift; }
+				result.push(0, 'ARC', 8, 'Board', 62, 1, 10, x3, 20, (coords[5] + th + space), 40, radius, space, start, 51, end);
+			}
+		});
+		views += 1;
+		drawBoardGrid(shift, th + space, mirrored);
+	}
+	function drawSymbolsOnBoard(object) {
+		var key, i, side;
+		
+		for (key in object) {
+			if (object.hasOwnProperty(key)) {
+				for (i = 0; i < object[key].coords.length; i += 1) {
+					y = object[key].coords[i].y - shiftY + th + space;
+					rotation = (object[key].coords[i].rotation / 90 % 2 > 0) ? true : false;
+					side = object[key].coords[i].side;
+					
+					if (object[key].width > object[key].height && rotation) { // Изначально горизонатльная КП, но повернута на 90/270
+						w = object[key].height;
+						h = object[key].width;
+					} else if (object[key].width < object[key].height) { // Изначально вертикальная
+						if (rotation) { // Если повернута на 90/270 - меняем длину с высотой, но флаг поворота уже не нужен
+							w = object[key].height;
+							h = object[key].width;
+							rotation = false;
+						} else { // Если не повернута или повернута на 180 - сохраняем значения длины и высоты и добавляем поворот
+							w = object[key].width;
+							h = object[key].height;
+							rotation = true;
+						}
+					} else { // Длина больше ширины и нет поворота либо длина равна ширине - сохраняем значения как есть
+						w = object[key].width;
+						h = object[key].height;
+						radius = w / 2;
+					}
+					
+					if (side === 'top') {
+						x = object[key].coords[i].x - shiftX - hw;
+					} else if (side === 'bot') {
+						x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+					} else if (side === 'thru') {
+						x = object[key].coords[i].x - shiftX - hw;
+						if (drillViews === 2) {
+							symbol[key]();
+							x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+						}
+					}
+					symbol[key]();
+				}
+			}
+		}
+	}
 	
 	d.rnd = { // Аргумент p - точка, для которой нужны координаты. 0 - первая, 2 - вторая. Для первой добавляется заголовок блока
 		x05y05:   function (p) { var a = [10, x, 20, y];                           if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
@@ -214,29 +344,29 @@ function generateDXF(lib) {
 		deg315:   function (p) { var a = [10, x + Math.cos(Math.PI * 1.75) * radius, 20, y + Math.sin(Math.PI * 1.75) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
 	};
 	d.rect = {
-		x05y05:   function (p) { var a = [10, x, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y0:    function (p) { var a = [10, x, 20, y + h / 2];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y1:    function (p) { var a = [10, x, 20, y - h / 2];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y05:    function (p) { var a = [10, x + w / 2, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y05:    function (p) { var a = [10, x - w / 2, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y05:  function (p) { var a = [10, x - w / 4, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y05:  function (p) { var a = [10, x + w / 4, 20, y];         if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y0:     function (p) { var a = [10, x - w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y0:     function (p) { var a = [10, x + w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y1:     function (p) { var a = [10, x + w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y1:     function (p) { var a = [10, x - w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y0:   function (p) { var a = [10, x - w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y0:   function (p) { var a = [10, x + w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y025:   function (p) { var a = [10, x + w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y075:   function (p) { var a = [10, x + w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y1:   function (p) { var a = [10, x + w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y1:   function (p) { var a = [10, x - w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y075:   function (p) { var a = [10, x - w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y025:   function (p) { var a = [10, x - w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y025: function (p) { var a = [10, x - w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y025: function (p) { var a = [10, x + w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y075: function (p) { var a = [10, x + w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y075: function (p) { var a = [10, x - w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
+		x05y05:   function (p) { var a = [10, x, 20, y]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y0:    function (p) { var a = (!rotation) ? [10, x, 20, y + h / 2] : [10, x - w / 2, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x05y1:    function (p) { var a = (!rotation) ? [10, x, 20, y - h / 2] : [10, x + w / 2, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y05:    function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y] : [10, x, 20, y + h / 2];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y05:    function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y] : [10, x, 20, y - h / 2];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y05:  function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y] : [10, x, 20, y - h / 4];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y05:  function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y] : [10, x, 20, y + h / 4];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y0:     function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y + h / 2] : [10, x - w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y0:     function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y + h / 2] : [10, x - w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y1:     function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y - h / 2] : [10, x + w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y1:     function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y - h / 2] : [10, x + w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y0:   function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y + h / 2] : [10, x - w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y0:   function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y + h / 2] : [10, x - w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y025:   function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y + h / 4] : [10, x - w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x1y075:   function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y - h / 4] : [10, x + w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y1:   function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y - h / 2] : [10, x + w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y1:   function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y - h / 2] : [10, x + w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y075:   function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y - h / 4] : [10, x + w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x0y025:   function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y + h / 4] : [10, x - w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y025: function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y + h / 4] : [10, x - w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y025: function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y + h / 4] : [10, x - w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x075y075: function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y - h / 4] : [10, x + w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
+		x025y075: function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y - h / 4] : [10, x + w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
 	};
 	
 	symbol = {
@@ -950,27 +1080,27 @@ function generateDXF(lib) {
 	
 	/* Построение таблицы */
 	// Ячейки заголовков
-	result = result.concat(redLn, [10,   0, 20, 0,  11, -42,  21, 0]);
-	result = result.concat(redLn, [10, -42, 20, 0,  11, -42,  21, th]);
-	result = result.concat(redLn, [10, -42, 20, th, 11,   0,  21, th]);
+	result = result.concat(redLn, [10,   0, 20,  0, 11, -hw,  21, 0]);
+	result = result.concat(redLn, [10, -hw, 20,  0, 11, -hw,  21, th]);
+	result = result.concat(redLn, [10, -hw, 20, th, 11,   0,  21, th]);
 	result = result.concat(redLn, [10,   0, 20, th, 11,   0,  21, 0]);
-	result = result.concat(redLn, [10, -42, 20, 15, 11,   0,  21, 15]);
-	result = result.concat(redLn, [10, -42, 20, 30, 11,   0,  21, 30]);
-	result = result.concat(redLn, [10, -42, 20, 45, 11,   0,  21, 45]);
-	result = result.concat(redLn, [10, -42, 20, 60, 11,   0,  21, 60]);
-	result = result.concat(redLn, [10, -42, 20, 75, 11,   0,  21, 75]);
+	result = result.concat(redLn, [10, -hw, 20, 15, 11,   0,  21, 15]);
+	result = result.concat(redLn, [10, -hw, 20, 30, 11,   0,  21, 30]);
+	result = result.concat(redLn, [10, -hw, 20, 45, 11,   0,  21, 45]);
+	result = result.concat(redLn, [10, -hw, 20, 60, 11,   0,  21, 60]);
+	result = result.concat(redLn, [10, -hw, 20, 75, 11,   0,  21, 75]);
 	
 	// Ячейки данных
 	skippedCells = determineEmptyCells(lib); // Ячейки без значений
 	for (i = 0; i < columns; i += 1) {
 		for (j = 0; j <= rows; j += 1) { // Горизонатльные
 			if (!(j === 2 && skippedCells.row1.indexOf(i) + 1 && skippedCells.row2.indexOf(i) + 1)) { // Не рисовать линию если эта ячейка и та, что под ней, пусты
-				result = result.concat(redLn, [10, (colWidth * i),  20, (colHeight * j),  11, (colWidth * i) + colWidth,  21, (colHeight * j)]);
+				result = result.concat(redLn, [10, (colWidth * i), 20, (colHeight * j), 11, (colWidth * i) + colWidth, 21, (colHeight * j)]);
 			}
 		}
 		for (j = 1; j < rows; j += 1) { // Вертикальные
 			if (!(j > 0 && j < 4 && skippedCells['row' + j].indexOf(i) + 1 && skippedCells['row' + j].indexOf(i + 1) + 1)) {
-				result = result.concat(redLn, [10, (colWidth * i + colWidth),  20, (colHeight * j),  11, (colWidth * i + colWidth),  21, (colHeight * j) + colHeight]);
+				result = result.concat(redLn, [10, (colWidth * i + colWidth), 20, (colHeight * j), 11, (colWidth * i + colWidth), 21, (colHeight * j) + colHeight]);
 			}
 		}
 	}
@@ -983,24 +1113,53 @@ function generateDXF(lib) {
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, headers[11]);
 	
 	// Тексты заголовков
-	result = result.concat(text, [10, -42, 20, th,                   11, -21, 21, th - colHeight * 0.5, 1], headers[0]);
-	result = result.concat(text, [10, -42, 20, th - colHeight,       11, -21, 21, th - colHeight * 1.5, 1], headers[1]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 2,   11, -21, 21, th - colHeight * 2.33, 1], headers[2]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 2.5, 11, -21, 21, th - colHeight * 2.66, 1], headers[3]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 3,   11, -21, 21, th - colHeight * 3.33, 1], headers[4]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 3.5, 11, -21, 21, th - colHeight * 3.66, 1], headers[5]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 4,   11, -21, 21, th - colHeight * 4.33, 1], headers[4]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 4.5, 11, -21, 21, th - colHeight * 4.66, 1], headers[6]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 5,   11, -21, 21, th - colHeight * 5.33, 1], headers[7]);
-	result = result.concat(text, [10, -42, 20, th - colHeight * 5.5, 11, -21, 21, th - colHeight * 5.66, 1], headers[8]);
+	result = result.concat(text, [10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5, 1], headers[0]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5, 1], headers[1]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1], headers[2]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1], headers[3]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1], headers[4]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1], headers[5]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1], headers[4]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1], headers[6]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1], headers[7]);
+	result = result.concat(text, [10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1], headers[8]);
 	
 	// Значения ячеек
 	if (pth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1], headers[9]); } // Металлизация - "Есть"
 	if (npth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1], headers[10]); } // Металлизация - "Нет"
 	
+	radius = (colHeight / 2 - cellPadding);
+	
 	fillTheTable(lib.metallized);
 	fillTheTable(lib.nonMetallized);
 	fillTheTable(lib.holes);
+	/* -=-=-=- */
+	
+	/* Построение сборочного чертежа */
+	if (outline.length) {
+		// Контуры платы
+		outline.forEach(function (coords, index) {
+			var i;
+			
+			if (index === outline.length - 1) { return; } // Последний элемент массива - объект с информацией о смещении контура
+			
+			for (i = 0; i < coords.length; i += 1) {
+				if (i % 2 && coords[i] > boardHeight) {
+					boardHeight = coords[i];
+				} else if (i % 2 === 0 && coords[i] > boardWidth) {
+					boardWidth = coords[i];
+				}
+			}
+		});
+		drawBoardOutline(false, true);
+		if (drillViews === 2) { drawBoardOutline(true, true); }
+		
+		// Символы на плате
+		drawSymbolsOnBoard(lib.holes);
+		drawSymbolsOnBoard(lib.metallized);
+		drawSymbolsOnBoard(lib.nonMetallized);
+	}
+	
 	/* -=-=-=- */
 	
 	result.push(0, 'ENDSEC', 0, 'EOF');

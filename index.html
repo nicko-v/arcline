@@ -14,8 +14,9 @@
 		<script src="js/main.js" defer></script>
 	</head>
 	<body class="noselect">
-		<div class="mainWrapper" id="mainWrapper">
-			<div id="cover"></div>
+		<div class="mainWrapper">
+			<div id="cover" style="opacity: 0;"></div>
+			<div class="version" id="version">v1.0.0</div>
 			<div style="width: 80%;">
 				<header>
 					<div class="header-text">P-CAD PCB tools</div>
@@ -27,26 +28,53 @@
 						<div class="help">
 							<h1 class="uppercase" style="text-align: center;">Инструкция</h1>
 							<ol class="help-list">
-								<li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
-								Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
-								Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.
-								Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut,
-								imperdiet a, venenatis vitae, justo.</li>
 								<li>
-								Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi.
-								Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim.
-								Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.
-								Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui.</li>
+									Для начала работы требуется выбрать .pcb файл. Он должен быть сохранен в формате ASCII (бинарный формат 
+								  не может быть прочитан). В случае, если файл содержит слои с названиями “Drill”, “DrillTop” или “DrillBot”, их 
+								  содержимое будет очищено и заменено результатом работы данной программы. Нет необходимости заранее создавать 
+								  слои или удалять старые. После выбора необходимого файла следует нажать кнопку подтверждения загрузки.
+								</li>
+								<br />
 								<li>
-								Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing
-								sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et
-								ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci
-								eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh.</li>
+									По окончании распознавания содержимого в секции “Шаг 2” появится список контактных площадок (КП), присутствующих 
+									на плате. В скобках около каждого названия указаны компоненты, в которых используется данная КП. Выбор любого элемента 
+									списка открывает более подробную информацию: размеры, диаметр, количество, а так же условный вид КП, который показывает 
+									соотношение сторон (для прямоугольных) или отношение диаметра площадки к отверстию (для круглых). Что бы назначить символ 
+									выбранной КП, следует открыть вкладку “Библиотека символов” и нажать на любом из них. При нажатии "Автоподбор" программа 
+									самостоятельно установит символы для всех КП исходя из логики "чем меньше площадь КП - тем проще символ". Нажатие на крестик 
+									над символом удаляет его и возвращает в библиотеку. Когда все необходимые символы назначены, следует нажать стрелку справа 
+									от списка КП для начала отрисовки.
+								</li>
+								<br />
 								<li>
-								Donec sodales sagittis magna. Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida
-								magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus.
-								Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla. Vestibulum ante ipsum primis in faucibus
-								orci luctus et ultrices posuere cubilia Curae.</li>
+									Как только все символы будут отрисованы, в секции "Шаг 3" появятся результаты работы - сама плата и таблица, добавляемая 
+									на сборочный чертеж. На каждой из вкладок приведен код сгенерированного файла и ссылка на его скачивание. В случае, если 
+									ссылки нет или она не работает (браузер не поддерживает необходимую технологию), - выделите содержимое вкладки 
+									с помощью сочетания Ctrl+A, скопируйте и вставьте в любой текстовый редактор (Блокнот, Notepad++), затем сохраните в 
+									соответствующем формате (.pcb для файла с первой вкладки и .dxf для файла со второй).
+								</li>
+							</ol>
+							<br />
+							<h1 class="uppercase" style="text-align: center;">Советы</h1>
+							<ol class="help-list">
+								<li>
+									Перед началом работы очистите файл от неиспользуемых стилей контактных площадок, переходных отверстий и текстов. Это ускорит 
+									время обработки файла. Имеет смысл только если присутствует более 10 неиспользуемых стилей у каждого типа объектов.
+									<br />
+									Как сделать: <i>Options -> Pad styles -> Purge unused styles</i>. Точно так же для Via styles, Text styles.
+								</li>
+								<br />
+								<li>
+									При ручной настройке старайтесь подбирать самые простые символы для контактных площадок с маленькой площадью (это улучшит их 
+									разборчивость на бумаге) или с слишком большим соотношением сторон (это позволит избежать чрезмерного искажения сложных символов).
+									<br />
+									Символы в библиотеке отсортированы по увеличению сложности (количества линий), список контактных площадок отсортирован по увеличению их площади. 
+								</li>
+								<br />
+								<li>
+									Все кириллические символы в файле транслитеруются латинскими во избежание возможных ошибок при последующем чтении. Если на плате 
+									присутствовали кириллические надписи (например, номер с буквенным кодом) - проверьте их и замените.
+								</li>
 							</ol>
 						</div>
 					</div>
@@ -116,7 +144,7 @@
 					<div class="step3-actions">
 						<div class="step3-actions-headers" id="tabs">
 							<div class="step3-actions-headers-header step3-actions-headers-header-active" id="tabPCB">PCB</div>
-							<div class="step3-actions-headers-header" id="tabDXF">Таблица</div>
+							<div class="step3-actions-headers-header" id="tabDXF">Сборочный чертеж</div>
 						</div>
 						<div class="step3-actions-tabContent">
 							<div class="step3-actions-tabContent-linkWrapper" id="link"></div>
