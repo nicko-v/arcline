@@ -33,10 +33,12 @@
 		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
-		                 'Не удалось распознать контур платы, сборочный чертеж не будет построен. <br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.'],
+		                 'Не удалось распознать контур платы, будет построена только таблица отверстий - без сборочного чертежа и проводящих рисунков. <br><br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.',
+		                 'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		drillViews = 1, padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
+		drillViews = 1, padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink,
+		boardOutline, routes, output = {};
 
 	function hidePopup() {
 		cover.style.opacity = 0;
@@ -53,7 +55,7 @@
 			if (!moving && e.target.className.match(/popup-cover|popup-close/)) {
 				if (params.closeable) {
 					hidePopup();
-					cover.removeEventListener(click, tryToClose);
+					cover.onclick = tryToClose;
 				} else {
 					popup.style.animation = 'reset 0 linear normal';
 					setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
@@ -82,58 +84,58 @@
 			setTimeout(function () { moving = false; }, 100);
 		}
 		
-		if (!cover.innerHTML) { // Предотвращает появление нового окошка пока существует другое
-			cover.classList.add('popup-cover'); // Класс с затемненным фоном и блокировкой прокрутки
-			
-			popup = document.createElement('div');
-			popup.classList.add('popup');
-			
-			header = document.createElement('div');
-			header.classList.add('uppercase');
-			header.classList.add('popup-header');
-			header.innerHTML = params.header;
-			
-			content = document.createElement('div');
-			content.classList.add('popup-content');
-			content.innerHTML = params.content;
-			
-			popup.appendChild(header);
-			popup.appendChild(content);
-			
-			if (params.buttons) { // Если у окошка должны быть кнопки
-				params.buttons.forEach(function (name, index) {
-					var button = document.createElement('button');
-					
-					button.classList.add('popup-button');
-					button.innerHTML = name;
-					button.addEventListener(click, function () { params.funcs[index](); hidePopup(); });
-					popup.appendChild(button);
-				});
-			}
-			if (params.closeable) { // Если нужен закрывающий крестик
-				close = document.createElement('div');
-				close.classList.add('popup-close');
-				close.appendChild(document.createElement('div'));
-				close.firstChild.classList.add('popup-close-cross');
-				popup.appendChild(close);
-			}
-			
-			document.body.classList.add('lock');
-			cover.style.opacity = 1;
-			cover.appendChild(popup);
-			popup.style.top = window.scrollY + window.innerHeight / 3 + 'px'; // Что бы показывалось относительно прокрученной страницы
-			popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
-			
-			cover.addEventListener(click, tryToClose);
-			header.addEventListener('mousedown', function (e) {
-				if (e.button === 0) {
-					moving = true;
-					clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
-					document.addEventListener('mousemove', movePopup);
-					document.addEventListener('mouseup', stopMoving);
-				}
+		cover.innerHTML = '';
+		
+		cover.classList.add('popup-cover'); // Класс с затемненным фоном и блокировкой прокрутки
+		
+		popup = document.createElement('div');
+		popup.classList.add('popup');
+		
+		header = document.createElement('div');
+		header.classList.add('uppercase');
+		header.classList.add('popup-header');
+		header.innerHTML = params.header;
+		
+		content = document.createElement('div');
+		content.classList.add('popup-content');
+		content.innerHTML = params.content;
+		
+		popup.appendChild(header);
+		popup.appendChild(content);
+		
+		if (params.buttons) { // Если у окошка должны быть кнопки
+			params.buttons.forEach(function (name, index) {
+				var button = document.createElement('button');
+				
+				button.classList.add('popup-button');
+				button.innerHTML = name;
+				button.addEventListener(click, function () { params.funcs[index](); hidePopup(); });
+				popup.appendChild(button);
 			});
 		}
+		if (params.closeable) { // Если нужен закрывающий крестик
+			close = document.createElement('div');
+			close.classList.add('popup-close');
+			close.appendChild(document.createElement('div'));
+			close.firstChild.classList.add('popup-close-cross');
+			popup.appendChild(close);
+		}
+		
+		document.body.classList.add('lock');
+		cover.style.opacity = 1;
+		cover.appendChild(popup);
+		popup.style.top = window.scrollY + window.innerHeight / 3 + 'px'; // Что бы показывалось относительно прокрученной страницы
+		popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
+		
+		cover.onclick = tryToClose;
+		header.addEventListener('mousedown', function (e) {
+			if (e.button === 0) {
+				moving = true;
+				clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
+				document.addEventListener('mousemove', movePopup);
+				document.addEventListener('mouseup', stopMoving);
+			}
+		});
 	}
 	function rollBlock(wrapper, block, restore) {
 		var
@@ -146,31 +148,34 @@
 			wrapper.style.maxHeight = '0px';
 		}
 	}
-	function setStepStatus(step, operation, status, restore) {
-		var icon = document.getElementById('stp' + step + operation), opsAmount;
+	function setStepStatus(operation, status, stop, restore) {
+		var icon = document.getElementById('op' + operation), opsAmount;
 		
-		function setToAll(n, cls) { // Ставит классы cls всем элементам, начиная с заданного n
+		function setToAll(n, cls, title) { // Ставит классы cls всем элементам, начиная с заданного n
 			var i;
 			
-			while (document.getElementById('stp' + step + n)) {
-				icon = document.getElementById('stp' + step + n);
+			while (document.getElementById('op' + n)) {
+				icon = document.getElementById('op' + n);
 				icon.className = 'cleanstate';
+				icon.title = title;
 				for (i = 0; i < cls.length; i += 1) { icon.classList.add(cls[i]); }
 				n += 1;
 			}
 		}
 		
 		if (restore) { // Если передан флаг восстановления статусов (например при выборе нового файла)
-			setToAll(1, ['yellow', 'icon-spin5', 'animate-spin']);
+			setToAll(1, ['yellow', 'icon-spin5', 'animate-spin'], 'Ожидание');
 		} else {
 			icon.className = 'cleanstate';
 			if (status) {
 				icon.classList.add('green');
 				icon.classList.add('icon-ok');
+				icon.title = 'Выполнено успешно';
 			} else {
 				icon.classList.add('red');
 				icon.classList.add('icon-cancel');
-				setToAll(operation + 1, ['red', 'icon-stop']);
+				icon.title = 'Ошибка при выполнении';
+				if (stop) { setToAll(operation + 1, ['red', 'icon-stop'], 'Операция не выполнялась'); }
 			}
 		}
 	}
@@ -249,14 +254,14 @@
 		});
 		
 		if (string.indexOf('ACCEL_ASCII') + 1) {
-			setStepStatus(1, 1, true);
+			setStepStatus(1, true);
 		} else {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[0],
 				closeable: true
 			});
-			setStepStatus(1, 1, false);
+			setStepStatus(1, false, true);
 			return;
 		}
 		try {
@@ -295,18 +300,18 @@
 				content: msgs[1],
 				closeable: true
 			});
-			setStepStatus(1, 2, false);
+			setStepStatus(2, false, true);
 			return;
 		}
 		if (Object.keys(obj).length > 4) {
-			setStepStatus(1, 2, true);
+			setStepStatus(2, true);
 		} else {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[1],
 				closeable: true
 			});
-			setStepStatus(1, 2, false);
+			setStepStatus(2, false, true);
 			return;
 		}
 		
@@ -417,20 +422,24 @@
 		var i = 0;
 		
 		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
-			var key, usage, status, result = '';
+			var key, usage, status, same, result = '';
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
 					
 					if (object[key].comps) {
-						usage = '<span style="color: #666;"> (' + object[key].comps.join(', ') + ')</span>';
-					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
-					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
+						usage = '<span style="color: #666;" title="используется в перечисленных компонентах">(' + object[key].comps.join(', ') + ')</span>';
+					} else { usage = (v) ? '<span style="color: #666;">(переходное отверстие)</span>' :
+					                       '<span style="color: #666;">(используется самостоятельно)</span>'; }
 					
 					status = (object[key].width > 0 && object[key].height > 0) ? 'icon-help step2-actions-pads-list-row-status yellow' : 'icon-cancel step2-actions-pads-list-row-status red';
+					if (object[key].same.length) {
+						same = '<span style="color: #666;" title="объединено с перечисленными КП"> (' + object[key].same.join(', ') + ')</span>';
+						usage = '<br />' + usage;
+					} else { same = false; }
 					
 					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="' + status + '"></span>' + key + usage +
+					          '<span class="' + status + '"></span>' + key + (same || ' ') + usage +
 					          '</div>';
 					i += 1;
 				}
@@ -531,18 +540,18 @@
 	version.addEventListener(click, function () {
 		showPopup({
 			header: 'Список изменений',
-			content: 'Версия от 30.12.2015:' +
+			content: 'Версия от 10.01.2016:' +
 			         '<ul>' +
-			         '<li>Завершен основной этап разработки.</li>' +
 			         '<li>Добавлена кнопка информации о версии.</li>' +
-			         '<li>Добавлена инструкция и советы по использованию.</li>' +
+			         '<li>Добавлена отрисовка сборочных чертежей.</li>' +
+			         '<li>Добавлены инструкция и советы по использованию.</li>' +
 			         '</ul>',
 			closeable: true
 		});
 	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
-			setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
+			setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
 			file = input.files[0];
 			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
 			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
@@ -552,7 +561,7 @@
 		rollBlock(document.getElementById('help-wrapper'), document.getElementById('help-borders'), true);
 	});
 	uploadButton.addEventListener(click, function () {
-		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
+		setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
 		
 		if (padsList.innerHTML) { resetChanges(); }
 		
@@ -757,7 +766,7 @@
 			prepareSymbolsInfo(padsLib.vias, symbols);
 			prepareSymbolsInfo(padsLib.pads, symbols);
 			dxfOutputContent = document.createElement('pre');
-			dxfOutputContent.innerHTML = generateDXF(symbols, fileContent.getBoardOutline(), drillViews).join(String.fromCharCode(10));
+			dxfOutputContent.innerHTML = generateDXF(symbols, boardOutline, drillViews).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header: 'Ошибка',
@@ -921,9 +930,89 @@
 					return array;
 				}
 			},
+			addLayer: {
+				value: function (layerName, layerContent) {
+					var i, j, exists = false, layerNum, layers = [];
+					
+					function compareNumeric(a, b) {
+						return a - b;
+					}
+					function getFreeLayerNum(array) {
+						var i, result;
+						for (i = 1; i < array.length; i += 1) {
+							if (!array[i]) { result = i; }
+						}
+						return result || array.length;
+					}
+					function shiftPropsLeft(object, n) {
+						var size = Object.keys(object).length;
+						
+						for (n; n < size; n += 1) {
+							object[n] = object[n + 1];
+						}
+						delete object[n];
+					}
+					function shiftPropsRight(object, n) {
+						var size = Object.keys(object).length, i;
+						
+						for (i = size - 1; i >= n; i -= 1) {
+							object[i + 1] = object[i];
+							delete object[i];
+						}
+					}
+					
+					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+						if (typeof this['4'][i] === 'object') {
+							
+							if (this['4'][i].header.indexOf('(layerDef') + 1 && !layerNum) { // Находим блок layerDef
+								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
+									layerNum = +this['4'][i][0].slice(10, -1);
+									exists = true;
+								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
+									layers[+this['4'][i][0].slice(10, -1)] = true;
+								}
+							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
+								/* Создаем блок с описанием слоя */
+								if (!exists) { // Если слоя не было найдено
+									if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
+									shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
+									this['4'][i] = {};
+									Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
+										header: { value: '(layerDef \"' + layerName + '\"' },
+										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
+										1:			{ value: '(layerType NonSignal)', enumerable: true },
+										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
+									});
+									i += 1; // Снова указывает на multilayer
+								}
+								
+								/* Создаем блок с содержимым слоя */
+								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
+								this['4'][i + 1] = {};
+								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
+								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
+									this['4'][i + 1][j] = layerContent[j];
+								}
+								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
+								
+								/* Удаляем предыдущее содержимое слоя */
+								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
+									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
+									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
+										delete this['4'][j];
+										shiftPropsLeft(this['4'], j);
+									}
+								}
+								break;
+							}
+							
+						}
+					}
+				}
+			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, coords, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
+					var comp = {}, coords, cosA, currPath, height, i, j, key, name, pth = true, pad, pads = {},
 						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
@@ -1074,13 +1163,19 @@
 							if (coords[i].hasOwnProperty('flipped')) { // Если есть такой ключ - это отдельная КП
 								if (coords[i].flipped) { // Меняем сторону если у текущих координат есть флаг flipped
 									coords[i].side = (defaultSide === 'top') ? 'bot' : (defaultSide === 'bot') ? 'top' : 'thru';
-									if (drillViews < 2 && coords[i].side === 'bot') { drillViews = 2; } // Количество необходимых видов передается в функцию построения сборочного чертежа
 								} else {
 									coords[i].side = defaultSide;
 									delete coords[i].flipped;
 								}
+								if (drillViews < 2 && coords[i].side === 'bot') { drillViews = 2; } // Количество необходимых видов передается в функцию построения сборочного чертежа
 							}
 						}
+					}
+					function isPadsSame(obj1, obj2) {
+						var rnd = new RegExp('ellipse|oval|mthole|target', 'i'), rect = new RegExp('rect|rndrect', 'i');
+						
+						return (obj1.width === obj2.width && obj1.height === obj2.height && obj1.hole === obj2.hole && obj1.pth === obj2.pth &&
+						       ((obj1.shape.match(rnd) && obj2.shape.match(rnd)) || (obj1.shape.match(rect) && obj2.shape.match(rect)))) ? true : false;
 					}
 					
 					try {
@@ -1092,7 +1187,7 @@
 										
 										if (this['4'][i][j].indexOf('(viaStyleRef') + 1) {
 											name = parser('viaStyleRef', this['4'][i][j]);
-											if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
+											if (!vias[name]) { vias[name] = {}; vias[name].coords = []; vias[name].same = []; }
 											coords = parser('pt', this['4'][i][j]).split(' ');
 											vias[name].coords.push({ x: +coords[0],
 											                         y: +coords[1],
@@ -1100,7 +1195,7 @@
 											                       });
 										} else if (this['4'][i][j].indexOf('(padStyleRef') + 1) {
 											name = parser('padStyleRef', this['4'][i][j]);
-											if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
+											if (!pads[name]) { pads[name] = {}; pads[name].coords = []; pads[name].same = []; }
 											coords = parser('pt', this['4'][i][j]).split(' ');
 											pads[name].coords.push({ x: +coords[0],
 											                         y: +coords[1],
@@ -1135,7 +1230,7 @@
 							if (type) {
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
-								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
+								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; currPath[name].same = []; }
 								currPath[name].side = 'thru'; // Вариант по-умолчанию - сквозная КП
 								
 								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
@@ -1169,6 +1264,17 @@
 								
 								currPath[name].pth = (currPath[name].hole < currPath[name].width) ? pth : false;
 								writeSideForLonePads(currPath[name].coords, currPath[name].side);
+								
+								for (key in currPath) {
+									if (currPath.hasOwnProperty(key) && key !== name && !currPath[key].mergedWith) {
+										if (isPadsSame(currPath[key], currPath[name])) {
+											currPath[key].coords = currPath[key].coords.concat(currPath[name].coords);
+											currPath[key].same.push(name); // Добавляем в КП, с которой объединили, текущее название что бы выводить его на странице
+											currPath[name].mergedWith = currPath[key]; // Сохраняем ссылку на КП, с которой объединяем, что бы потом найти, куда она переехала
+											break;
+										}
+									}
+								}
 							}
 							type = null;
 							pth = true;
@@ -1199,7 +1305,9 @@
 										for (i = 0; i < comp[key].pads[name].length; i += 1) {
 											shiftX = +comp[key].pads[name][i].split(' ')[0];
 											shiftY = +comp[key].pads[name][i].split(' ')[1];
-											side = pads[name].side;
+											pad = pads[name].mergedWith || pads[name]; // Если КП была объединена с другой
+											side = pad.side;
+											
 											if (comp[key].rotation) {
 												sinA = Math.sin(comp[key].rotation * Math.PI / 180);
 												cosA = Math.cos(comp[key].rotation * Math.PI / 180);
@@ -1211,8 +1319,8 @@
 											}
 											if (+zero[2]) {
 												x = -x;
-												side = (pads[name].side === 'top') ?
-														'bot' : (pads[name].side === 'bot') ?
+												side = (pad.side === 'top') ?
+														'bot' : (pad.side === 'bot') ?
 														'top' : 'thru';
 											}
 											if (drillViews < 2 && side === 'bot') { drillViews = 2; }
@@ -1220,20 +1328,20 @@
 											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[3]) : (+comp[key].pads[name][i].split(' ')[3]);
 											while (rotation >= 360) { rotation -= 360; }
 											
-											pads[name].coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
-											                         y: Math.round((+zero[1] + y) * 1000) / 1000,
-											                         side: side,
-											                         rotation: +rotation
-											                       });
+											pad.coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
+											                  y: Math.round((+zero[1] + y) * 1000) / 1000,
+											                  side: side,
+											                  rotation: +rotation
+											                });
 										}
 										// Записывает в каких компонентах использована площадка:
-										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
+										if (pad.comps) { pad.comps.push(key); } else { pad.comps = []; pad.comps.push(key); }
 									}
 								}
 							}
 						}
-						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } else { delete pads[name].side; } } }
-						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } else { delete vias[name].side; } } }
+						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length || pads[name].mergedWith) { delete pads[name]; } else { delete pads[name].side; } } }
+						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length || vias[name].mergedWith) { delete vias[name]; } else { delete vias[name].side; } } }
 						for (name in pads) {
 							if (pads.hasOwnProperty(name) && pads[name].comps && pads[name].comps.length > 1) {
 								pads[name].comps.sort(compareNames);
@@ -1244,96 +1352,19 @@
 						showPopup({
 							header: 'Ошибка',
 							content: msgs[2],
+							buttons: ['OK'],
+							funcs: [hidePopup],
 							closeable: true
 						});
-						setStepStatus(1, 3, false);
+						setStepStatus(3, false, true);
 						return;
 					}
 					
 					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
 					result.pads = sortObject(pads);
-					setStepStatus(1, 3, true);
+					setStepStatus(3, true);
+					
 					return result;
-				}
-			},
-			addLayer: {
-				value: function (layerName, layerContent) {
-					var i, j, exists = false, layerNum, layers = [];
-					
-					function compareNumeric(a, b) {
-						return a - b;
-					}
-					function getFreeLayerNum(array) {
-						var i, result;
-						for (i = 1; i < array.length; i += 1) {
-							if (!array[i]) { result = i; }
-						}
-						return result || array.length;
-					}
-					function shiftPropsLeft(object, n) {
-						var size = Object.keys(object).length;
-						
-						for (n; n < size; n += 1) {
-							object[n] = object[n + 1];
-						}
-						delete object[n];
-					}
-					function shiftPropsRight(object, n) {
-						var size = Object.keys(object).length, i;
-						
-						for (i = size - 1; i >= n; i -= 1) {
-							object[i + 1] = object[i];
-							delete object[i];
-						}
-					}
-					
-					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-						if (typeof this['4'][i] === 'object') {
-							
-							if (this['4'][i].header.indexOf('(layerDef') + 1 && !layerNum) { // Находим блок layerDef
-								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
-									layerNum = +this['4'][i][0].slice(10, -1);
-									exists = true;
-								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
-									layers[+this['4'][i][0].slice(10, -1)] = true;
-								}
-							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
-								/* Создаем блок с описанием слоя */
-								if (!exists) { // Если слоя не было найдено
-									if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
-									shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
-									this['4'][i] = {};
-									Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
-										header: { value: '(layerDef \"' + layerName + '\"' },
-										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
-										1:			{ value: '(layerType NonSignal)', enumerable: true },
-										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
-									});
-									i += 1; // Снова указывает на multilayer
-								}
-								
-								/* Создаем блок с содержимым слоя */
-								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
-								this['4'][i + 1] = {};
-								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
-								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
-									this['4'][i + 1][j] = layerContent[j];
-								}
-								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
-								
-								/* Удаляем предыдущее содержимое слоя */
-								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
-									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
-									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
-										delete this['4'][j];
-										shiftPropsLeft(this['4'], j);
-									}
-								}
-								break;
-							}
-							
-						}
-					}
 				}
 			},
 			getBoardOutline: {
@@ -1385,27 +1416,146 @@
 								}
 							}
 						});
-						if (!result.length) {
-							showPopup({
-								header: 'Ошибка',
-								content: msgs[10],
-								closeable: true
-							});
-						}
 					} catch (err) {
 						showPopup({
 							header: 'Ошибка',
 							content: msgs[10],
+							buttons: ['OK'],
+							funcs: [hidePopup],
 							closeable: true
 						});
+						setStepStatus(4, false, true);
 					}
 					
-					result.push({ shiftX: minX, shiftY: minY });
+					if (result.length) {
+						result.push({ shiftX: minX, shiftY: minY });
+						setStepStatus(4, true);
+					} else {
+						showPopup({
+							header: 'Предупреждение',
+							content: msgs[10],
+							buttons: ['OK'],
+							funcs: [hidePopup],
+							closeable: true
+						});
+						setStepStatus(4, false, true);
+					}
 					return result;
+				}
+			},
+			getRoutes: {
+				value: function () {
+					var i, j, currNum, currType, layerName, routes = {};
+					
+					function Route(string) {
+						var type, width, first, second, third;
+						
+						width = parseFloat(string.slice(string.indexOf('width ') + 6));
+						type = string.slice(1, string.indexOf(' '));
+						
+						first = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						string = string.slice(string.indexOf(')') + 1);
+						second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						if (type === 'triplePointArc') {
+							third = first; // Меняем местами для удобства, т.к. у арок первая пара координат - центр, а у линий - начало
+							first = second;
+							string = string.slice(string.indexOf(')') + 1);
+							second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						}
+						
+						this.type = type;
+						this.width = width;
+						this.x1 = +first[0];
+						this.y1 = +first[1];
+						this.x2 = +second[0];
+						this.y2 = +second[1];
+						
+						if (third) {
+							this.x3 = +third[0];
+							this.y3 = +third[1];
+						}
+					}
+					function Text(string) {
+						var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text;
+						
+						text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" (')).split('\\r\\n');
+						string = string.slice(string.indexOf('justify ') + 8);
+						
+						this.type = 'text';
+						this.content = text;
+						this.justify = string.slice(0, string.indexOf(')')).toLowerCase();
+						this.x1 = +coords[0];
+						this.y1 = +coords[1];
+					}
+					
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object') {
+								
+								if (this['4'][i].header.indexOf('layerDef') > -1) {
+									layerName = this['4'][i].header.slice(11, -1);
+									
+									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+										if (typeof this['4'][i][j] === 'string') {
+											
+											if (this['4'][i][j].indexOf('layerNum') > -1) {
+												currNum = +this['4'][i][j].slice(10, -1);
+											} else if (this['4'][i][j] === '(layerType Signal)') {
+												currType = 'signal';
+											} else if (this['4'][i][j] === '(layerType Plane)') {
+												currType = 'plane';
+											}
+											
+											if (currNum && currType) {
+												routes[currNum] = { name: layerName.toUpperCase(), type: currType };
+												break;
+											}
+											
+										}
+									}
+									currNum = null;
+									currType = null;
+								}
+								
+								if (this['4'][i].header.indexOf('layerContents') > -1) {
+									currNum = this['4'][i].header.slice(28, -1);
+									if (routes.hasOwnProperty(currNum)) {
+										
+										for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+											if (typeof this['4'][i][j] === 'string') {
+												if (this['4'][i][j].match(/\(line|\(triplePointArc/i)) {
+													routes[currNum][j] = new Route(this['4'][i][j]);
+												} else if (this['4'][i][j].match(/\(text/i)) {
+													routes[currNum][j] = new Text(this['4'][i][j]);
+												}
+											}
+										}
+										
+									}
+								}
+							}
+						}
+					} catch (err) {
+						showPopup({
+							header: 'Ошибка',
+							content: msgs[11],
+							buttons: ['OK'],
+							funcs: [hidePopup],
+							closeable: true
+						});
+						setStepStatus(5, false, false);
+					}
+					
+					setStepStatus(5, true);
+					
+					return routes;
 				}
 			}
 		});
+		//console.log(fileContent.getRoutes());
 		padsLib = fileContent.getPads();
+		boardOutline = fileContent.getBoardOutline();
+		if (boardOutline.length) { routes = fileContent.getRoutes(); }
 		createPadsList(padsLib);
 	});
 }());

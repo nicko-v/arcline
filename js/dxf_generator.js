@@ -14,6 +14,11 @@
 *		62 - цвет линии (1 - red, 2 - yellow, 3 - green, 256 - ByLayer)
 *		72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
 *		73 - вертикальное выравнивание текста (0 - baseline, 1 - bottom, 2 - middle, 3 - top)
+*   Используемые заголовки:
+*   [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2] - желтый текст высотой 3.5
+*   [0, 'LINE', 8, 'Drill_Table', 62, 1] - красная линия для таблицы или платы
+*   [0, 'LINE', 8, 'Drill_Table', 62, 3] - зеленая линия для символов
+*   [0, 'LINE', 8, 'Grid', 62, 4] - бирюзовая линия для сетки
 */
 function generateDXF(lib, outline, drillViews) {
 	'use strict';
@@ -29,81 +34,91 @@ function generateDXF(lib, outline, drillViews) {
 		th = colHeight * rows, // Общая высота таблицы
 		dashSize = colWidth / 2,
 		result = [0, 'SECTION',
-						2, 'TABLES',
-						0, 'TABLE',
-						2, 'VPORT',
-						0, 'VPORT',
-						2, '*ACTIVE',
-						12, (tw / 2 - hw / 2), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
-						22, (th / 2),
-						40, (th + 15),
-						41, ((tw + hw) / 100),
-						70, 0,
-						10, 0,
-						20, 0,
-						11, 1,
-						21, 1,
-						13, 0,
-						23, 0,
-						14, 1,
-						24, 1,
-						15, 0,
-						25, 0,
-						16, 0,
-						26, 0,
-						36, 1,
-						17, 0,
-						27, 0,
-						37, 0,
-						42, 1,
-						43, 0,
-						44, 0,
-						50, 0,
-						51, 0,
-						71, 0,
-						72, 100,
-						73, 2,
-						74, 1,
-						75, 0,
-						76, 0,
-						77, 0,
-						78, 0,
-						0, 'ENDTAB',
-						0, 'TABLE',
-						2, 'LAYER',
-						70, 3,
-						0, 'LAYER',
-						2, 'Drill_Table',
-						70, 64,
-						62, 1,
-						6, 'CONTINUOUS',
-						0, 'LAYER',
-						2, 'Board',
-						70, 64,
-						62, 1,
-						6, 'CONTINUOUS',
-						0, 'LAYER',
-						2, 'Grid',
-						70, 64,
-						62, 4,
-						6, 'CONTINUOUS',
-						0, 'ENDTAB',
-						0, 'TABLE',
-						2, 'STYLE',
-						0, 'STYLE',
-						2, 'win_eskd',
-						70, 64,
-						40, 0,
-						41, 1,
-						50, 15,
-						71, 0,
-						42, 0.2,
-						3, 'win_eskd.shx',
-						4, '',
-						0, 'ENDTAB',
-						0, 'ENDSEC',
-						0, 'SECTION',
-						2, 'ENTITIES'],
+		          2, 'HEADER',
+		          9, '$ACADVER',
+		          1, 'AC1009',
+		          0, 'ENDSEC',
+		          0, 'SECTION',
+		          2, 'TABLES',
+		          0, 'TABLE',
+		          2, 'VPORT',
+		          0, 'VPORT',
+		          2, '*ACTIVE',
+		          12, (tw / 2 - hw / 2), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
+		          22, (th / 2),
+		          40, (th + 15),
+		          41, ((tw + hw) / 100),
+		          70, 0,
+		          10, 0,
+		          20, 0,
+		          11, 1,
+		          21, 1,
+		          13, 0,
+		          23, 0,
+		          14, 1,
+		          24, 1,
+		          15, 0,
+		          25, 0,
+		          16, 0,
+		          26, 0,
+		          36, 1,
+		          17, 0,
+		          27, 0,
+		          37, 0,
+		          42, 1,
+		          43, 0,
+		          44, 0,
+		          50, 0,
+		          51, 0,
+		          71, 0,
+		          72, 100,
+		          73, 2,
+		          74, 1,
+		          75, 0,
+		          76, 0,
+		          77, 0,
+		          78, 0,
+		          0, 'ENDTAB',
+		          0, 'TABLE',
+		          2, 'LAYER',
+		          70, 3,
+		          0, 'LAYER',
+		          2, 'Drill_Table',
+		          70, 64,
+		          62, 1,
+		          6, 'CONTINUOUS',
+		          0, 'LAYER',
+		          2, 'Drill_Symbols',
+		          70, 64,
+		          62, 3,
+		          6, 'CONTINUOUS',
+		          0, 'LAYER',
+		          2, 'Board',
+		          70, 64,
+		          62, 1,
+		          6, 'CONTINUOUS',
+		          0, 'LAYER',
+		          2, 'Grid',
+		          70, 64,
+		          62, 4,
+		          6, 'CONTINUOUS',
+		          0, 'ENDTAB',
+		          0, 'TABLE',
+		          2, 'STYLE',
+		          0, 'STYLE',
+		          2, 'win_eskd',
+		          70, 64,
+		          40, 0,
+		          41, 1,
+		          50, 15,
+		          71, 0,
+		          42, 0.2,
+		          3, 'win_eskd.shx',
+		          4, '',
+		          0, 'ENDTAB',
+		          0, 'ENDSEC',
+		          0, 'SECTION',
+		          2, 'ENTITIES'],
 		headers = ['\\U+041E\\U+0431\\U+043E\\U+0437\\U+043D\\U+0430\\U+0447\\U+0435\\U+043D\\U+0438\\U+0435', // [0] Обозначение
 							 '\\U+041A\\U+043E\\U+043B\\U+0438\\U+0447\\U+0435\\U+0441\\U+0442\\U+0432\\U+043E', // [1] Количество
 							 '\\U+0414\\U+0438\\U+0430\\U+043C\\U+0435\\U+0442\\U+0440', // [2] Диаметр
@@ -117,20 +132,16 @@ function generateDXF(lib, outline, drillViews) {
 							 '\\U+041D\\U+0435\\U+0442', // [10] Нет
 							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2' // [11] ТАБЛИЦА 2
 							 ],
-		text = [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2],
-		redLn = [0, 'LINE', 8, 'Drill_Table', 62, 1],
-		cyanLn = [0, 'LINE', 8, 'Grid', 62, 4],
-		greenLn = [0, 'LINE', 8, 'Drill_Table', 62, 3],
 		cellPadding = 3, // Расстояние от границы ячейки до символа
 		y = (th - colHeight / 2), // Центр символа в ячейке
 		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
 		space = 50, // Расстояние между чертежами
-		shiftX = outline[outline.length - 1].shiftX, // Смещение левого нижнего края платы относительно нуля
-		shiftY = outline[outline.length - 1].shiftY,
+		shiftX = (outline.length) ? outline[outline.length - 1].shiftX : 0, // Смещение левого нижнего края платы относительно нуля
+		shiftY = (outline.length) ? outline[outline.length - 1].shiftY : 0,
 		currCol = 0, d = {}, symbol, skippedCells, boardWidth = 0, boardHeight = 0, radius, rotation, i, j, w, h, x;
 	
 	function baseRnd() {
-		result = result.concat(0, 'CIRCLE', 8, 'Drill_Table', 62, 3, 10, x, 20, y, 40, radius);
+		result.push(0, 'CIRCLE', 8, 'Drill_Symbols', 62, 3, 10, x, 20, y, 40, radius);
 		d.rnd.x0y05(0);
 		d.rnd.x1y05(1);
 		d.rnd.x05y0(0);
@@ -151,10 +162,10 @@ function generateDXF(lib, outline, drillViews) {
 		
 		for (key in object) { // Проставляет значения
 			if (object.hasOwnProperty(key)) {
-				if (object[key].mount) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount]); }
-				if (object[key].pad) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad]); }
-				if (object[key].hole) { result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole]); }
-				result = result.concat(text, [10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount]);
+				if (object[key].mount) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount); }
+				if (object[key].pad) {   result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad); }
+				if (object[key].hole) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole); }
+				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount);
 				
 				if (object[key].ratio >= (colWidth - cellPadding * 2) / (colHeight - cellPadding * 2)) {
 					w = colWidth - cellPadding * 2;
@@ -173,7 +184,7 @@ function generateDXF(lib, outline, drillViews) {
 			if (!startPoint && startPoint !== 0) { startPoint = position; }
 			if (position + 1 !== arr[i + 1]) {
 				lineStart = (position - startPoint + 1) * colWidth / 2 - dashSize / 2 + startPoint * colWidth;
-				result = result.concat(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 2), 11, (lineStart + dashSize), 21, (colHeight * 2));
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 2), 11, (lineStart + dashSize), 21, (colHeight * 2));
 				startPoint = false;
 			}
 		});
@@ -182,7 +193,7 @@ function generateDXF(lib, outline, drillViews) {
 			if (!startPoint && startPoint !== 0) { startPoint = position; }
 			if (position + 1 !== arr[i + 1]) {
 				lineStart = (position - startPoint + 1) * colWidth / 2 - colWidth / 4 + startPoint * colWidth;
-				result = result.concat(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 3.5), 11, (lineStart + dashSize), 21, (colHeight * 3.5));
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 3.5), 11, (lineStart + dashSize), 21, (colHeight * 3.5));
 				startPoint = false;
 			}
 		});
@@ -217,21 +228,23 @@ function generateDXF(lib, outline, drillViews) {
 				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, i, 20, (y - dashWidth - 2), 11, i, 21, (y - dashWidth - 2), 1, dashes);
 				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, i, 20, (y + boardHeight + dashWidth + 2), 11, i, 21, (y + boardHeight + dashWidth + 2), 1, dashes);
 			} else { dashWidth = 1.25; }
-			result = result.concat(cyanLn, [10, i, 20, y, 11, i, 21, y - dashWidth]);
-			result = result.concat(cyanLn, [10, i, 20, y + boardHeight, 11, i, 21, y + boardHeight + dashWidth]);
+			result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, i, 20, y, 11, i, 21, y - dashWidth);
+			result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, i, 20, y + boardHeight, 11, i, 21, y + boardHeight + dashWidth);
 			dashes += 1;
 		}
 		
-		result = result.concat(cyanLn, [10, x, 20, y, 11, x + boardWidth, 21, y]);
-		result = result.concat(cyanLn, [10, x + boardWidth, 20, y, 11, x + boardWidth, 21, y + boardHeight]);
-		result = result.concat(cyanLn, [10, x + boardWidth, 20, y + boardHeight, 11, x, 21, y + boardHeight]);
-		result = result.concat(cyanLn, [10, x, 20, y + boardHeight, 11, x, 21, y]);
+		result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x, 20, y, 11, x + boardWidth, 21, y);
+		result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x + boardWidth, 20, y, 11, x + boardWidth, 21, y + boardHeight);
+		result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x + boardWidth, 20, y + boardHeight, 11, x, 21, y + boardHeight);
+		result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x, 20, y + boardHeight, 11, x, 21, y);
 		
 		if (mirrored) {
+			result.push(0, 'POLYLINE', 8, 'Grid', 66, 1, 10, 0, 20, 0, 40, 1, 41, 1, 0, 'VERTEX', 8, 'Grid', 10, (x + boardWidth + 0.25), 20, y, 42, 1, 0, 'VERTEX', 8, 'Grid', 10, (x + boardWidth - 0.25), 20, y, 42, 1, 0, 'VERTEX', 8, 'Grid', 10, (x + boardWidth + 0.25), 20, y, 42, 1, 0, 'SEQEND', 8, 'Grid');
 			for (i = x + boardWidth; i >= x; i -= 1.25) {
 				drawHorizontalElems();
 			}
 		} else {
+			result.push(0, 'POLYLINE', 8, 'Grid', 66, 1, 10, 0, 20, 0, 40, 1, 41, 1, 0, 'VERTEX', 8, 'Grid', 10, (x + 0.25), 20, y, 42, 1, 0, 'VERTEX', 8, 'Grid', 10, (x - 0.25), 20, y, 42, 1, 0, 'VERTEX', 8, 'Grid', 10, (x + 0.25), 20, y, 42, 1, 0, 'SEQEND', 8, 'Grid');
 			for (i = x; i <= x + boardWidth; i += 1.25) {
 				drawHorizontalElems();
 			}
@@ -243,8 +256,8 @@ function generateDXF(lib, outline, drillViews) {
 				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, (x - dashWidth - 2), 20, i, 11, (x - dashWidth - 2), 21, i, 1, dashes);
 				result.push(0, 'TEXT', 8, 'Grid', 62, 4, 7, 'win_eskd', 40, 1.25, 51, 15, 72, 1, 73, 2, 10, (x + boardWidth + dashWidth + 2), 20, i, 11, (x + boardWidth + dashWidth + 2), 21, i, 1, dashes);
 			} else { dashWidth = 1.25; }
-			result = result.concat(cyanLn, [10, x, 20, i, 11, x - dashWidth, 21, i]);
-			result = result.concat(cyanLn, [10, x + boardWidth, 20, i, 11, x + boardWidth + dashWidth, 21, i]);
+			result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x, 20, i, 11, x - dashWidth, 21, i);
+			result.push(0, 'LINE', 8, 'Grid', 62, 4, 10, x + boardWidth, 20, i, 11, x + boardWidth + dashWidth, 21, i);
 			dashes += 1;
 		}
 	}
@@ -324,49 +337,49 @@ function generateDXF(lib, outline, drillViews) {
 		}
 	}
 	
-	d.rnd = { // Аргумент p - точка, для которой нужны координаты. 0 - первая, 2 - вторая. Для первой добавляется заголовок блока
-		x05y05:   function (p) { var a = [10, x, 20, y];                           if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y0:    function (p) { var a = [10, x, 20, y + radius];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y1:    function (p) { var a = [10, x, 20, y - radius];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y05:    function (p) { var a = [10, x - radius, 20, y];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y05:    function (p) { var a = [10, x + radius, 20, y];                  if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y025:  function (p) { var a = [10, x, 20, y + radius / 2];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y075:  function (p) { var a = [10, x, 20, y - radius / 2];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y05:  function (p) { var a = [10, x - radius / 2, 20, y];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y05:  function (p) { var a = [10, x + radius / 2, 20, y];              if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y025: function (p) { var a = [10, x - radius / 2, 20, y + radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y025: function (p) { var a = [10, x + radius / 2, 20, y + radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y075: function (p) { var a = [10, x - radius / 2, 20, y - radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y075: function (p) { var a = [10, x + radius / 2, 20, y - radius / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		deg45:    function (p) { var a = [10, x + Math.cos(Math.PI * 0.25) * radius, 20, y + Math.sin(Math.PI * 0.25) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		deg135:   function (p) { var a = [10, x + Math.cos(Math.PI * 0.75) * radius, 20, y + Math.sin(Math.PI * 0.75) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		deg225:   function (p) { var a = [10, x + Math.cos(Math.PI * 1.25) * radius, 20, y + Math.sin(Math.PI * 1.25) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		deg315:   function (p) { var a = [10, x + Math.cos(Math.PI * 1.75) * radius, 20, y + Math.sin(Math.PI * 1.75) * radius]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
+	d.rnd = { // Аргумент p - точка, для которой нужны координаты. 0 - первая, 1 - вторая. Для первой добавляется заголовок блока
+		x05y05:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y); },
+		x05y0:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y + radius); },
+		x05y1:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y - radius); },
+		x0y05:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x - radius, 20 + p, y); },
+		x1y05:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + radius, 20 + p, y); },
+		x05y025:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y + radius / 2); },
+		x05y075:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y - radius / 2); },
+		x025y05:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x - radius / 2, 20 + p, y); },
+		x075y05:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + radius / 2, 20 + p, y); },
+		x025y025: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x - radius / 2, 20 + p, y + radius / 2); },
+		x075y025: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + radius / 2, 20 + p, y + radius / 2); },
+		x025y075: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x - radius / 2, 20 + p, y - radius / 2); },
+		x075y075: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + radius / 2, 20 + p, y - radius / 2); },
+		deg45:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + Math.cos(Math.PI * 0.25) * radius, 20 + p, y + Math.sin(Math.PI * 0.25) * radius); },
+		deg135:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + Math.cos(Math.PI * 0.75) * radius, 20 + p, y + Math.sin(Math.PI * 0.75) * radius); },
+		deg225:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + Math.cos(Math.PI * 1.25) * radius, 20 + p, y + Math.sin(Math.PI * 1.25) * radius); },
+		deg315:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x + Math.cos(Math.PI * 1.75) * radius, 20 + p, y + Math.sin(Math.PI * 1.75) * radius); }
 	};
 	d.rect = {
-		x05y05:   function (p) { var a = [10, x, 20, y]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y0:    function (p) { var a = (!rotation) ? [10, x, 20, y + h / 2] : [10, x - w / 2, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x05y1:    function (p) { var a = (!rotation) ? [10, x, 20, y - h / 2] : [10, x + w / 2, 20, y];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y05:    function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y] : [10, x, 20, y + h / 2];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y05:    function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y] : [10, x, 20, y - h / 2];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y05:  function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y] : [10, x, 20, y - h / 4];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y05:  function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y] : [10, x, 20, y + h / 4];                 if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y0:     function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y + h / 2] : [10, x - w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y0:     function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y + h / 2] : [10, x - w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y1:     function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y - h / 2] : [10, x + w / 2, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y1:     function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y - h / 2] : [10, x + w / 2, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y0:   function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y + h / 2] : [10, x - w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y0:   function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y + h / 2] : [10, x - w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y025:   function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y + h / 4] : [10, x - w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x1y075:   function (p) { var a = (!rotation) ? [10, x + w / 2, 20, y - h / 4] : [10, x + w / 4, 20, y + h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y1:   function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y - h / 2] : [10, x + w / 2, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y1:   function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y - h / 2] : [10, x + w / 2, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y075:   function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y - h / 4] : [10, x + w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x0y025:   function (p) { var a = (!rotation) ? [10, x - w / 2, 20, y + h / 4] : [10, x - w / 4, 20, y - h / 2]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y025: function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y + h / 4] : [10, x - w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y025: function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y + h / 4] : [10, x - w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x075y075: function (p) { var a = (!rotation) ? [10, x + w / 4, 20, y - h / 4] : [10, x + w / 4, 20, y + h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); },
-		x025y075: function (p) { var a = (!rotation) ? [10, x - w / 4, 20, y - h / 4] : [10, x + w / 4, 20, y - h / 4]; if (p) { a[0] = 11; a[2] = 21; } else { a = greenLn.concat(a); } result = result.concat(a); }
+		x05y05:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } result.push(10 + p, x, 20 + p, y); },
+		x05y0:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x,         20 + p, y + h / 2); } else { result.push(10 + p, x - w / 2, 20 + p, y); } },
+		x05y1:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x,         20 + p, y - h / 2); } else { result.push(10 + p, x + w / 2, 20 + p, y); } },
+		x1y05:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 2, 20 + p, y);         } else { result.push(10 + p, x,         20 + p, y + h / 2); } },
+		x0y05:    function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 2, 20 + p, y);         } else { result.push(10 + p, x,         20 + p, y - h / 2); } },
+		x025y05:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 4, 20 + p, y);         } else { result.push(10 + p, x,         20 + p, y - h / 4); } },
+		x075y05:  function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 4, 20 + p, y);         } else { result.push(10 + p, x,         20 + p, y + h / 4); } },
+		x0y0:     function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 2, 20 + p, y + h / 2); } else { result.push(10 + p, x - w / 2, 20 + p, y - h / 2); } },
+		x1y0:     function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 2, 20 + p, y + h / 2); } else { result.push(10 + p, x - w / 2, 20 + p, y + h / 2); } },
+		x1y1:     function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 2, 20 + p, y - h / 2); } else { result.push(10 + p, x + w / 2, 20 + p, y + h / 2); } },
+		x0y1:     function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 2, 20 + p, y - h / 2); } else { result.push(10 + p, x + w / 2, 20 + p, y - h / 2); } },
+		x025y0:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 4, 20 + p, y + h / 2); } else { result.push(10 + p, x - w / 2, 20 + p, y - h / 4); } },
+		x075y0:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 4, 20 + p, y + h / 2); } else { result.push(10 + p, x - w / 2, 20 + p, y + h / 4); } },
+		x1y025:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 2, 20 + p, y + h / 4); } else { result.push(10 + p, x - w / 4, 20 + p, y + h / 2); } },
+		x1y075:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 2, 20 + p, y - h / 4); } else { result.push(10 + p, x + w / 4, 20 + p, y + h / 2); } },
+		x075y1:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 4, 20 + p, y - h / 2); } else { result.push(10 + p, x + w / 2, 20 + p, y + h / 4); } },
+		x025y1:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 4, 20 + p, y - h / 2); } else { result.push(10 + p, x + w / 2, 20 + p, y - h / 4); } },
+		x0y075:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 2, 20 + p, y - h / 4); } else { result.push(10 + p, x + w / 4, 20 + p, y - h / 2); } },
+		x0y025:   function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 2, 20 + p, y + h / 4); } else { result.push(10 + p, x - w / 4, 20 + p, y - h / 2); } },
+		x025y025: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 4, 20 + p, y + h / 4); } else { result.push(10 + p, x - w / 4, 20 + p, y - h / 4); } },
+		x075y025: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 4, 20 + p, y + h / 4); } else { result.push(10 + p, x - w / 4, 20 + p, y + h / 4); } },
+		x075y075: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x + w / 4, 20 + p, y - h / 4); } else { result.push(10 + p, x + w / 4, 20 + p, y + h / 4); } },
+		x025y075: function (p) { if (!p) { result.push(0, 'LINE', 8, 'Drill_Symbols', 62, 3); } if (!rotation) { result.push(10 + p, x - w / 4, 20 + p, y - h / 4); } else { result.push(10 + p, x + w / 4, 20 + p, y - h / 4); } }
 	};
 	
 	symbol = {
@@ -1080,32 +1093,32 @@ function generateDXF(lib, outline, drillViews) {
 	
 	/* Построение таблицы */
 	// Ячейки заголовков
-	result = result.concat(redLn, [10,   0, 20,  0, 11, -hw,  21, 0]);
-	result = result.concat(redLn, [10, -hw, 20,  0, 11, -hw,  21, th]);
-	result = result.concat(redLn, [10, -hw, 20, th, 11,   0,  21, th]);
-	result = result.concat(redLn, [10,   0, 20, th, 11,   0,  21, 0]);
-	result = result.concat(redLn, [10, -hw, 20, 15, 11,   0,  21, 15]);
-	result = result.concat(redLn, [10, -hw, 20, 30, 11,   0,  21, 30]);
-	result = result.concat(redLn, [10, -hw, 20, 45, 11,   0,  21, 45]);
-	result = result.concat(redLn, [10, -hw, 20, 60, 11,   0,  21, 60]);
-	result = result.concat(redLn, [10, -hw, 20, 75, 11,   0,  21, 75]);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21, 0);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21, 0);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 15, 11,   0,  21, 15);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 30, 11,   0,  21, 30);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 45, 11,   0,  21, 45);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 60, 11,   0,  21, 60);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 75, 11,   0,  21, 75);
 	
 	// Ячейки данных
 	skippedCells = determineEmptyCells(lib); // Ячейки без значений
 	for (i = 0; i < columns; i += 1) {
 		for (j = 0; j <= rows; j += 1) { // Горизонатльные
 			if (!(j === 2 && skippedCells.row1.indexOf(i) + 1 && skippedCells.row2.indexOf(i) + 1)) { // Не рисовать линию если эта ячейка и та, что под ней, пусты
-				result = result.concat(redLn, [10, (colWidth * i), 20, (colHeight * j), 11, (colWidth * i) + colWidth, 21, (colHeight * j)]);
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * i), 20, (colHeight * j), 11, (colWidth * i) + colWidth, 21, (colHeight * j));
 			}
 		}
 		for (j = 1; j < rows; j += 1) { // Вертикальные
 			if (!(j > 0 && j < 4 && skippedCells['row' + j].indexOf(i) + 1 && skippedCells['row' + j].indexOf(i + 1) + 1)) {
-				result = result.concat(redLn, [10, (colWidth * i + colWidth), 20, (colHeight * j), 11, (colWidth * i + colWidth), 21, (colHeight * j) + colHeight]);
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * i + colWidth), 20, (colHeight * j), 11, (colWidth * i + colWidth), 21, (colHeight * j) + colHeight);
 			}
 		}
 	}
-	result = result.concat(redLn, [10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight]);
-	result = result.concat(redLn, [10, tw, 20, 0, 11, tw, 21, colHeight]);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, tw, 20, 0, 11, tw, 21, colHeight);
 	/* -=-=-=- */
 	
 	/* Заполнение таблицы */
@@ -1113,20 +1126,20 @@ function generateDXF(lib, outline, drillViews) {
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, headers[11]);
 	
 	// Тексты заголовков
-	result = result.concat(text, [10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5, 1], headers[0]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5, 1], headers[1]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1], headers[2]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1], headers[3]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1], headers[4]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1], headers[5]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1], headers[4]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1], headers[6]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1], headers[7]);
-	result = result.concat(text, [10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1], headers[8]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5, 1, headers[0]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5, 1, headers[1]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1, headers[2]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1, headers[3]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1, headers[4]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1, headers[5]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1, headers[4]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1, headers[6]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1, headers[7]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1, headers[8]);
 	
 	// Значения ячеек
-	if (pth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1], headers[9]); } // Металлизация - "Есть"
-	if (npth) { result = result.concat(text, [10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1], headers[10]); } // Металлизация - "Нет"
+	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, headers[9]); } // Металлизация - "Есть"
+	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, headers[10]); } // Металлизация - "Нет"
 	
 	radius = (colHeight / 2 - cellPadding);
 	
@@ -1140,8 +1153,6 @@ function generateDXF(lib, outline, drillViews) {
 		// Контуры платы
 		outline.forEach(function (coords, index) {
 			var i;
-			
-			if (index === outline.length - 1) { return; } // Последний элемент массива - объект с информацией о смещении контура
 			
 			for (i = 0; i < coords.length; i += 1) {
 				if (i % 2 && coords[i] > boardHeight) {
@@ -1158,8 +1169,7 @@ function generateDXF(lib, outline, drillViews) {
 		drawSymbolsOnBoard(lib.holes);
 		drawSymbolsOnBoard(lib.metallized);
 		drawSymbolsOnBoard(lib.nonMetallized);
-	}
-	
+	} else { document.getElementById('tabDXF').innerHTML = 'Таблица'; }
 	/* -=-=-=- */
 	
 	result.push(0, 'ENDSEC', 0, 'EOF');
