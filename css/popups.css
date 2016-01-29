@@ -86,11 +86,10 @@
 	position: absolute;
 	width: 100%;
 	height: 100%;
-	opacity: 0;
 	z-index: 998;
 	cursor: default;
 	background-color: rgba(0,0,0,0.4);
-	transition: opacity 300ms linear;	/* При изменении времени исправить так же в hidePopup(): */
+	transition: opacity 300ms linear;	/* При изменении времени исправить так же в hidePopup() */
 }
 .popup-header {
 	display: inline-block;

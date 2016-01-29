@@ -1,4 +1,4 @@
-/*global FileReader, unescape, generateSVG, generateDXF, generateLayers */
+/*global Blob, FileReader, unescape, generateSVG, generateDXF, generateLayers */
 
 (function () {
 	'use strict';
@@ -10,9 +10,11 @@
 		input         = document.getElementById('file'),
 		link          = document.getElementById('link'),
 		startButton   = document.getElementById('start'),
+		cover         = document.getElementById('cover'),
 		uploadButton  = document.getElementById('upload'),
 		tabPCB        = document.getElementById('tabPCB'),
 		tabDXF        = document.getElementById('tabDXF'),
+		version       = document.getElementById('version'),
 		padsList      = document.getElementById('padsList'),
 		icon          = document.getElementById('padsIcon'),
 		descr         = document.getElementById('padsDescr'),
@@ -20,7 +22,6 @@
 		symbol        = document.getElementById('padsSymbol'),
 		helpButton    = document.getElementById('helpButton'),
 		clearButton   = document.getElementById('clearSymbol'),
-		allSupported  = window.FileReader && document.body.style.flex !== undefined,
 		click         = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
 		msgs          = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
 		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
@@ -31,14 +32,15 @@
 		                 'Не удалось сформировать таблицу отверстий. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.'],
+		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                 'Не удалось распознать контур платы, будет построена только таблица отверстий - без сборочного чертежа и проводящих рисунков. <br><br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.',
+		                 'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink, output = {};
+		drillViews = 1, padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink,
+		boardOutline, routes, output = {};
 
 	function hidePopup() {
-		var cover = document.getElementById('cover');
-		
 		cover.style.opacity = 0;
 		setTimeout(function () { cover.innerHTML = ''; }, 100);
 		setTimeout(function () {
@@ -46,14 +48,14 @@
 			cover.classList.remove('popup-cover');
 		}, 300);
 	}
-	function showPopup(params) {
-		var cover = document.getElementById('cover'), clickOffset, popup, close, header, content, moving;
+	function showPopup(params) { // Принимает объект с ключами: заголовок, текст, кнопки, функции кнопок, закрываемость. Ключи могут отсутствовать.
+		var clickOffset, popup, close, header, content, moving;
 		
 		function tryToClose(e) {
 			if (!moving && e.target.className.match(/popup-cover|popup-close/)) {
 				if (params.closeable) {
 					hidePopup();
-					cover.removeEventListener(click, tryToClose);
+					cover.onclick = tryToClose;
 				} else {
 					popup.style.animation = 'reset 0 linear normal';
 					setTimeout(function () { popup.style.animation = 'popup-swing 500ms ease-out normal'; }, 20);
@@ -82,58 +84,58 @@
 			setTimeout(function () { moving = false; }, 100);
 		}
 		
-		if (!cover.innerHTML) { // Предотвращает появление нового окошка пока существует другое
-			cover.classList.add('popup-cover'); // Класс с затемненным фоном и блокировкой прокрутки
-			
-			popup = document.createElement('div');
-			popup.classList.add('popup');
-			
-			header = document.createElement('div');
-			header.classList.add('uppercase');
-			header.classList.add('popup-header');
-			header.innerHTML = params.header;
-			
-			content = document.createElement('div');
-			content.classList.add('popup-content');
-			content.innerHTML = params.content;
-			
-			popup.appendChild(header);
-			popup.appendChild(content);
-			
-			if (params.buttons) { // Если у окошка должны быть кнопки
-				params.buttons.forEach(function (name, index) {
-					var button = document.createElement('button');
-					
-					button.classList.add('popup-button');
-					button.innerHTML = name;
-					button.addEventListener(click, function () { params.funcs[index](); hidePopup(); });
-					popup.appendChild(button);
-				});
-			}
-			if (params.closeable) { // Если нужен закрывающий крестик
-				close = document.createElement('div');
-				close.classList.add('popup-close');
-				close.appendChild(document.createElement('div'));
-				close.firstChild.classList.add('popup-close-cross');
-				popup.appendChild(close);
-			}
-			
-			document.body.classList.add('lock');
-			cover.style.opacity = 1;
-			cover.appendChild(popup);
-			popup.style.top = window.scrollY + window.innerHeight / 3 + 'px'; // Что бы показывалось относительно прокрученной страницы
-			popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
-			
-			cover.addEventListener(click, tryToClose);
-			header.addEventListener('mousedown', function (e) {
-				if (e.button === 0) {
-					moving = true;
-					clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
-					document.addEventListener('mousemove', movePopup);
-					document.addEventListener('mouseup', stopMoving);
-				}
+		cover.innerHTML = '';
+		
+		cover.classList.add('popup-cover'); // Класс с затемненным фоном и блокировкой прокрутки
+		
+		popup = document.createElement('div');
+		popup.classList.add('popup');
+		
+		header = document.createElement('div');
+		header.classList.add('uppercase');
+		header.classList.add('popup-header');
+		header.innerHTML = params.header;
+		
+		content = document.createElement('div');
+		content.classList.add('popup-content');
+		content.innerHTML = params.content;
+		
+		popup.appendChild(header);
+		popup.appendChild(content);
+		
+		if (params.buttons) { // Если у окошка должны быть кнопки
+			params.buttons.forEach(function (name, index) {
+				var button = document.createElement('button');
+				
+				button.classList.add('popup-button');
+				button.innerHTML = name;
+				button.addEventListener(click, function () { params.funcs[index](); hidePopup(); });
+				popup.appendChild(button);
 			});
 		}
+		if (params.closeable) { // Если нужен закрывающий крестик
+			close = document.createElement('div');
+			close.classList.add('popup-close');
+			close.appendChild(document.createElement('div'));
+			close.firstChild.classList.add('popup-close-cross');
+			popup.appendChild(close);
+		}
+		
+		document.body.classList.add('lock');
+		cover.style.opacity = 1;
+		cover.appendChild(popup);
+		popup.style.top = window.scrollY + window.innerHeight / 3 + 'px'; // Что бы показывалось относительно прокрученной страницы
+		popup.style.minWidth = popup.style.maxWidth = popup.offsetWidth + 'px'; // Иначе при приближении к границе окна уменьшается ширина.
+		
+		cover.onclick = tryToClose;
+		header.addEventListener('mousedown', function (e) {
+			if (e.button === 0) {
+				moving = true;
+				clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
+				document.addEventListener('mousemove', movePopup);
+				document.addEventListener('mouseup', stopMoving);
+			}
+		});
 	}
 	function rollBlock(wrapper, block, restore) {
 		var
@@ -146,31 +148,34 @@
 			wrapper.style.maxHeight = '0px';
 		}
 	}
-	function setStepStatus(step, operation, status, restore) {
-		var icon = document.getElementById('stp' + step + operation), opsAmount;
+	function setStepStatus(operation, status, stop, restore) {
+		var icon = document.getElementById('op' + operation), opsAmount;
 		
-		function setToAll(n, cls) { // Ставит классы cls всем элементам, начиная с заданного n
+		function setToAll(n, cls, title) { // Ставит классы cls всем элементам, начиная с заданного n
 			var i;
 			
-			while (document.getElementById('stp' + step + n)) {
-				icon = document.getElementById('stp' + step + n);
+			while (document.getElementById('op' + n)) {
+				icon = document.getElementById('op' + n);
 				icon.className = 'cleanstate';
+				icon.title = title;
 				for (i = 0; i < cls.length; i += 1) { icon.classList.add(cls[i]); }
 				n += 1;
 			}
 		}
 		
 		if (restore) { // Если передан флаг восстановления статусов (например при выборе нового файла)
-			setToAll(1, ['yellow', 'icon-spin5', 'animate-spin']);
+			setToAll(1, ['yellow', 'icon-spin5', 'animate-spin'], 'Ожидание');
 		} else {
 			icon.className = 'cleanstate';
 			if (status) {
 				icon.classList.add('green');
 				icon.classList.add('icon-ok');
+				icon.title = 'Выполнено успешно';
 			} else {
 				icon.classList.add('red');
 				icon.classList.add('icon-cancel');
-				setToAll(operation + 1, ['red', 'icon-stop']);
+				icon.title = 'Ошибка при выполнении';
+				if (stop) { setToAll(operation + 1, ['red', 'icon-stop'], 'Операция не выполнялась'); }
 			}
 		}
 	}
@@ -184,13 +189,13 @@
 			});
 		}
 		function calcBrackets(string) {
-			var leftBrackets = 0, quote = 0, bracketsPositions = [], result = { down: 0, strings: [] }, noCyrillicString = '', i;
+			var leftBrackets = 0, quote = 0, bracketsPositions = [], result = { down: 0, strings: [] }, nonCyrillicString = '', i;
 			
 			for (i = 0; i < string.length; i += 1) {
 				// Неэкранированная кавычка - начало или конец какого-то названия, экранированная - его часть, т.е. находится внутри другой пары кавычек:
 				if (string[i] === '\"' && string[i - 1] !== '\\') { quote += 1; }
-				// Если символ кириллический - заменяет на транслит, иначе файл может не открыться
-				if (replacements[string[i].toLowerCase()]) { noCyrillicString += replacements[string[i].toLowerCase()]; } else { noCyrillicString += string[i]; }
+				// Если символ кириллический - заменяем на транслит, иначе файл может не открыться
+				if (replacements[string[i]]) { nonCyrillicString += replacements[string[i]]; } else { nonCyrillicString += string[i]; }
 				
 				if (quote % 2 === 0) { // Говорит о том, что скобка находится вне кавычек, т.е. является частью разметки, а не названия
 					if (string[i] === '(') {
@@ -204,59 +209,30 @@
 			}
 			
 			bracketsPositions.forEach(function (pos, index) {
-				result.strings.push(noCyrillicString.slice(pos, bracketsPositions[index + 1] || noCyrillicString.length));
+				result.strings.push(nonCyrillicString.slice(pos, bracketsPositions[index + 1] || nonCyrillicString.length));
 			});
 			
-			if (!result.strings.length) { result.strings.push(noCyrillicString); } // Если строку не пришлось делить - записываем изначальную (с заменой на транслит где надо)
+			if (!result.strings.length) { result.strings.push(nonCyrillicString); } // Если строку не пришлось делить - записываем изначальную (с заменой на транслит где надо)
 			result.down = leftBrackets; // На столько шагов надо подняться по списку вверх (если закрывающих скобок было больше)
 			return result;
 		}
 		
-		Object.defineProperties(replacements, {
-			'а': { value: 'a' },
-			'б': { value: 'b' },
-			'в': { value: 'v' },
-			'г': { value: 'g' },
-			'д': { value: 'd' },
-			'е': { value: 'e' },
-			'ё': { value: 'e' },
-			'ж': { value: 'z' },
-			'з': { value: 'z' },
-			'и': { value: 'i' },
-			'й': { value: 'i' },
-			'к': { value: 'k' },
-			'л': { value: 'l' },
-			'м': { value: 'm' },
-			'н': { value: 'n' },
-			'о': { value: 'o' },
-			'п': { value: 'p' },
-			'р': { value: 'r' },
-			'с': { value: 's' },
-			'т': { value: 't' },
-			'у': { value: 'u' },
-			'ф': { value: 'f' },
-			'х': { value: 'h' },
-			'ц': { value: 'c' },
-			'ч': { value: 'h' },
-			'ш': { value: 's' },
-			'щ': { value: 'h' },
-			'ъ': { value: 'b' },
-			'ы': { value: 'i' },
-			'ь': { value: 'b' },
-			'э': { value: 'e' },
-			'ю': { value: 'u' },
-			'я': { value: 'a' }
-		});
+		replacements = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'z', 'з': 'z', 'и': 'i', 'й': 'i',
+		                 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f',
+		                 'х': 'h', 'ц': 'c', 'ч': 'h', 'ш': 's', 'щ': 'h', 'ъ': 'b', 'ы': 'i', 'ь': 'b', 'э': 'e', 'ю': 'u', 'я': 'a',
+		                 'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E', 'Ж': 'Z', 'З': 'Z', 'И': 'I', 'Й': 'I',
+		                 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F',
+		                 'Х': 'H', 'Ц': 'C', 'Ч': 'H', 'Ш': 'S', 'Щ': 'H', 'Ъ': 'b', 'Ы': 'I', 'Ь': 'b', 'Э': 'E', 'Ю': 'U', 'Я': 'A' };
 		
 		if (string.indexOf('ACCEL_ASCII') + 1) {
-			setStepStatus(1, 1, true);
+			setStepStatus(1, true);
 		} else {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[0],
 				closeable: true
 			});
-			setStepStatus(1, 1, false);
+			setStepStatus(1, false, true);
 			return;
 		}
 		try {
@@ -295,18 +271,18 @@
 				content: msgs[1],
 				closeable: true
 			});
-			setStepStatus(1, 2, false);
+			setStepStatus(2, false, true);
 			return;
 		}
 		if (Object.keys(obj).length > 4) {
-			setStepStatus(1, 2, true);
+			setStepStatus(2, true);
 		} else {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[1],
 				closeable: true
 			});
-			setStepStatus(1, 2, false);
+			setStepStatus(2, false, true);
 			return;
 		}
 		
@@ -417,20 +393,24 @@
 		var i = 0;
 		
 		function getNames(object, v) { // Флаг v для объекта с via, что бы добавить соответствующее описание
-			var key, usage, status, result = '';
+			var key, usage, status, same, result = '';
 			
 			for (key in object) {
 				if (object.hasOwnProperty(key)) {
 					
 					if (object[key].comps) {
-						usage = '<span style="color: #666;"> (' + object[key].comps.join(', ') + ')</span>';
-					} else { usage = (v) ? '<span style="color: #666;"> (переходное отверстие)</span>' :
-					                       '<span style="color: #666;"> (используется самостоятельно)</span>'; }
+						usage = '<span style="color: #666;" title="используется в перечисленных компонентах">(' + object[key].comps.join(', ') + ')</span>';
+					} else { usage = (v) ? '<span style="color: #666;">(переходное отверстие)</span>' :
+					                       '<span style="color: #666;">(используется самостоятельно)</span>'; }
 					
 					status = (object[key].width > 0 && object[key].height > 0) ? 'icon-help step2-actions-pads-list-row-status yellow' : 'icon-cancel step2-actions-pads-list-row-status red';
+					if (object[key].same.length) {
+						same = '<span style="color: #666;" title="объединено с перечисленными КП"> (' + object[key].same.join(', ') + ')</span>';
+						usage = '<br />' + usage;
+					} else { same = false; }
 					
 					result += '<div id="r' + i + '" class="step2-actions-pads-list-row">' +
-					          '<span class="' + status + '"></span>' + key + usage +
+					          '<span class="' + status + '"></span>' + key + (same || ' ') + usage +
 					          '</div>';
 					i += 1;
 				}
@@ -471,22 +451,20 @@
 		tabDXF.classList.remove('step3-actions-headers-header-active');
 		tabPCB.classList.add('step3-actions-headers-header-active');
 	}
-	function toB64(string) {
-		return window.btoa(unescape(encodeURIComponent(string)));
-	}
 	
-	if (!allSupported) {
+	if (!window.FileReader || document.body.style.flex === undefined) {
 		showPopup({
 			header: 'Ошибка',
-			content: msgs[msgs.length - 2],
+			content: msgs[8],
 			closeable: false
 		});
 		return;
 	}
+	
 	window.addEventListener('error', function () {
 		showPopup({
 			header:    'Ошибка',
-			content:   msgs[msgs.length - 1], // Неопределенная ошибка всегда последняя в массиве msgs
+			content:   msgs[9],
 			buttons:   ['Обновить страницу'],
 			funcs:     [location.reload.bind(location, true)],
 			closeable: false
@@ -494,6 +472,8 @@
 	});
 	window.addEventListener('load', function () { // Добавление символов в библиотеку
 		var rndGroup, rectGroup, symbol, i, favicon;
+		
+		setTimeout(function () { document.body.scrollTop = 0; }, 200);
 		
 		favicon = document.createElement('link');
 		favicon.rel = 'icon';
@@ -528,9 +508,21 @@
 		lib.appendChild(rndGroup);
 		lib.appendChild(rectGroup);
 	});
+	version.addEventListener(click, function () {
+		showPopup({
+			header: 'Список изменений',
+			content: 'Версия от 10.01.2016:' +
+			         '<ul>' +
+			         '<li>Добавлена кнопка информации о версии.</li>' +
+			         '<li>Добавлена отрисовка сборочных чертежей.</li>' +
+			         '<li>Добавлены инструкция и советы по использованию.</li>' +
+			         '</ul>',
+			closeable: true
+		});
+	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
-			setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
+			setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
 			file = input.files[0];
 			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
 			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
@@ -540,7 +532,7 @@
 		rollBlock(document.getElementById('help-wrapper'), document.getElementById('help-borders'), true);
 	});
 	uploadButton.addEventListener(click, function () {
-		setStepStatus(1, 1, true, true); // Сброс иконок при нажатии кнопки загрузки.
+		setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
 		
 		if (padsList.innerHTML) { resetChanges(); }
 		
@@ -686,20 +678,19 @@
 				if (lib.hasOwnProperty(key) && lib[key].symbol) {
 					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
 					
-					if (path[lib[key].symbol]) {
-						path[lib[key].symbol].amount += lib[key].coords.length;
-					} else {
-						path[lib[key].symbol] = {};
-						Object.defineProperties(path[lib[key].symbol], {
-							amount: { value: lib[key].coords.length, writable: true },
-							hole:   { value: calcHoleSize(lib[key]) },
-							pad:    { value: calcPadSize(lib[key]) },
-							ratio:  { value: calcRatio(lib[key]) }
-						});
-						Object.defineProperty(path[lib[key].symbol], 'mount', {
-							value: calcMountSize(lib[key], path[lib[key].symbol].pad)
-						});
-					}
+					path[lib[key].symbol] = {};
+					Object.defineProperties(path[lib[key].symbol], {
+						amount: { value: lib[key].coords.length },
+						hole:   { value: calcHoleSize(lib[key]) },
+						pad:    { value: calcPadSize(lib[key]) },
+						ratio:  { value: calcRatio(lib[key]) },
+						coords: { value: lib[key].coords },
+						width:  { value: lib[key].width },
+						height: { value: lib[key].height }
+					});
+					Object.defineProperty(path[lib[key].symbol], 'mount', {
+						value: calcMountSize(lib[key], path[lib[key].symbol].pad)
+					});
 				}
 			}
 		}
@@ -724,7 +715,7 @@
 		
 		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
 		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
-		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
+		if (layers.bot.length) { fileContent.addLayer('DrillBottom', layers.bot); }
 		
 		fileName = (file.name.match(/\.pcb$/i)) ? file.name.slice(0, -4) : file.name;
 		
@@ -746,7 +737,7 @@
 			prepareSymbolsInfo(padsLib.vias, symbols);
 			prepareSymbolsInfo(padsLib.pads, symbols);
 			dxfOutputContent = document.createElement('pre');
-			dxfOutputContent.innerHTML = generateDXF(symbols).join(String.fromCharCode(10));
+			dxfOutputContent.innerHTML = generateDXF(symbols, boardOutline, routes, drillViews).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header: 'Ошибка',
@@ -758,17 +749,19 @@
 			return;
 		}
 		
-		pcbLink = document.createElement('a');
-		pcbLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(pcbOutputContent.innerHTML);
-		pcbLink.download = fileName + '_DRILL.pcb';
-		pcbLink.classList.add('step3-actions-tabContent-link');
-		pcbLink.innerHTML = 'Сохранить .pcb файл';
-		
-		dxfLink = document.createElement('a');
-		dxfLink.href = 'data:text/plain;charset=utf-8;base64,' + toB64(dxfOutputContent.innerHTML);
-		dxfLink.download = fileName + '_TABLE.dxf';
-		dxfLink.classList.add('step3-actions-tabContent-link');
-		dxfLink.innerHTML = 'Сохранить .dxf файл';
+		if (document.createElement('a').download !== undefined) { // Атрибут download не поддерживают IE и Safari
+			pcbLink = document.createElement('a');
+			pcbLink.href = window.URL.createObjectURL(new Blob([pcbOutputContent.innerHTML], { type: 'text/plain' }));
+			pcbLink.download = fileName + '_DRILL.pcb';
+			pcbLink.classList.add('step3-actions-tabContent-link');
+			pcbLink.innerHTML = 'Сохранить .pcb файл';
+			
+			dxfLink = document.createElement('a');
+			dxfLink.href = window.URL.createObjectURL(new Blob([dxfOutputContent.innerHTML], { type: 'text/plain' }));
+			dxfLink.download = fileName + '_SB.dxf';
+			dxfLink.classList.add('step3-actions-tabContent-link');
+			dxfLink.innerHTML = 'Сохранить .dxf файл';
+		}
 		
 		output.pcb = document.createElement('div');
 		output.dxf = document.createElement('div');
@@ -788,7 +781,7 @@
 		selectText.style.color = '#666';
 		selectText.innerHTML = 'Выделить текст: Ctrl+A';
 		
-		link.appendChild(pcbLink);
+		if (pcbLink) { link.appendChild(pcbLink); }
 		link.appendChild(selectText);
 		link.nextElementSibling.style.display = 'block';
 	});
@@ -869,7 +862,7 @@
 			tabPCB.classList.add('step3-actions-headers-header-active');
 			tabDXF.classList.remove('step3-actions-headers-header-active');
 			if (pcbOutputContent && link.contains(dxfLink)) {
-				link.replaceChild(pcbLink, dxfLink);
+				if (pcbLink) { link.replaceChild(pcbLink, dxfLink); }
 				output.dxf.style.display = 'none';
 				output.pcb.style.display = 'block';
 			}
@@ -877,7 +870,7 @@
 			tabDXF.classList.add('step3-actions-headers-header-active');
 			tabPCB.classList.remove('step3-actions-headers-header-active');
 			if (dxfOutputContent && link.contains(pcbLink)) {
-				link.replaceChild(dxfLink, pcbLink);
+				if (pcbLink) { link.replaceChild(dxfLink, pcbLink); }
 				output.pcb.style.display = 'none';
 				output.dxf.style.display = 'block';
 			}
@@ -908,9 +901,89 @@
 					return array;
 				}
 			},
+			addLayer: {
+				value: function (layerName, layerContent) {
+					var i, j, exists = false, layerNum, layers = [];
+					
+					function compareNumeric(a, b) {
+						return a - b;
+					}
+					function getFreeLayerNum(array) {
+						var i, result;
+						for (i = 1; i < array.length; i += 1) {
+							if (!array[i]) { result = i; }
+						}
+						return result || array.length;
+					}
+					function shiftPropsLeft(object, n) {
+						var size = Object.keys(object).length;
+						
+						for (n; n < size; n += 1) {
+							object[n] = object[n + 1];
+						}
+						delete object[n];
+					}
+					function shiftPropsRight(object, n) {
+						var size = Object.keys(object).length, i;
+						
+						for (i = size - 1; i >= n; i -= 1) {
+							object[i + 1] = object[i];
+							delete object[i];
+						}
+					}
+					
+					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+						if (typeof this['4'][i] === 'object') {
+							
+							if (this['4'][i].header.indexOf('(layerDef') + 1 && !layerNum) { // Находим блок layerDef
+								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
+									layerNum = +this['4'][i][0].slice(10, -1);
+									exists = true;
+								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
+									layers[+this['4'][i][0].slice(10, -1)] = true;
+								}
+							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
+								/* Создаем блок с описанием слоя */
+								if (!exists) { // Если слоя не было найдено
+									if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
+									shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
+									this['4'][i] = {};
+									Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
+										header: { value: '(layerDef \"' + layerName + '\"' },
+										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
+										1:			{ value: '(layerType NonSignal)', enumerable: true },
+										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
+									});
+									i += 1; // Снова указывает на multilayer
+								}
+								
+								/* Создаем блок с содержимым слоя */
+								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
+								this['4'][i + 1] = {};
+								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
+								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
+									this['4'][i + 1][j] = layerContent[j];
+								}
+								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
+								
+								/* Удаляем предыдущее содержимое слоя */
+								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
+									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
+									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
+										delete this['4'][j];
+										shiftPropsLeft(this['4'], j);
+									}
+								}
+								break;
+							}
+							
+						}
+					}
+				}
+			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, cosA, currPath, height, i, j, key, name, pth = true, pads = {},
+					var comp = {}, coords, cosA, currPath, height, i, j, key, name, pth = true, pad, pads = {},
 						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
 						width, x, y, zero;
 					
@@ -936,8 +1009,8 @@
 							values = string.match(regStandardValue);
 							if (values) {
 								return (string.indexOf('isFlipped True') === -1) ?
-												values[0].slice(type.length + 2) + ' noflip' :
-												values[0].slice(type.length + 2) + ' flipped';
+												values[0].slice(type.length + 2) + ' 0' :
+												values[0].slice(type.length + 2) + ' 1';
 							} else {
 								return null;
 							}
@@ -1054,75 +1127,89 @@
 						}
 						return result;
 					}
-					function writeSideForLonePads(coordsArray, defaultSide) {
-						var k, coords, side;
+					function writeSideForLonePads(coords, defaultSide) {
+						var i;
 						
-						if (coordsArray.length) {
-							for (k = 0; k < coordsArray.length; k += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
-								coords = coordsArray[k].split(' ');
-								if (coords[2]) { // Если у набора координат есть третье значение - это отдельная КП
-									if (coords[2] === 'flipped') { side = (defaultSide === 'top') ? 'bot' : 'top'; } else { side = defaultSide; } // Меняем сторону если у текущих координат есть флаг flipped
-									if (+coords[2] || +coords[2] === 0) { coords[3] = coords[2]; } // Если третье значение - угол поворота - делаем его четвертым
-									coords[2] = side;
-									coordsArray[k] = coords.join(' ');
+						for (i = 0; i < coords.length; i += 1) { // Записывает слой отдельностоящего пада. Надо все это упростить
+							if (coords[i].hasOwnProperty('flipped')) { // Если есть такой ключ - это отдельная КП
+								if (coords[i].flipped) { // Меняем сторону если у текущих координат есть флаг flipped
+									coords[i].side = (defaultSide === 'top') ? 'bot' : (defaultSide === 'bot') ? 'top' : 'thru';
+								} else {
+									coords[i].side = defaultSide;
+									delete coords[i].flipped;
 								}
+								if (drillViews < 2 && coords[i].side === 'bot') { drillViews = 2; } // Количество необходимых видов передается в функцию построения сборочного чертежа
 							}
 						}
+					}
+					function isPadsSame(obj1, obj2) {
+						var rnd = new RegExp('ellipse|oval|mthole|target', 'i'), rect = new RegExp('rect|rndrect', 'i');
+						
+						return (obj1.width === obj2.width && obj1.height === obj2.height && obj1.hole === obj2.hole && obj1.pth === obj2.pth &&
+						       ((obj1.shape.match(rnd) && obj2.shape.match(rnd)) || (obj1.shape.match(rect) && obj2.shape.match(rect)))) ? true : false;
 					}
 					
 					try {
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-							if (this['4'][i].header === '(multiLayer') {
-								currPath = this['4'][i];
+							if (typeof this['4'][i] === 'object' && this['4'][i].header === '(multiLayer') {
+								
+								for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+									if (typeof this['4'][i][j] === 'string') {
+										
+										if (this['4'][i][j].indexOf('(viaStyleRef') + 1) {
+											name = parser('viaStyleRef', this['4'][i][j]);
+											if (!vias[name]) { vias[name] = {}; vias[name].coords = []; vias[name].same = []; }
+											coords = parser('pt', this['4'][i][j]).split(' ');
+											vias[name].coords.push({ x: +coords[0],
+											                         y: +coords[1],
+											                         side: 'thru'
+											                       });
+										} else if (this['4'][i][j].indexOf('(padStyleRef') + 1) {
+											name = parser('padStyleRef', this['4'][i][j]);
+											if (!pads[name]) { pads[name] = {}; pads[name].coords = []; pads[name].same = []; }
+											coords = parser('pt', this['4'][i][j]).split(' ');
+											pads[name].coords.push({ x: +coords[0],
+											                         y: +coords[1],
+											                         flipped: (+coords[2] === 1) ? true : false,
+											                         rotation: parser('rotation', this['4'][i][j])
+											                       });
+										}
+										
+									} else {
+										if (this['4'][i][j].header.indexOf('(pattern') > -1) {
+											name = parser('refDesRef', this['4'][i][j].header);
+											if (!comp[name]) { comp[name] = {}; }
+											comp[name].pattern = parser('patternRef', this['4'][i][j].header);
+											comp[name].zero = parser('pt', this['4'][i][j].header);
+											comp[name].rotation = parser('rotation', this['4'][i][j].header);
+											comp[name].graphics = (this['4'][i][j].header.indexOf('patternGraphicsNameRef') > -1) ?
+													parser('patternGraphicsNameRef', this['4'][i][j].header) :
+													parser('patternGraphicsNameRef', this['4'][i][j]['0']);
+										}
+									}
+								}
+								
 								break;
 							}
 						}
-						for (i = 0; i < Object.keys(currPath).length; i += 1) {
-							if (typeof currPath[i] === 'string') {
-								type = (currPath[i].indexOf('(viaStyleRef') + 1) ?
-										'viaStyleRef' : (currPath[i].indexOf('(padStyleRef') + 1) ?
-										'padStyleRef' : 0;
-								switch (type) {
-								case 'viaStyleRef':
-									name = parser(type, currPath[i]);
-									if (!vias[name]) { vias[name] = {}; vias[name].coords = []; }
-									vias[name].coords.push(parser('pt', currPath[i]));
-									break;
-								case 'padStyleRef':
-									name = parser(type, currPath[i]);
-									if (!pads[name]) { pads[name] = {}; pads[name].coords = []; }
-									pads[name].coords.push(parser('pt', currPath[i]) + ' ' + parser('rotation', currPath[i]));
-									break;
-								}
-							} else {
-								if (currPath[i].header.indexOf('(pattern') > -1) {
-									name = parser('refDesRef', currPath[i].header);
-									if (!comp[name]) { comp[name] = {}; }
-									comp[name].pattern = parser('patternRef', currPath[i].header);
-									comp[name].zero = parser('pt', currPath[i].header);
-									comp[name].rotation = parser('rotation', currPath[i].header);
-									comp[name].graphics = (currPath[i].header.indexOf('patternGraphicsNameRef') > -1) ?
-											parser('patternGraphicsNameRef', currPath[i].header) :
-											parser('patternGraphicsNameRef', currPath[i]['0']);
-								}
-							}
-						}
 						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
-							type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
-									'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
-									'pad' : 0;
+							if (typeof this['2'][i] === 'object') {
+								type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
+										'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
+										'pad' : null;
+							}
 							if (type) {
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
-								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; }
+								if (!currPath[name]) { currPath[name] = {}; currPath[name].coords = []; currPath[name].same = []; }
 								currPath[name].side = 'thru'; // Вариант по-умолчанию - сквозная КП
 								
 								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
 									if (typeof this['2'][i][j] === 'string') {
 										
-										if (this['2'][i][j].match(/isHolePlated False/i)) { pth = false; }
-										
-										if (this['2'][i][j].match(/holeDiam/i)) {
+										if (this['2'][i][j].match(/isHolePlated False/i)) {
+											pth = false;
+										} else if (this['2'][i][j].match(/holeDiam/i)) {
 											currPath[name].hole = parser('holeDiam', this['2'][i][j]);
 										}
 										
@@ -1148,6 +1235,17 @@
 								
 								currPath[name].pth = (currPath[name].hole < currPath[name].width) ? pth : false;
 								writeSideForLonePads(currPath[name].coords, currPath[name].side);
+								
+								for (key in currPath) {
+									if (currPath.hasOwnProperty(key) && key !== name && !currPath[key].mergedWith) {
+										if (isPadsSame(currPath[key], currPath[name])) {
+											currPath[key].coords = currPath[key].coords.concat(currPath[name].coords);
+											currPath[key].same.push(name); // Добавляем в КП, с которой объединили, текущее название что бы выводить его на странице
+											currPath[name].mergedWith = currPath[key]; // Сохраняем ссылку на КП, с которой объединяем, что бы потом найти, куда она переехала
+											break;
+										}
+									}
+								}
 							}
 							type = null;
 							pth = true;
@@ -1178,7 +1276,9 @@
 										for (i = 0; i < comp[key].pads[name].length; i += 1) {
 											shiftX = +comp[key].pads[name][i].split(' ')[0];
 											shiftY = +comp[key].pads[name][i].split(' ')[1];
-											side = pads[name].side;
+											pad = pads[name].mergedWith || pads[name]; // Если КП была объединена с другой
+											side = pad.side;
+											
 											if (comp[key].rotation) {
 												sinA = Math.sin(comp[key].rotation * Math.PI / 180);
 												cosA = Math.cos(comp[key].rotation * Math.PI / 180);
@@ -1188,28 +1288,31 @@
 												x = shiftX;
 												y = shiftY;
 											}
-											if (zero[2] === 'flipped') {
+											if (+zero[2]) {
 												x = -x;
-												side = (pads[name].side === 'top') ?
-														'bot' : (pads[name].side === 'bot') ?
+												side = (pad.side === 'top') ?
+														'bot' : (pad.side === 'bot') ?
 														'top' : 'thru';
 											}
+											if (drillViews < 2 && side === 'bot') { drillViews = 2; }
 											// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
 											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[3]) : (+comp[key].pads[name][i].split(' ')[3]);
 											while (rotation >= 360) { rotation -= 360; }
 											
-											pads[name].coords.push((+zero[0] + x).toFixed(3) + ' ' +
-																						 (+zero[1] + y).toFixed(3) + ' ' +
-																						 side + ' ' + rotation);
+											pad.coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
+											                  y: Math.round((+zero[1] + y) * 1000) / 1000,
+											                  side: side,
+											                  rotation: +rotation
+											                });
 										}
 										// Записывает в каких компонентах использована площадка:
-										if (pads[name].comps) { pads[name].comps.push(key); } else { pads[name].comps = []; pads[name].comps.push(key); }
+										if (pad.comps) { pad.comps.push(key); } else { pad.comps = []; pad.comps.push(key); }
 									}
 								}
 							}
 						}
-						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length) { delete pads[name]; } } }
-						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length) { delete vias[name]; } } }
+						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length || pads[name].mergedWith) { delete pads[name]; } else { delete pads[name].side; } } }
+						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length || vias[name].mergedWith) { delete vias[name]; } else { delete vias[name].side; } } }
 						for (name in pads) {
 							if (pads.hasOwnProperty(name) && pads[name].comps && pads[name].comps.length > 1) {
 								pads[name].comps.sort(compareNames);
@@ -1218,102 +1321,296 @@
 						}
 					} catch (err) {
 						showPopup({
-							header:    'Ошибка',
-							content:   msgs[2],
+							header: 'Ошибка',
+							content: msgs[2],
+							buttons: ['OK'],
+							funcs: [hidePopup],
 							closeable: true
 						});
-						setStepStatus(1, 3, false);
+						setStepStatus(3, false, true);
 						return;
 					}
 					
 					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
 					result.pads = sortObject(pads);
-					setStepStatus(1, 3, true);
+					setStepStatus(3, true);
+					
 					return result;
 				}
 			},
-			addLayer: {
-				value: function (layerName, layerContent) {
-					var i, j, exists = false, layerNum, layers = [];
+			getBoardOutline: {
+				value: function () {
+					var i, j, result = [], layerNum, minX, minY, coords;
 					
-					function compareNumeric(a, b) {
-						return a - b;
-					}
-					function getFreeLayerNum(array) {
-						var i, result;
-						for (i = 1; i < array.length; i += 1) {
-							if (!array[i]) { result = i; }
-						}
-						return result || array.length;
-					}
-					function shiftPropsLeft(object, n) {
-						var size = Object.keys(object).length;
+					function parser(string) {
+						var result = [];
 						
-						for (n; n < size; n += 1) {
-							object[n] = object[n + 1];
+						while (string.indexOf('(pt') + 1) {
+							coords = string.slice(string.indexOf('(pt') + 4, string.indexOf(')')).split(' ');
+							result.push(+coords[0], +coords[1]);
+							string = string.slice(string.indexOf(')') + 2);
+							// Ищет левую нижнюю точку контура что бы узнать насколько контур смещен от нуля координат:
+							if (result[result.length - 2] < minX || minX === undefined) { minX = result[result.length - 2]; }
+							if (result[result.length - 1] < minY || minY === undefined) { minY = result[result.length - 1]; }
 						}
-						delete object[n];
-					}
-					function shiftPropsRight(object, n) {
-						var size = Object.keys(object).length, i;
+						// Если три набора координат - значит арка, переносим координаты центра арки в конец массива что бы порядок координат был таким же, как у линий:
+						if (result.length === 6) { result.push(result[0], result[1]); result.shift(); result.shift(); }
 						
-						for (i = size - 1; i >= n; i -= 1) {
-							object[i + 1] = object[i];
-							delete object[i];
-						}
+						return result;
 					}
 					
-					for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-						if (typeof this['4'][i] === 'object') {
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object') {
+								
+								if (this['4'][i].header.match(/layerDef \"Board\"/i)) {
+									layerNum = this['4'][i][0].slice(10, -1);
+								} else if (layerNum && this['4'][i].header.indexOf('(layerContents (layerNumRef ' + layerNum + ')') + 1) {
+									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+										if (typeof this['4'][i][j] === 'string' && this['4'][i][j].indexOf('(pt') + 1) {
+											result.push(parser(this['4'][i][j]));
+										}
+									}
+									break;
+								}
+								
+							}
+						}
+						result.forEach(function (coords) {
+							var i;
 							
-							if (this['4'][i].header.indexOf('(layerDef') + 1 && !layerNum) { // Находим блок layerDef
-								if (this['4'][i].header.slice(11, -1).toLowerCase() === layerName.toLowerCase()) { // Если слой с таким именем существует - берем его номер
-									layerNum = +this['4'][i][0].slice(10, -1);
-									exists = true;
-								} else { // Иначе запоминаем номер этого слоя в соответствующую ячейку массива что бы потом найти наименьший свободный номер
-									layers[+this['4'][i][0].slice(10, -1)] = true;
+							for (i = 0; i < coords.length; i += 1) {
+								if (i % 2) {
+									coords[i] = coords[i] - minY;
+								} else {
+									coords[i] = coords[i] - minX;
 								}
-							} else if (this['4'][i].header.indexOf('(multiLayer') + 1) { // Находим блок multilayer - после него идут блоки с содержимым слоев, перед ним - с описанием
-								/* Создаем блок с описанием слоя */
-								if (!exists) { // Если слоя не было найдено
-									if (!layerNum) { layerNum = getFreeLayerNum(layers); } // Если слоя с нужным именем не нашлось - подбираем первый свободный номер
-									shiftPropsRight(this['4'], i); // Смещаем нумерацию свойств в блоке на 1
-									this['4'][i] = {};
-									Object.defineProperties(this['4'][i], { // Создаем свойство на освободившемся месте
-										header: { value: '(layerDef \"' + layerName + '\"' },
-										0:			{ value: '(layerNum ' + layerNum + ')', enumerable: true },
-										1:			{ value: '(layerType NonSignal)', enumerable: true },
-										2:			{ value: '(fieldSetRef \"(Default)\"))', enumerable: true }
-									});
-									i += 1; // Снова указывает на multilayer
-								}
-								
-								/* Создаем блок с содержимым слоя */
-								shiftPropsRight(this['4'], i + 1); // Смещаем нумерацию свойств что бы добавить описание для нового слоя
-								this['4'][i + 1] = {};
-								Object.defineProperty(this['4'][i + 1], 'header', { value: '(layerContents (layerNumRef ' + layerNum + ')' });
-								for (j = 0; j < layerContent.length; j += 1) { // Записываем содержимое слоя, поступившее в массиве
-									this['4'][i + 1][j] = layerContent[j];
-								}
-								this['4'][i + 1][j - 1] += ')'; // Закрываем блок
-								
-								/* Удаляем предыдущее содержимое слоя */
-								for (j = i + 2; j < Object.keys(this['4']).length; j += 1) {
-									if ((typeof this['4'][j] === 'object' && this['4'][j].header.indexOf('(layerNumRef ' + layerNum) + 1) ||
-									    (typeof this['4'][j] === 'string' && this['4'][j].indexOf('(layerNumRef ' + layerNum) + 1)) {
-										delete this['4'][j];
-										shiftPropsLeft(this['4'], j);
+							}
+						});
+					} catch (err) {
+						showPopup({
+							header: 'Ошибка',
+							content: msgs[10],
+							buttons: ['OK'],
+							funcs: [hidePopup],
+							closeable: true
+						});
+						setStepStatus(4, false, true);
+					}
+					
+					if (result.length) {
+						result.push({ shiftX: minX, shiftY: minY });
+						setStepStatus(4, true);
+					} else {
+						showPopup({
+							header: 'Предупреждение',
+							content: msgs[10],
+							buttons: ['OK'],
+							funcs: [hidePopup],
+							closeable: true
+						});
+						setStepStatus(4, false, true);
+					}
+					return result;
+				}
+			},
+			getRoutes: {
+				value: function () {
+					var i, j, k, l, currNum, currType, layerName, polygonType, routes = {};
+					
+					function Route(string) {
+						var type, width, first, second, third;
+						
+						width = parseFloat(string.slice(string.indexOf('width ') + 6));
+						type = string.slice(1, string.indexOf(' '));
+						if (type === 'triplePointArc') { type = 'arc'; }
+						
+						first = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						string = string.slice(string.indexOf(')') + 1);
+						second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						if (type === 'triplePointArc') {
+							third = first; // Меняем местами для удобства, т.к. у арок первая пара координат - центр, а у линий - начало
+							first = second;
+							string = string.slice(string.indexOf(')') + 1);
+							second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						}
+						
+						this.type = type;
+						this.width = width;
+						this.x1 = +first[0];
+						this.y1 = +first[1];
+						this.x2 = +second[0];
+						this.y2 = +second[1];
+						
+						if (third) {
+							this.x3 = +third[0];
+							this.y3 = +third[1];
+						}
+					}
+					function Text(string) {
+						var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text, justification, rotation, sliced;
+						
+						text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" (')).split('\\r\\n');
+						if (string.indexOf('justify ') > -1) {
+							sliced = string.slice(string.indexOf('justify ') + 8);
+							justification = sliced.slice(0, sliced.indexOf(')')).toLowerCase();
+						} else { justification = 'lowerleft'; }
+						if (string.indexOf('rotation') > -1) {
+							sliced = string.slice(string.indexOf('rotation ') + 9);
+							rotation = +sliced.slice(0, sliced.indexOf(')'));
+						} else { rotation = 0; }
+						
+						this.type = 'text';
+						this.content = text;
+						this.justification = justification;
+						this.rotation = rotation;
+						this.x1 = +coords[0];
+						this.y1 = +coords[1];
+					}
+					function Thermal(string) {
+						var begin, end;
+						
+						begin = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						string = string.slice(string.indexOf(')') + 2);
+						end = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						
+						this.type = 'thermal';
+						this.x1 = +begin[0];
+						this.y1 = +begin[1];
+						this.x2 = +end[0];
+						this.y2 = +end[1];
+					}
+					function Polygon(object, type) {
+						var i, coords;
+						
+						this.type = type;
+						for (i = 0; i < Object.keys(object).length; i += 1) {
+							if (typeof object[i] === 'string' && object[i].indexOf('pt') > -1) {
+								coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
+								this['x' + i] = +coords[0];
+								this['y' + i] = +coords[1];
+							}
+						}
+					}
+					function handleIsland(object) {
+						var i, j;
+						
+						for (i = 0; i < Object.keys(object).length; i += 1) {
+							if (typeof object[i] === 'object') {
+								if (object[i].header.indexOf('islandOutline') > -1) {
+									routes[currNum][k] = new Polygon(object[i], 'copperpour');
+									k += 1;
+								} else if (object[i].header.indexOf('cutout') > -1) {
+									for (j = 0; j < Object.keys(object[i]).length; j += 1) {
+										if (object[i][j].header.indexOf('cutoutOutline') > -1) {
+											routes[currNum][k] = new Polygon(object[i][j], 'cutout');
+											k += 1;
+										}
 									}
 								}
-								break;
+							} else if (typeof object[i] === 'string' && object[i].indexOf('thermal') > -1) {
+								routes[currNum][k] = new Thermal(object[i]);
+								k += 1;
 							}
-							
 						}
 					}
+					
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object') {
+								
+								if (this['4'][i].header.indexOf('layerDef') > -1) {
+									layerName = this['4'][i].header.slice(11, -1);
+									
+									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+										if (typeof this['4'][i][j] === 'string') {
+											
+											if (this['4'][i][j].indexOf('layerNum') > -1) {
+												currNum = +this['4'][i][j].slice(10, -1);
+											} else if (this['4'][i][j] === '(layerType Signal)') {
+												currType = 'signal';
+											} else if (this['4'][i][j] === '(layerType Plane)') {
+												currType = 'plane';
+											}
+											
+											if (currNum && currType) {
+												routes[currNum] = { name: layerName.toUpperCase(), type: currType };
+												break;
+											}
+											
+										}
+									}
+									currNum = null;
+									currType = null;
+								}
+								
+								if (this['4'][i].header.indexOf('layerContents') > -1) {
+									currNum = this['4'][i].header.slice(28, -1);
+									if (routes.hasOwnProperty(currNum)) {
+										k = 0;
+										
+										for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+											
+											if (typeof this['4'][i][j] === 'string') {
+												if (this['4'][i][j].match(/\(line|\(triplePointArc/i)) {
+													routes[currNum][k] = new Route(this['4'][i][j]);
+													k += 1;
+												} else if (this['4'][i][j].match(/\(text/i)) {
+													routes[currNum][k] = new Text(this['4'][i][j]);
+													k += 1;
+												}
+											} else if (typeof this['4'][i][j] === 'object') {
+												polygonType = (this['4'][i][j].header.indexOf('polyCutOut') > -1) ? 'cutout' :
+													            (this['4'][i][j].header.indexOf('planeObj') > -1) ? 'plane' :
+													            (this['4'][i][j].header.indexOf('copperPour95') > -1) ? 'copperpour' : null;
+												if (polygonType && polygonType.match(/cutout|plane/i)) {
+													for (l = 0; l < Object.keys(this['4'][i][j]).length; l += 1) {
+														if (typeof this['4'][i][j][l] === 'object' && this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
+															routes[currNum][k] = new Polygon(this['4'][i][j][l], polygonType);
+															k += 1;
+														}
+													}
+												} else if (polygonType && polygonType === 'copperpour') {
+													for (l = 0; l < Object.keys(this['4'][i][j]).length; l += 1) {
+														if (typeof this['4'][i][j][l] === 'object') {
+															if (this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
+																routes[currNum][k] = new Polygon(this['4'][i][j][l], polygonType);
+																k += 1;
+															} else if (this['4'][i][j][l].header.indexOf('island') > -1) {
+																handleIsland(this['4'][i][j][l]);
+															}
+														}
+													}
+												}
+											}
+										}
+										
+									}
+								}
+							}
+						}
+					} catch (err) {
+						showPopup({
+							header: 'Ошибка',
+							content: msgs[11],
+							buttons: ['OK'],
+							funcs: [hidePopup],
+							closeable: true
+						});
+						setStepStatus(5, false, false);
+					}
+					
+					setStepStatus(5, true);
+					for (i in routes) { if (routes.hasOwnProperty(i)) { if (!routes[i].hasOwnProperty(0)) { delete routes[i]; } } }
+					
+					return routes;
 				}
 			}
 		});
+		
 		padsLib = fileContent.getPads();
+		boardOutline = fileContent.getBoardOutline();
+		if (boardOutline.length) { routes = fileContent.getRoutes(); }
 		createPadsList(padsLib);
 	});
 }());
