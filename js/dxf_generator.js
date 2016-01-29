@@ -8,9 +8,11 @@
 *		20 - y
 *		21 - y1
 *		22 - центр вьюпорта по y
-*		40 - высота текста / высота вьюпорта / радиус круга
-*		41 - коэффициент сжатия текста / соотношение сторон вьюпорта
-*		50 - угол наклона текста
+*		40 - высота текста / высота вьюпорта / радиус круга / начальная толщина полилинии
+*		41 - коэффициент сжатия текста / соотношение сторон вьюпорта / конечная толщина полилинии
+*   42 - выпуклость вертекса полилинии: 1 - полукруг, 0 - прямо
+*		50 - поворот текста
+*		51 - угол наклона текста
 *		62 - цвет линии (1 - red, 2 - yellow, 3 - green, 256 - ByLayer)
 *		72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
 *		73 - вертикальное выравнивание текста (0 - baseline, 1 - bottom, 2 - middle, 3 - top)
@@ -20,7 +22,7 @@
 *   [0, 'LINE', 8, 'Drill_Table', 62, 3] - зеленая линия для символов
 *   [0, 'LINE', 8, 'Grid', 62, 4] - бирюзовая линия для сетки
 */
-function generateDXF(lib, outline, drillViews) {
+function generateDXF(lib, outline, routes, drillViews) {
 	'use strict';
 	var
 		pth = Object.keys(lib.metallized).length,
@@ -102,6 +104,16 @@ function generateDXF(lib, outline, drillViews) {
 		          70, 64,
 		          62, 4,
 		          6, 'CONTINUOUS',
+							0, 'LAYER',
+		          2, 'Top',
+		          70, 64,
+		          62, 1,
+		          6, 'CONTINUOUS',
+							0, 'LAYER',
+		          2, 'Bottom',
+		          70, 64,
+		          62, 3,
+		          6, 'CONTINUOUS',
 		          0, 'ENDTAB',
 		          0, 'TABLE',
 		          2, 'STYLE',
@@ -130,7 +142,9 @@ function generateDXF(lib, outline, drillViews) {
 							 '\\U+043E \\U+043C\\U+0435\\U+0442\\U+0430\\U+043B\\U+043B\\U+0438\\U+0437\\U+0430\\U+0446\\U+0438\\U+0438', // [8] о металлизации
 							 '\\U+0415\\U+0441\\U+0442\\U+044C', // [9] Есть
 							 '\\U+041D\\U+0435\\U+0442', // [10] Нет
-							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2' // [11] ТАБЛИЦА 2
+							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2', // [11] ТАБЛИЦА 2
+							 '\\U+0421\\U+043B\\U+043E\\U+0439', // [12] Слой
+							 '\\U+043E\\U+0442\\U+0440\\U+0430\\U+0436\\U+0435\\U+043D' // [13] отражен
 							 ],
 		cellPadding = 3, // Расстояние от границы ячейки до символа
 		y = (th - colHeight / 2), // Центр символа в ячейке
@@ -138,7 +152,7 @@ function generateDXF(lib, outline, drillViews) {
 		space = 50, // Расстояние между чертежами
 		shiftX = (outline.length) ? outline[outline.length - 1].shiftX : 0, // Смещение левого нижнего края платы относительно нуля
 		shiftY = (outline.length) ? outline[outline.length - 1].shiftY : 0,
-		currCol = 0, d = {}, symbol, skippedCells, boardWidth = 0, boardHeight = 0, radius, rotation, i, j, w, h, x;
+		currCol = 0, d = {}, symbol, skippedCells, boardWidth = 0, boardHeight = 0, radius, rotation, i, j, layerNum, w, h, x;
 	
 	function baseRnd() {
 		result.push(0, 'CIRCLE', 8, 'Drill_Symbols', 62, 3, 10, x, 20, y, 40, radius);
@@ -261,10 +275,10 @@ function generateDXF(lib, outline, drillViews) {
 			dashes += 1;
 		}
 	}
-	function drawBoardOutline(mirrored, grid) {
+	function drawBoardOutline(mirrored, grid, name) {
 		var shift; // Смещение по X в зависимости от количества уже созданных видов
 		
-		shift = (views) ? views * boardWidth - hw + space : -hw;
+		shift = (views) ? views * (boardWidth + space) - hw : -hw;
 		outline.forEach(function (coords) {
 			var start, end, radius, box, x1, x2, x3;
 			// Набор координат в массиве выглядит так: 
@@ -288,6 +302,13 @@ function generateDXF(lib, outline, drillViews) {
 				result.push(0, 'ARC', 8, 'Board', 62, 1, 10, x3, 20, (coords[5] + th + space), 40, radius, space, start, 51, end);
 			}
 		});
+		
+		if (name) {
+			result.push(0, 'TEXT', 8, 'Grid', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 1, 73, 2,
+			            10, shift, 20, (th + space + boardHeight), 11, (shift + boardWidth / 2), 21, (th + space + boardHeight + 20),
+			            1, (headers[12] + ' ' + name + (mirrored ? ' (' + headers[13] + ')' : '')));
+		}
+		
 		views += 1;
 		drawBoardGrid(shift, th + space, mirrored);
 	}
@@ -333,6 +354,73 @@ function generateDXF(lib, outline, drillViews) {
 					}
 					symbol[key]();
 				}
+			}
+		}
+	}
+	function drawRoutes(routes) {
+		var i, key, offsetX, offsetY, horJustification, vertJustification, strOffsetX, strOffsetY, strings, mirr = 1;
+		
+		offsetX = views * (boardWidth + space) - shiftX - hw;
+		offsetY = th + space - shiftY;
+		
+		if (routes.name === 'BOTTOM') { // Если слой отражен - координаты по X будут отсчитываться от правого края назад
+			offsetX += boardWidth + shiftX * 2;
+			mirr = -1;
+		}
+		
+		for (key in routes) {
+			if (routes.hasOwnProperty(key)) {
+				
+				if (routes[key].type === 'line') {
+					result.push(0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX), 20, (routes[key].y1 + offsetY),
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX), 20, (routes[key].y2 + offsetY),
+					            0, 'SEQEND',   8, routes.name,
+					            0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width, // Скругление на начальной точке отрезка
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX - routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
+					            0, 'SEQEND',   8, routes.name,
+					            0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width, // Скругление на конечной точке отрезка
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX - routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
+					            0, 'SEQEND',   8, routes.name);
+				} else if (routes[key].type === 'text') {
+					horJustification  = (routes[key].justification.match(/left/i))  ? 0 : (routes[key].justification.match(/right/i)) ? 2 : 1;
+					vertJustification = (routes[key].justification.match(/upper/i)) ? 3 : (routes[key].justification.match(/lower/i)) ? 1 : 2;
+					
+					if (routes[key].content.length === 1) {
+						result.push(0, 'TEXT', 8, routes.name, 62, 256, 7, 'win_eskd', 40, 1.75, 50, routes[key].rotation, 51, 15, 72, horJustification, 73, vertJustification,
+					              10, (routes[key].x1 * mirr + offsetX), 20, (routes[key].y1 + offsetY), 11, (routes[key].x1 * mirr + offsetX), 21, (routes[key].y1 + offsetY), 1, (routes[key].content[0] || ' '));
+					} else if (routes[key].content.length > 1) {
+						// От поворота отнимается/прибавляется 90 градусов потому что при повороте на 0 строки идут сверху вниз, то есть смещаются на 270 градусов.
+						if (vertJustification === 1) { // Если привязка к нижней части - меняем ее на верхнюю для удобства
+							vertJustification = 3;
+							routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
+							routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
+						} else if (vertJustification === 2) { // Если привязка к центру - меняем ее на верхнюю для удобства
+							vertJustification = 3;
+							if (routes[key].content.length % 2 === 0) { // Если четное количество строк
+								routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
+								routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
+							} else {
+								routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
+								routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
+							}
+						}
+						strOffsetX = Math.round(Math.cos((routes[key].rotation - 90) * Math.PI / 180) * 2.5 * 1000) / 1000;
+						strOffsetY = Math.round(Math.sin((routes[key].rotation - 90) * Math.PI / 180) * 2.5 * 1000) / 1000;
+						
+						for (i = 0; i < routes[key].content.length; i += 1) {
+							result.push(0, 'TEXT', 8, routes.name, 62, 256, 7, 'win_eskd', 40, 1.75, 50, routes[key].rotation, 51, 15, 72, horJustification, 73, vertJustification,
+					                10, (routes[key].x1 * mirr + offsetX + i * strOffsetX), 20, (routes[key].y1 + offsetY + i * strOffsetY),
+							            11, (routes[key].x1 * mirr + offsetX + i * strOffsetX), 21, (routes[key].y1 + offsetY + i * strOffsetY), 1, (routes[key].content[i] || ' '));
+						}
+					}
+					
+				}
+				
 			}
 		}
 	}
@@ -1093,10 +1181,10 @@ function generateDXF(lib, outline, drillViews) {
 	
 	/* Построение таблицы */
 	// Ячейки заголовков
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21, 0);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21,  0);
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th);
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21, 0);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21,  0);
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 15, 11,   0,  21, 15);
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 30, 11,   0,  21, 30);
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 45, 11,   0,  21, 45);
@@ -1126,8 +1214,8 @@ function generateDXF(lib, outline, drillViews) {
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, headers[11]);
 	
 	// Тексты заголовков
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5, 1, headers[0]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5, 1, headers[1]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5,  1, headers[0]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5,  1, headers[1]);
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1, headers[2]);
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1, headers[3]);
 	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1, headers[4]);
@@ -1162,13 +1250,21 @@ function generateDXF(lib, outline, drillViews) {
 				}
 			}
 		});
-		drawBoardOutline(false, true);
-		if (drillViews === 2) { drawBoardOutline(true, true); }
+		drawBoardOutline(false, true, 'DRILLTOP');
+		if (drillViews === 2) { drawBoardOutline(true, true, 'DRILLBOTTOM'); }
 		
 		// Символы на плате
 		drawSymbolsOnBoard(lib.holes);
 		drawSymbolsOnBoard(lib.metallized);
 		drawSymbolsOnBoard(lib.nonMetallized);
+		
+		// Проводящие рисунки
+		for (layerNum in routes) {
+			if (routes.hasOwnProperty(layerNum)) {
+				drawRoutes(routes[layerNum]);
+				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, routes[layerNum].name);
+			}
+		}
 	} else { document.getElementById('tabDXF').innerHTML = 'Таблица'; }
 	/* -=-=-=- */
 	

@@ -189,13 +189,13 @@
 			});
 		}
 		function calcBrackets(string) {
-			var leftBrackets = 0, quote = 0, bracketsPositions = [], result = { down: 0, strings: [] }, noCyrillicString = '', i;
+			var leftBrackets = 0, quote = 0, bracketsPositions = [], result = { down: 0, strings: [] }, nonCyrillicString = '', i;
 			
 			for (i = 0; i < string.length; i += 1) {
 				// Неэкранированная кавычка - начало или конец какого-то названия, экранированная - его часть, т.е. находится внутри другой пары кавычек:
 				if (string[i] === '\"' && string[i - 1] !== '\\') { quote += 1; }
-				// Если символ кириллический - заменяет на транслит, иначе файл может не открыться
-				if (replacements[string[i].toLowerCase()]) { noCyrillicString += replacements[string[i].toLowerCase()]; } else { noCyrillicString += string[i]; }
+				// Если символ кириллический - заменяем на транслит, иначе файл может не открыться
+				if (replacements[string[i]]) { nonCyrillicString += replacements[string[i]]; } else { nonCyrillicString += string[i]; }
 				
 				if (quote % 2 === 0) { // Говорит о том, что скобка находится вне кавычек, т.е. является частью разметки, а не названия
 					if (string[i] === '(') {
@@ -209,49 +209,20 @@
 			}
 			
 			bracketsPositions.forEach(function (pos, index) {
-				result.strings.push(noCyrillicString.slice(pos, bracketsPositions[index + 1] || noCyrillicString.length));
+				result.strings.push(nonCyrillicString.slice(pos, bracketsPositions[index + 1] || nonCyrillicString.length));
 			});
 			
-			if (!result.strings.length) { result.strings.push(noCyrillicString); } // Если строку не пришлось делить - записываем изначальную (с заменой на транслит где надо)
+			if (!result.strings.length) { result.strings.push(nonCyrillicString); } // Если строку не пришлось делить - записываем изначальную (с заменой на транслит где надо)
 			result.down = leftBrackets; // На столько шагов надо подняться по списку вверх (если закрывающих скобок было больше)
 			return result;
 		}
 		
-		Object.defineProperties(replacements, {
-			'а': { value: 'a' },
-			'б': { value: 'b' },
-			'в': { value: 'v' },
-			'г': { value: 'g' },
-			'д': { value: 'd' },
-			'е': { value: 'e' },
-			'ё': { value: 'e' },
-			'ж': { value: 'z' },
-			'з': { value: 'z' },
-			'и': { value: 'i' },
-			'й': { value: 'i' },
-			'к': { value: 'k' },
-			'л': { value: 'l' },
-			'м': { value: 'm' },
-			'н': { value: 'n' },
-			'о': { value: 'o' },
-			'п': { value: 'p' },
-			'р': { value: 'r' },
-			'с': { value: 's' },
-			'т': { value: 't' },
-			'у': { value: 'u' },
-			'ф': { value: 'f' },
-			'х': { value: 'h' },
-			'ц': { value: 'c' },
-			'ч': { value: 'h' },
-			'ш': { value: 's' },
-			'щ': { value: 'h' },
-			'ъ': { value: 'b' },
-			'ы': { value: 'i' },
-			'ь': { value: 'b' },
-			'э': { value: 'e' },
-			'ю': { value: 'u' },
-			'я': { value: 'a' }
-		});
+		replacements = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'z', 'з': 'z', 'и': 'i', 'й': 'i',
+		                 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f',
+		                 'х': 'h', 'ц': 'c', 'ч': 'h', 'ш': 's', 'щ': 'h', 'ъ': 'b', 'ы': 'i', 'ь': 'b', 'э': 'e', 'ю': 'u', 'я': 'a',
+		                 'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E', 'Ж': 'Z', 'З': 'Z', 'И': 'I', 'Й': 'I',
+		                 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F',
+		                 'Х': 'H', 'Ц': 'C', 'Ч': 'H', 'Ш': 'S', 'Щ': 'H', 'Ъ': 'b', 'Ы': 'I', 'Ь': 'b', 'Э': 'E', 'Ю': 'U', 'Я': 'A' };
 		
 		if (string.indexOf('ACCEL_ASCII') + 1) {
 			setStepStatus(1, true);
@@ -744,7 +715,7 @@
 		
 		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
 		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
-		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
+		if (layers.bot.length) { fileContent.addLayer('DrillBottom', layers.bot); }
 		
 		fileName = (file.name.match(/\.pcb$/i)) ? file.name.slice(0, -4) : file.name;
 		
@@ -766,7 +737,7 @@
 			prepareSymbolsInfo(padsLib.vias, symbols);
 			prepareSymbolsInfo(padsLib.pads, symbols);
 			dxfOutputContent = document.createElement('pre');
-			dxfOutputContent.innerHTML = generateDXF(symbols, boardOutline, drillViews).join(String.fromCharCode(10));
+			dxfOutputContent.innerHTML = generateDXF(symbols, boardOutline, routes, drillViews).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header: 'Ошибка',
@@ -1445,13 +1416,14 @@
 			},
 			getRoutes: {
 				value: function () {
-					var i, j, currNum, currType, layerName, routes = {};
+					var i, j, k, l, currNum, currType, layerName, polygonType, routes = {};
 					
 					function Route(string) {
 						var type, width, first, second, third;
 						
 						width = parseFloat(string.slice(string.indexOf('width ') + 6));
 						type = string.slice(1, string.indexOf(' '));
+						if (type === 'triplePointArc') { type = 'arc'; }
 						
 						first = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
 						string = string.slice(string.indexOf(')') + 1);
@@ -1476,16 +1448,71 @@
 						}
 					}
 					function Text(string) {
-						var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text;
+						var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text, justification, rotation, sliced;
 						
 						text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" (')).split('\\r\\n');
-						string = string.slice(string.indexOf('justify ') + 8);
+						if (string.indexOf('justify ') > -1) {
+							sliced = string.slice(string.indexOf('justify ') + 8);
+							justification = sliced.slice(0, sliced.indexOf(')')).toLowerCase();
+						} else { justification = 'lowerleft'; }
+						if (string.indexOf('rotation') > -1) {
+							sliced = string.slice(string.indexOf('rotation ') + 9);
+							rotation = +sliced.slice(0, sliced.indexOf(')'));
+						} else { rotation = 0; }
 						
 						this.type = 'text';
 						this.content = text;
-						this.justify = string.slice(0, string.indexOf(')')).toLowerCase();
+						this.justification = justification;
+						this.rotation = rotation;
 						this.x1 = +coords[0];
 						this.y1 = +coords[1];
+					}
+					function Thermal(string) {
+						var begin, end;
+						
+						begin = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						string = string.slice(string.indexOf(')') + 2);
+						end = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+						
+						this.type = 'thermal';
+						this.x1 = +begin[0];
+						this.y1 = +begin[1];
+						this.x2 = +end[0];
+						this.y2 = +end[1];
+					}
+					function Polygon(object, type) {
+						var i, coords;
+						
+						this.type = type;
+						for (i = 0; i < Object.keys(object).length; i += 1) {
+							if (typeof object[i] === 'string' && object[i].indexOf('pt') > -1) {
+								coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
+								this['x' + i] = +coords[0];
+								this['y' + i] = +coords[1];
+							}
+						}
+					}
+					function handleIsland(object) {
+						var i, j;
+						
+						for (i = 0; i < Object.keys(object).length; i += 1) {
+							if (typeof object[i] === 'object') {
+								if (object[i].header.indexOf('islandOutline') > -1) {
+									routes[currNum][k] = new Polygon(object[i], 'copperpour');
+									k += 1;
+								} else if (object[i].header.indexOf('cutout') > -1) {
+									for (j = 0; j < Object.keys(object[i]).length; j += 1) {
+										if (object[i][j].header.indexOf('cutoutOutline') > -1) {
+											routes[currNum][k] = new Polygon(object[i][j], 'cutout');
+											k += 1;
+										}
+									}
+								}
+							} else if (typeof object[i] === 'string' && object[i].indexOf('thermal') > -1) {
+								routes[currNum][k] = new Thermal(object[i]);
+								k += 1;
+							}
+						}
 					}
 					
 					try {
@@ -1520,13 +1547,40 @@
 								if (this['4'][i].header.indexOf('layerContents') > -1) {
 									currNum = this['4'][i].header.slice(28, -1);
 									if (routes.hasOwnProperty(currNum)) {
+										k = 0;
 										
 										for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+											
 											if (typeof this['4'][i][j] === 'string') {
 												if (this['4'][i][j].match(/\(line|\(triplePointArc/i)) {
-													routes[currNum][j] = new Route(this['4'][i][j]);
+													routes[currNum][k] = new Route(this['4'][i][j]);
+													k += 1;
 												} else if (this['4'][i][j].match(/\(text/i)) {
-													routes[currNum][j] = new Text(this['4'][i][j]);
+													routes[currNum][k] = new Text(this['4'][i][j]);
+													k += 1;
+												}
+											} else if (typeof this['4'][i][j] === 'object') {
+												polygonType = (this['4'][i][j].header.indexOf('polyCutOut') > -1) ? 'cutout' :
+													            (this['4'][i][j].header.indexOf('planeObj') > -1) ? 'plane' :
+													            (this['4'][i][j].header.indexOf('copperPour95') > -1) ? 'copperpour' : null;
+												if (polygonType && polygonType.match(/cutout|plane/i)) {
+													for (l = 0; l < Object.keys(this['4'][i][j]).length; l += 1) {
+														if (typeof this['4'][i][j][l] === 'object' && this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
+															routes[currNum][k] = new Polygon(this['4'][i][j][l], polygonType);
+															k += 1;
+														}
+													}
+												} else if (polygonType && polygonType === 'copperpour') {
+													for (l = 0; l < Object.keys(this['4'][i][j]).length; l += 1) {
+														if (typeof this['4'][i][j][l] === 'object') {
+															if (this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
+																routes[currNum][k] = new Polygon(this['4'][i][j][l], polygonType);
+																k += 1;
+															} else if (this['4'][i][j][l].header.indexOf('island') > -1) {
+																handleIsland(this['4'][i][j][l]);
+															}
+														}
+													}
 												}
 											}
 										}
@@ -1547,12 +1601,13 @@
 					}
 					
 					setStepStatus(5, true);
+					for (i in routes) { if (routes.hasOwnProperty(i)) { if (!routes[i].hasOwnProperty(0)) { delete routes[i]; } } }
 					
 					return routes;
 				}
 			}
 		});
-		//console.log(fileContent.getRoutes());
+		
 		padsLib = fileContent.getPads();
 		boardOutline = fileContent.getBoardOutline();
 		if (boardOutline.length) { routes = fileContent.getRoutes(); }
