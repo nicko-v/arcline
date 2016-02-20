@@ -23,9 +23,9 @@
 	text-align: center;
 	transform: translateX(-50%);
 	background-color: #bbb;
-	border: 7px solid #666;
+	border: 7px solid #555;
 	border-radius: 10px;
-	box-shadow: 0px 0px 10px 15px rgba(0,0,0,0.1);
+/*	box-shadow: 0px 0px 10px 15px rgba(0,0,0,0.1);*/
 	animation: popup-scale 300ms ease-out 400ms normal;
 	animation-fill-mode: backwards;
 	z-index: 999;
@@ -35,15 +35,15 @@
 	margin: 0 2rem 1rem;
 	font-size: 1.6rem;
 	color: #000;
-	background-image: linear-gradient(to bottom,  #ddd, #ccc);
+	background-color: #ddd;
 	border: 1px solid #aaa;
 	border-radius: 5px;
 }
 .popup-button:hover {
-	background-image: linear-gradient(to top,  #ddd, #ccc);
+	background-color: #ccc;
 }
 .popup-button:active {
-	background-image: linear-gradient(to top,  #ccc, #bbb);
+	background-color: #bbb;
 }
 .popup-close {
 	width: 40px;
@@ -98,9 +98,6 @@
 	padding: 3px 50px 10px;
 	border-bottom-left-radius: 10px;
 	border-bottom-right-radius: 10px;
-	background-image: linear-gradient(to bottom,  #666, #474747);
+	background-color: #555;
 	font-size: 2rem;
-	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-	box-shadow: 5px 5px 5px 0px rgba(0,0,0,0.1),
-							-5px 5px 5px 0px rgba(0,0,0,0.1);
 }
