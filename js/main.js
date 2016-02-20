@@ -3,7 +3,6 @@
 (function () {
 	'use strict';
 	var
-		reader        = new FileReader(),
 		lib           = document.getElementById('lib'),
 		tabs          = document.getElementById('tabs'),
 		autoButton    = document.getElementById('auto'),
@@ -37,8 +36,8 @@
 		                 'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		drillViews = 1, padsDescriptions, padsLib, activeRow, file, fileContent, pcbOutputContent, dxfOutputContent, pcbLink, dxfLink,
-		boardOutline, routes, output = {};
+		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, output = {},
+		padsDescriptions,	padsLib, pcbLink, pcbOutputContent, reader = new FileReader(), routes;
 
 	function hidePopup() {
 		cover.style.opacity = 0;
@@ -67,9 +66,9 @@
 			// то есть 0 по X у него не слева, а в центре.
 			var // Что бы не уходило за края страницы:
 				x = (e.clientX - clickOffset[0] - popup.offsetWidth / 2 > 0 &&
-			       e.clientX - clickOffset[0] + popup.offsetWidth / 2 < document.body.offsetWidth),
+			       e.clientX - clickOffset[0] + popup.offsetWidth / 2 < window.innerWidth),
 				y = (e.clientY - clickOffset[1] > 0 &&
-			       e.clientY - clickOffset[1] + popup.offsetHeight < document.body.offsetHeight);
+			       e.clientY - clickOffset[1] + popup.offsetHeight < window.innerHeight);
 			if (x && y) { // Если мышь находится в пределах страницы, то символ двигается по обеим осям:
 				popup.style.left = e.clientX - clickOffset[0] + 'px';
 				popup.style.top = e.clientY - clickOffset[1] + 'px';
@@ -405,7 +404,7 @@
 					
 					status = (object[key].width > 0 && object[key].height > 0) ? 'icon-help step2-actions-pads-list-row-status yellow' : 'icon-cancel step2-actions-pads-list-row-status red';
 					if (object[key].same.length) {
-						same = '<span style="color: #666;" title="объединено с перечисленными КП"> (' + object[key].same.join(', ') + ')</span>';
+						same = '<span style="color: #666;" title="объединено с перечисленными КП"> (объединено с ' + object[key].same.join(', ') + ')</span>';
 						usage = '<br />' + usage;
 					} else { same = false; }
 					
@@ -511,9 +510,10 @@
 	version.addEventListener(click, function () {
 		showPopup({
 			header: 'Список изменений',
-			content: 'Версия от 05.02.2016:' +
+			content: 'Версия от 20.02.2016:' +
 			         '<ul>' +
-			         '<li>Добавлена отрисовка проводящих рисунков.</li>' +
+			         '<li>Добавлена отрисовка внутренних слоев.</li>' +
+			         '<li>Добавлена отрисовка полигонов.</li>' +
 			         '<li>Исправлены некоторые ошибки.</li>' +
 			         '</ul>',
 			closeable: true
@@ -982,16 +982,30 @@
 			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp = {}, coords, cosA, currPath, height, i, j, key, name, pth = true, pad, pads = {},
-						rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {},
-						width, x, y, zero;
+					var comp, comps = {}, coords, cosA, currPath, height, i, flipped, j, key, name, netName, node, pth = true, pad,
+						padName, pads = {},	pin, pinDes, rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {}, width, x, y, zero;
 					
 					function parser(type, string) {
-						var values, i,
+						var i, tmp, values = [], result = '',
 							// Совпадение до первой закрывающей скобки, т.к. внутри скобок быть не может:
 							regStandardValue = new RegExp('\\(' + type + ' .+?(?=\\))', 'g'),
 							// Совпадение до кавычки, за которой идет закрывающая скобка или конец строки:
 							regName = new RegExp('\\(' + type + ' .+?(?=(\"\\))|\"$)', 'g');
+						
+						function getClosingQuotePos(string) {
+							var pos = 0, lastSymbol = '';
+							
+							while (string.length) { // Поиск неэкранированной закрывающей кавычки. Экранированные - часть названия
+								if (string[0] === '\"' && lastSymbol !== '\\') {
+									break;
+								} else {
+									lastSymbol = string[0];
+									string = string.slice(1);
+									pos += 1;
+								}
+							}
+							return pos;
+						}
 						
 						switch (type) {
 						case 'viaShapeType':
@@ -1002,6 +1016,7 @@
 						case 'holeDiam':
 						case 'shapeWidth':
 						case 'shapeHeight':
+						case 'padNum':
 							values = string.match(regStandardValue);
 							return (values) ? +values[0].slice(type.length + 2) : 0;
 						case 'pt':
@@ -1020,8 +1035,19 @@
 						case 'patternRef':
 						case 'refDesRef':
 						case 'patternGraphicsNameRef':
+						case 'defaultPinDes':
+						case 'netNameRef':
 							values = string.match(regName);
 							return (values) ? values[0].slice(type.length + 3) : null;
+						case 'net':
+							tmp = string.slice(string.indexOf('net \"') + 5);
+							return tmp.slice(0, getClosingQuotePos(tmp)) || null;
+						case 'node':
+							tmp = string.slice(string.indexOf('node \"') + 6);
+							values.push(tmp.slice(0, getClosingQuotePos(tmp)));
+							tmp = tmp.slice(tmp.indexOf('\" \"') + 3);
+							values.push(tmp.slice(0, getClosingQuotePos(tmp)));
+							return values;
 						}
 					}
 					function finder(array, object) {
@@ -1161,6 +1187,7 @@
 											coords = parser('pt', this['4'][i][j]).split(' ');
 											vias[name].coords.push({ x: +coords[0],
 											                         y: +coords[1],
+											                         net: parser('netNameRef', this['4'][i][j]),
 											                         side: 'thru'
 											                       });
 										} else if (this['4'][i][j].indexOf('(padStyleRef') + 1) {
@@ -1169,6 +1196,7 @@
 											coords = parser('pt', this['4'][i][j]).split(' ');
 											pads[name].coords.push({ x: +coords[0],
 											                         y: +coords[1],
+											                         net: parser('netNameRef', this['4'][i][j]),
 											                         flipped: (+coords[2] === 1) ? true : false,
 											                         rotation: parser('rotation', this['4'][i][j])
 											                       });
@@ -1177,11 +1205,11 @@
 									} else {
 										if (this['4'][i][j].header.indexOf('(pattern') > -1) {
 											name = parser('refDesRef', this['4'][i][j].header);
-											if (!comp[name]) { comp[name] = {}; }
-											comp[name].pattern = parser('patternRef', this['4'][i][j].header);
-											comp[name].zero = parser('pt', this['4'][i][j].header);
-											comp[name].rotation = parser('rotation', this['4'][i][j].header);
-											comp[name].graphics = (this['4'][i][j].header.indexOf('patternGraphicsNameRef') > -1) ?
+											if (!comps[name]) { comps[name] = {}; }
+											comps[name].pattern = parser('patternRef', this['4'][i][j].header);
+											comps[name].zero = parser('pt', this['4'][i][j].header);
+											comps[name].rotation = parser('rotation', this['4'][i][j].header);
+											comps[name].graphics = (this['4'][i][j].header.indexOf('patternGraphicsNameRef') > -1) ?
 													parser('patternGraphicsNameRef', this['4'][i][j].header) :
 													parser('patternGraphicsNameRef', this['4'][i][j]['0']);
 										}
@@ -1249,65 +1277,95 @@
 							type = null;
 							pth = true;
 						}
-						for (key in comp) {
-							if (comp.hasOwnProperty(key)) {
-								comp[key].pads = {};
-								currPath = finder(['(patternDefExtended \"' + comp[key].pattern + '\"',
+						for (key in comps) {
+							if (comps.hasOwnProperty(key)) {
+								comps[key].pins = {};
+								currPath = finder(['(patternDefExtended \"' + comps[key].pattern + '\"',
 																	 '(patternGraphicsDef',
-																	 '(patternGraphicsNameDef "' + comp[key].graphics + '")'], this['2']);
+																	 '(patternGraphicsNameDef "' + comps[key].graphics + '")'], this['2']);
 								for (i = 0; i < Object.keys(currPath).length; i += 1) {
 									if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
+										
 										for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
 											name = parser('padStyleRef', currPath[i][j]);
-											if (!comp[key].pads[name]) { comp[key].pads[name] = []; }
-											comp[key].pads[name].push(parser('pt', currPath[i][j]) + ' ' + parser('rotation', currPath[i][j]));
+											pinDes = parser('defaultPinDes', currPath[i][j]) || parser('padNum', currPath[i][j]);
+											coords = parser('pt', currPath[i][j]).split(' ');
+											
+											if (!comps[key].pins[pinDes]) { comps[key].pins[pinDes] = {}; }
+											
+											comps[key].pins[pinDes] = { x: +coords[0],
+											                            y: +coords[1],
+											                            padName: name,
+											                            flipped: (+coords[2]) ? true : false,
+											                            rotation: parser('rotation', currPath[i][j])
+											                          };
 										}
+										
 										break;
 									}
 								}
 							}
 						}
-						for (key in comp) {
-							if (comp.hasOwnProperty(key)) {
-								zero = comp[key].zero.split(' ');
-								for (name in comp[key].pads) {
-									if (comp[key].pads.hasOwnProperty(name)) {
-										for (i = 0; i < comp[key].pads[name].length; i += 1) {
-											shiftX = +comp[key].pads[name][i].split(' ')[0];
-											shiftY = +comp[key].pads[name][i].split(' ')[1];
-											pad = pads[name].mergedWith || pads[name]; // Если КП была объединена с другой
-											side = pad.side;
-											
-											if (comp[key].rotation) {
-												sinA = Math.sin(comp[key].rotation * Math.PI / 180);
-												cosA = Math.cos(comp[key].rotation * Math.PI / 180);
-												x = (shiftX * cosA - shiftY * sinA);
-												y = (shiftY * cosA + shiftX * sinA);
-											} else {
-												x = shiftX;
-												y = shiftY;
-											}
-											if (+zero[2]) {
-												x = -x;
-												side = (pad.side === 'top') ?
-														'bot' : (pad.side === 'bot') ?
-														'top' : 'thru';
-											}
-											if (drillViews < 2 && side === 'bot') { drillViews = 2; }
-											// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
-											rotation = (comp[key].rotation) ? comp[key].rotation + (+comp[key].pads[name][i].split(' ')[3]) : (+comp[key].pads[name][i].split(' ')[3]);
-											while (rotation >= 360) { rotation -= 360; }
-											
-											pad.coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
-											                  y: Math.round((+zero[1] + y) * 1000) / 1000,
-											                  side: side,
-											                  rotation: +rotation
-											                });
+						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
+							if (typeof this['3'][i] === 'object' && this['3'][i].header.indexOf('(net') > -1) {
+								netName = parser('net', this['3'][i].header);
+								if (netName) {
+									for (j = 0; j < Object.keys(this['3'][i]).length; j += 1) {
+										if (typeof this['3'][i][j] === 'string' && this['3'][i][j].indexOf('(node') > -1) {
+											node = parser('node', this['3'][i][j]);
+											if (comps[node[0]] && comps[node[0]].pins[node[1]]) { comps[node[0]].pins[node[1]].net = netName; }
 										}
-										// Записывает в каких компонентах использована площадка:
-										if (pad.comps) { pad.comps.push(key); } else { pad.comps = []; pad.comps.push(key); }
 									}
 								}
+							}
+						}
+						for (key in comps) {
+							if (comps.hasOwnProperty(key)) {
+								
+								zero = comps[key].zero.split(' ');
+								
+								for (pinDes in comps[key].pins) {
+									if (comps[key].pins.hasOwnProperty(pinDes)) {
+										
+										shiftX = comps[key].pins[pinDes].x;
+										shiftY = comps[key].pins[pinDes].y;
+										flipped = comps[key].pins[pinDes].flipped;
+										padName = comps[key].pins[pinDes].padName;
+										netName = comps[key].pins[pinDes].net || null;
+										pad = pads[padName].mergedWith || pads[padName]; // Если КП была объединена с другой
+										side = (pad.side === 'top') ? (flipped ? 'bot' : 'top') : (pad.side === 'bot') ? (flipped ? 'top' : 'bot') : 'thru';
+										
+										if (comps[key].rotation) {
+											sinA = Math.sin(comps[key].rotation * Math.PI / 180);
+											cosA = Math.cos(comps[key].rotation * Math.PI / 180);
+											x = (shiftX * cosA - shiftY * sinA);
+											y = (shiftY * cosA + shiftX * sinA);
+										} else {
+											x = shiftX;
+											y = shiftY;
+										}
+										if (+zero[2]) {
+											x = -x;
+											side = (pad.side === 'top') ? 'bot' : (pad.side === 'bot') ? 'top' : 'thru';
+										}
+										
+										if (drillViews < 2 && side === 'bot') { drillViews = 2; }
+										// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
+										rotation = (comps[key].rotation) ? comps[key].rotation + comps[key].pins[pinDes].rotation : comps[key].pins[pinDes].rotation;
+										while (rotation >= 360) { rotation -= 360; }
+										
+										pad.coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
+										                  y: Math.round((+zero[1] + y) * 1000) / 1000,
+										                  side: side,
+										                  net: netName,
+										                  rotation: +rotation
+										                });
+										
+										// Записывает в каких компонентах использована площадка:
+										if (pad.comps) { if (pad.comps.indexOf(key) === -1) { pad.comps.push(key); } } else { pad.comps = []; pad.comps.push(key); }
+									}
+								}
+								
 							}
 						}
 						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length || pads[name].mergedWith) { delete pads[name]; } else { delete pads[name].side; } } }
@@ -1332,6 +1390,7 @@
 					
 					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
 					result.pads = sortObject(pads);
+					
 					setStepStatus(3, true);
 					
 					return result;
@@ -1415,7 +1474,7 @@
 			},
 			getRoutes: {
 				value: function () {
-					var i, j, k, l, currNum, currType, layerName, polygonType, routes = {};
+					var i, j, k, l, currNum, currType, layerName, polygonType, netName, routes = {};
 					
 					function Route(string) {
 						var type, width, first, second, third;
@@ -1480,25 +1539,31 @@
 						this.x1 = +end[0];
 						this.y1 = +end[1];
 					}
-					function Polygon(object, type) {
+					function Polygon(object, type, net) {
 						var i, coords;
 						
 						this.type = type;
+						this.net = net || null;
+						
 						for (i = 0; i < Object.keys(object).length; i += 1) {
-							if (typeof object[i] === 'string' && object[i].indexOf('pt') > -1) {
-								coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
-								this['x' + i] = +coords[0];
-								this['y' + i] = +coords[1];
+							if (typeof object[i] === 'string') {
+								if (object[i].indexOf('pt') > -1) {
+									coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
+									this['x' + i] = +coords[0];
+									this['y' + i] = +coords[1];
+								} else if (!net && object[i].indexOf('netNameRef') > -1) {
+									this.net = object[i].slice(object[i].indexOf('\"') + 1, object[i].lastIndexOf('\"'));
+								}
 							}
 						}
 					}
-					function handleIsland(object) {
+					function handleIsland(object, net) {
 						var i, j;
 						
 						for (i = 0; i < Object.keys(object).length; i += 1) {
 							if (typeof object[i] === 'object') {
 								if (object[i].header.indexOf('islandOutline') > -1) {
-									routes[currNum][k] = new Polygon(object[i], 'copperpour');
+									routes[currNum][k] = new Polygon(object[i], 'copperpour', net);
 									k += 1;
 								} else if (object[i].header.indexOf('cutout') > -1) {
 									for (j = 0; j < Object.keys(object[i]).length; j += 1) {
@@ -1534,7 +1599,13 @@
 											}
 											
 											if (currNum && currType) {
-												routes[currNum] = { name: layerName.toUpperCase(), type: currType };
+												routes[currNum] = {
+													// Два типа имени - в основном заменяются некоторые символы, которые нельзя использовать в dxf в названиях слоев,
+													// в дополнительном - имя слоя сохраняется как есть, его можно использовать в надписях
+													name: layerName.toUpperCase().replace(/\+/g, 'plus').replace(/\.|\:|\;|\*|\=|<|\>|\^|\“|\‘|\?|\/|\\|\|/g, '_'),
+													realName: layerName.toUpperCase(),
+													type: currType
+												};
 												break;
 											}
 											
@@ -1572,15 +1643,22 @@
 													}
 												} else if (polygonType && polygonType === 'copperpour') {
 													for (l = 0; l < Object.keys(this['4'][i][j]).length; l += 1) {
-														if (typeof this['4'][i][j][l] === 'object') {
-															if (this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
+														if (typeof this['4'][i][j][l] === 'string') {
+															if (this['4'][i][j][l].indexOf('netNameRef') > -1) {
+																netName = this['4'][i][j][l].slice(this['4'][i][j][l].indexOf('\"') + 1, this['4'][i][j][l].lastIndexOf('\"'));
+															}
+														} else if (typeof this['4'][i][j][l] === 'object') {
+															if (this['4'][i][j][l].header.indexOf('island') > -1) {
+																handleIsland(this['4'][i][j][l], netName);
+															} /* else if (this['4'][i][j][l].header.indexOf('pcbPoly') > -1) {
 																routes[currNum][k] = new Polygon(this['4'][i][j][l], polygonType);
 																k += 1;
-															} else if (this['4'][i][j][l].header.indexOf('island') > -1) {
-																handleIsland(this['4'][i][j][l]);
-															}
+															} */ // Отключено, т.к. при таком варианте отрисовывается общий контур полигона, который может не соответствовать реальной заливке
+															     // из-за того, что внутри или на границе контура могут быть объекты, которые заливка будет обтекать. Актуальные контуры
+															     // хранятся в блоках island. Необходимо более подробное тестирование этой части. Раскомменитровать при необходимости.
 														}
 													}
+													netName = null;
 												}
 											}
 										}

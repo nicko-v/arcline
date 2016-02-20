@@ -78,13 +78,6 @@ p {
 	stroke-linecap: round;
 	stroke-linejoin: round;
 }
-.header-text {
-	font-size: 5rem;
-	font-weight: bold;
-	color: #6e747e;
-	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-	cursor: default;
-}
 .header-icon {
 	font-size: 5rem;
 	font-weight: bold;
@@ -99,6 +92,16 @@ p {
 }
 .header-icon:active {
 	transform: scale(1.1);
+}
+.header-name {
+	font-size: 5rem;
+	font-weight: bold;
+	color: #6e747e;
+	text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+}
+.header-nameExpl {
+	font-size: 2rem;
+	color: #6e747e;
 }
 .help {
 	width: 80%;
@@ -116,7 +119,7 @@ p {
 	background-color: #303948;
 }
 .help-list {
-	font-size: 1.6rem;
+	font-size: 1.4rem;
 	color: #bbb;
 }
 .help-wrapper {
@@ -163,7 +166,7 @@ p {
 	text-align: center;
 	font-size: 1.6rem;
 	border-radius: 7px;
-	background-image: linear-gradient(to top, #444, #666);
+	background-color: #555;
 }
 .step1-actions-loadFile-button {
 	cursor: pointer;
@@ -172,12 +175,10 @@ p {
 	align-items: center;
 }
 .step1-actions-loadFile-button:hover {
-	background-image: linear-gradient(to bottom, #444, #666);
-	box-shadow: inset 0 0 10px 5px rgba(0,0,0,0.1);
+	background-color: #444;
 }
 .step1-actions-loadFile-button:active {
-	background-image: linear-gradient(to bottom, #333, #555);
-	box-shadow: inset 0 0 10px 5px rgba(0,0,0,0.1);
+	background-color: #333;
 }
 .step1-actions-loadFile-choose {
 	border-top-left-radius: 7px;
