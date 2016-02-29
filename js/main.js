@@ -26,7 +26,7 @@
 		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 		                 'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 		                 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
-		                 'Закончились доступные символы. Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
+		                 'Закончились доступные символы, необозначенные площадки не будут отрисованы на сборочных чертежах и проводящих рисунках. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
 		                 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
 		                 'Не удалось сформировать таблицу отверстий или сборочные чертежи. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
@@ -510,10 +510,9 @@
 	version.addEventListener(click, function () {
 		showPopup({
 			header: 'Список изменений',
-			content: 'Версия от 20.02.2016:' +
+			content: 'Версия от 29.02.2016:' +
 			         '<ul>' +
-			         '<li>Добавлена отрисовка внутренних слоев.</li>' +
-			         '<li>Добавлена отрисовка полигонов.</li>' +
+			         '<li>На проводящих рисунках с plane слоями отрисовываются только КП, находящиеся в границах конкретного plane.</li>' +
 			         '<li>Исправлены некоторые ошибки.</li>' +
 			         '</ul>',
 			closeable: true
@@ -982,8 +981,8 @@
 			},
 			getPads: { // NOTE: [] Этот метод надо полностью переписать
 				value: function () {
-					var comp, comps = {}, coords, cosA, currPath, height, i, flipped, j, key, name, netName, node, pth = true, pad,
-						padName, pads = {},	pin, pinDes, rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {}, width, x, y, zero;
+					var comp, comps = {}, coords, cosA, currPath, height, i, flipped, j, k, key, l, name, netName, node, pth = true, pad,
+						padName, padNum, pads = {},	pin, pinDes, pinMap, rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {}, width, x, y, zero;
 					
 					function parser(type, string) {
 						var i, tmp, values = [], result = '',
@@ -1037,10 +1036,14 @@
 						case 'patternGraphicsNameRef':
 						case 'defaultPinDes':
 						case 'netNameRef':
+						case 'compRef':
+						case 'compPinRef':
+						case 'originalName':
 							values = string.match(regName);
 							return (values) ? values[0].slice(type.length + 3) : null;
 						case 'net':
-							tmp = string.slice(string.indexOf('net \"') + 5);
+						case 'compInst':
+							tmp = string.slice(string.indexOf(type + ' \"') + (type + ' \"').length);
 							return tmp.slice(0, getClosingQuotePos(tmp)) || null;
 						case 'node':
 							tmp = string.slice(string.indexOf('node \"') + 6);
@@ -1277,25 +1280,41 @@
 							type = null;
 							pth = true;
 						}
+						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
+							if (typeof this['3'][i] === 'object') {
+								if (this['3'][i].header.indexOf('(compInst') > -1) {
+									comp = parser('compInst', this['3'][i].header);
+									for (j = 0; j < Object.keys(this['3'][i]).length; j += 1) {
+										if (typeof this['3'][i][j] === 'string' && this['3'][i][j].indexOf('compRef') > -1 && comps[comp]) {
+											comps[comp].compRef = parser('compRef', this['3'][i][j]);
+											break;
+										}
+									}
+								}
+							}
+						}
 						for (key in comps) {
 							if (comps.hasOwnProperty(key)) {
 								comps[key].pins = {};
 								currPath = finder(['(patternDefExtended \"' + comps[key].pattern + '\"',
 																	 '(patternGraphicsDef',
 																	 '(patternGraphicsNameDef "' + comps[key].graphics + '")'], this['2']);
+								
 								for (i = 0; i < Object.keys(currPath).length; i += 1) {
 									if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
 										
 										for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
 											name = parser('padStyleRef', currPath[i][j]);
-											pinDes = parser('defaultPinDes', currPath[i][j]) || parser('padNum', currPath[i][j]);
+											pinDes = parser('defaultPinDes', currPath[i][j]);
+											padNum = parser('padNum', currPath[i][j]);
 											coords = parser('pt', currPath[i][j]).split(' ');
 											
-											if (!comps[key].pins[pinDes]) { comps[key].pins[pinDes] = {}; }
+											if (!comps[key].pins[padNum]) { comps[key].pins[padNum] = {}; }
 											
-											comps[key].pins[pinDes] = { x: +coords[0],
+											comps[key].pins[padNum] = { x: +coords[0],
 											                            y: +coords[1],
 											                            padName: name,
+											                            pinDes: pinDes,
 											                            flipped: (+coords[2]) ? true : false,
 											                            rotation: parser('rotation', currPath[i][j])
 											                          };
@@ -1304,16 +1323,61 @@
 										break;
 									}
 								}
+								
+								 /* Добывание значения "compPinRef" из блока Library - compDef */
+								for (i = 0; i < Object.keys(this['2']).length; i += 1) {
+									if (typeof this['2'][i] === 'object' && this['2'][i].header.indexOf('(compDef \"' + comps[key].compRef + '\"') > -1) {
+										
+										for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+											if (typeof this['2'][i][j] === 'object' && this['2'][i][j].header.indexOf('attachedPattern') > -1) {
+												
+												for (k = 0; k < Object.keys(this['2'][i][j]).length; k += 1) {
+													if (typeof this['2'][i][j][k] === 'object' && this['2'][i][j][k].header.indexOf('padPinMap') > -1) {
+														
+														for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
+															if (typeof this['2'][i][j][k][l] === 'string' && this['2'][i][j][k][l].indexOf('padNum') > -1) {
+																padNum = parser('padNum', this['2'][i][j][k][l]);
+																if (comps[key].pins[padNum]) { comps[key].pins[padNum].compPin = parser('compPinRef', this['2'][i][j][k][l]); }
+															}
+														}
+														
+													}
+												}
+												
+											}
+										}
+										
+									}
+								}
+								/* -=-=-=- */
+								
 							}
 						}
 						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
-							if (typeof this['3'][i] === 'object' && this['3'][i].header.indexOf('(net') > -1) {
+							if (this['3'][i].header.indexOf('(net') > -1) {
 								netName = parser('net', this['3'][i].header);
 								if (netName) {
 									for (j = 0; j < Object.keys(this['3'][i]).length; j += 1) {
 										if (typeof this['3'][i][j] === 'string' && this['3'][i][j].indexOf('(node') > -1) {
 											node = parser('node', this['3'][i][j]);
-											if (comps[node[0]] && comps[node[0]].pins[node[1]]) { comps[node[0]].pins[node[1]].net = netName; }
+											
+											/* Поиск соответствующего pin. В нетлисте может быть использован один из трех вариантов - padNum, pinDes, compPin.
+											 * В объекте comps хранятся объекты padNum (т.к. это основной параметр и есть у всех КП, входящих в компоненты),
+											 * внутри которых ключи pinDes и compPin, поэтому, если нет подходящего padNum - перебираются все padNum'ы в поисках
+											 * совпадения по ключам pinDes, compPin. */
+											if (comps[node[0]]) {
+												if (comps[node[0]].pins[node[1]]) {
+													comps[node[0]].pins[node[1]].net = netName;
+												} else {
+													for (key in comps[node[0]].pins) {
+														if (comps[node[0]].pins.hasOwnProperty(key) && [comps[node[0]].pins[key].pinDes, comps[node[0]].pins[key].compPin].indexOf(node[1]) > -1) {
+															comps[node[0]].pins[key].net = netName;
+														}
+													}
+												}
+											}
+											/* -=-=-=- */
+											
 										}
 									}
 								}
