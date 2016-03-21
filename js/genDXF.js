@@ -23,11 +23,11 @@
 *   [0, 'LINE', 8, 'Drill_Table', 62, 3] - зеленая линия для символов
 *   [0, 'LINE', 8, 'Grid', 62, 4] - бирюзовая линия для сетки
 */
-function generateDXF(lib, outline, routes, drillViews) {
+function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) {
 	'use strict';
 	var
-		pth = Object.keys(lib.metallized).length,
-		npth = Object.keys(lib.nonMetallized).length + Object.keys(lib.holes).length,
+		pth = lib.metallized.withSymbols,
+		npth = lib.nonMetallized.withSymbols + lib.holes.withSymbols,
 		colHeight = 15,
 		colWidth = 25,
 		rows = 6,
@@ -156,18 +156,20 @@ function generateDXF(lib, outline, routes, drillViews) {
 							 '\\U+041D\\U+0435\\U+0442', // [10] Нет
 							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2', // [11] ТАБЛИЦА 2
 							 '\\U+0421\\U+043B\\U+043E\\U+0439', // [12] Слой
-							 '\\U+043E\\U+0442\\U+0440\\U+0430\\U+0436\\U+0435\\U+043D' // [13] отражен
+							 '\\U+043E\\U+0442\\U+0440\\U+0430\\U+0436\\U+0435\\U+043D', // [13] отражен
+		           '\\U+0421\\U+0431\\U+043E\\U+0440\\U+043E\\U+0447\\U+043D\\U+044B\\U+0439 \\U+0447\\U+0435\\U+0440\\U+0442\\U+0435\\U+0436', // [14] Сборочный чертеж
+		           '\\U+0421\\U+0431\\U+043E\\U+0440\\U+043A\\U+0430 \\U+0441 \\U+044D\\U+043B\\U+0435\\U+043C\\U+0435\\U+043D\\U+0442\\U+0430\\U+043C\\U+0438' // [15] Сборка с элементами
 							 ],
 		cellPadding = 3, // Расстояние от границы ячейки до символа
 		y = (th - colHeight / 2), // Центр символа в ячейке
 		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
 		space = 50, // Расстояние между чертежами
-		shiftX = (outline.length) ? outline[outline.length - 1].shiftX : 0, // Смещение левого нижнего края платы относительно нуля
-		shiftY = (outline.length) ? outline[outline.length - 1].shiftY : 0,
+		shiftX = boardOutline.shiftX || 0, // Смещение левого нижнего края платы относительно нуля
+		shiftY = boardOutline.shiftY || 0,
 		boardHeight = 0, boardWidth = 0, currCol = 0, d = {}, h, i, j, layerNum, radius, rotation, skippedCells, symbol, w, x;
 	
 	function baseRnd() {
-		result.push(0, 'CIRCLE', 8, 'Drill_Symbols', 62, 3, 10, x, 20, y, 40, radius);
+		result.push(0, 'CIRCLE', 8, 'Drill_Symbols', 62, 256, 10, x, 20, y, 40, radius);
 		d.rnd.x0y05(0);
 		d.rnd.x1y05(1);
 		d.rnd.x05y0(0);
@@ -183,11 +185,11 @@ function generateDXF(lib, outline, routes, drillViews) {
 		d.rect.x0y1(0);
 		d.rect.x0y0(1);
 	}
-	function fillTheTable(object) {
+	function fillTable(object) {
 		var startPoint, lineStart, key;
 		
 		for (key in object) { // Проставляет значения
-			if (object.hasOwnProperty(key)) {
+			if (object.hasOwnProperty(key) && object[key].symbol) {
 				if (object[key].mount) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount); }
 				if (object[key].pad) {   result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad); }
 				if (object[key].hole) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole); }
@@ -201,7 +203,7 @@ function generateDXF(lib, outline, routes, drillViews) {
 					w = h * object[key].ratio;
 				}
 				x = currCol * colWidth + colWidth / 2;
-				symbol[key]();
+				symbol[object[key].symbol]();
 				
 				currCol += 1;
 			}
@@ -231,7 +233,7 @@ function generateDXF(lib, outline, routes, drillViews) {
 			var key;
 			
 			for (key in obj) {
-				if (obj.hasOwnProperty(key)) {
+				if (obj.hasOwnProperty(key) && obj[key].symbol) {
 					if (!obj[key].hole) { result.row3.push(position); }
 					if (!obj[key].pad) { result.row2.push(position); }
 					if (!obj[key].mount) { result.row1.push(position); }
@@ -244,6 +246,68 @@ function generateDXF(lib, outline, routes, drillViews) {
 		checkLib(object.nonMetallized);
 		checkLib(object.holes);
 		return result;
+	}
+	function drawArc(x1, y1, x2, y2, centerX, centerY, mirrored, offsetX, offsetY, layer) {
+		var start, end, radius, box;
+		
+		// Ищется длина отрезка от центра до точки начала арки, т.к. арка может быть не обязательно половиной круга,
+		// значит нельзя просто взять разницу между координатой X центра и X начала:
+		radius = Math.sqrt(Math.pow(Math.abs(centerY - y1), 2) + Math.pow(Math.abs(centerX - x1), 2));
+		
+		// Для задания арки, надо знать углы начальной и конечной точек относительно центра:
+		start = Math.acos(Math.round((x1 - centerX) / radius * 1000) / 1000) * 180 / Math.PI;
+		end   = Math.acos(Math.round((x2 - centerX) / radius * 1000) / 1000) * 180 / Math.PI;
+		
+		// Т.к. расчет углов до начала и конца арки идет только с использованием координаты X, найденные значения будут в диапазоне 0...180,
+		// т.е. в положительной части Y, поэтому проверяем, не были ли точки начала или конца арки в отрицательной части и отражаем угол при необходимости:
+		if (centerY > y1) { start = 360 - start; }
+		if (centerY > y2) { end   = 360 - end; }
+		
+		if (mirrored) {
+			box = start;
+			start = 180 - end;
+			end = 180 - box;
+			centerX = offsetX + boardWidth - centerX;
+		} else {
+			centerX = centerX + offsetX;
+		}
+		
+		// Если углы равны, то арка - круг и рисуется с помощью "CIRCLE":
+		if (start === end) {
+			result.push(0, 'CIRCLE', 8, layer, 62, 256, 10, centerX, 20, (centerY + offsetY), 40, radius);
+		} else {
+			result.push(0, 'ARC', 8, layer, 62, 256, 10, centerX, 20, (centerY + offsetY), 40, radius, 50, start, 51, end);
+		}
+	}
+	function drawHoles(padsLib, circle, cross, offsetX, offsetY, mirr) {
+		var i, key;
+		
+		for (key in padsLib) {
+			if (padsLib.hasOwnProperty(key) && padsLib[key].type !== 'via') {
+				
+				for (i = 0; i < padsLib[key].coords.length; i += 1) {
+					if (circle) {
+						result.push(0, 'CIRCLE', 8, 'Board', 62, 256,
+						            10, (padsLib[key].coords[i].x * mirr + offsetX),
+						            20, (padsLib[key].coords[i].y + offsetY),
+						            40, (padsLib[key].holeSize / 2));
+					}
+					if (cross && padsLib[key].hole) {
+						result.push(0, 'LINE', 8, 'Crosses', 62, 256,
+						            10, (padsLib[key].coords[i].x * mirr + offsetX - padsLib[key].holeSize / 2 - 0.5),
+						            20, (padsLib[key].coords[i].y + offsetY),
+						            11, (padsLib[key].coords[i].x * mirr + offsetX + padsLib[key].holeSize / 2 + 0.5),
+						            21, (padsLib[key].coords[i].y + offsetY),
+						            0, 'LINE', 8, 'Crosses', 62, 256,
+						            10, (padsLib[key].coords[i].x * mirr + offsetX),
+						            20, (padsLib[key].coords[i].y + offsetY - padsLib[key].holeSize / 2 - 0.5),
+						            11, (padsLib[key].coords[i].x * mirr + offsetX),
+						            21, (padsLib[key].coords[i].y + offsetY + padsLib[key].holeSize / 2 + 0.5));
+					}
+				}
+				
+			}
+		}
 	}
 	function drawBoardGrid(x, y, mirrored) {
 		var dashes = 0, dashWidth, i;
@@ -287,42 +351,39 @@ function generateDXF(lib, outline, routes, drillViews) {
 			dashes += 1;
 		}
 	}
-	function drawBoardOutline(mirrored, grid, name) {
+	function drawBoardOutline(mirrored, grid, name, topAssy, botAssy) {
 		var shift; // Смещение по X в зависимости от количества уже созданных видов
 		
+		function draw(arr, layer) {
+			arr.forEach(function (coords) {
+				var start, end, radius, box, x1, x2, x3;
+				// Набор координат в массиве выглядит так: 
+				// [0, 1, 2, 3] для линий. Первая пара - x и y начала, вторая - конца.
+				// [0, 1, 2, 3, 4, 5] для арок. Первая и вторая пара как у линий, последняя - центр.
+				
+				if (coords.length === 4) {
+					x1 = (mirrored) ? shift + boardWidth - coords[0] : coords[0] + shift;
+					x2 = (mirrored) ? shift + boardWidth - coords[2] : coords[2] + shift;
+					result.push(0, 'LINE', 8, layer, 62, 256, 10, x1, 20, (coords[1] + th + space), 11, x2, 21, (coords[3] + th + space));
+				} else if (coords.length === 6) {
+					drawArc(coords[0], coords[1], coords[2], coords[3], coords[4], coords[5], mirrored, shift, (th + space), layer);
+				}
+			});
+		}
+		
 		shift = (views) ? views * (boardWidth + space) - hw : -hw;
-		outline.forEach(function (coords) {
-			var start, end, radius, box, x1, x2, x3;
-			// Набор координат в массиве выглядит так: 
-			// [0, 1, 2, 3] для линий. Первая пара - x и y начала, вторая - конца.
-			// [0, 1, 2, 3, 4, 5] для арок. Первая и вторая пара как у линий, последняя - центр.
-			
-			if (coords.length === 4) {
-				x1 = (mirrored) ? shift + boardWidth - coords[0] : coords[0] + shift;
-				x2 = (mirrored) ? shift + boardWidth - coords[2] : coords[2] + shift;
-				result.push(0, 'LINE', 8, 'Board', 62, 1, 10, x1, 20, (coords[1] + th + space), 11, x2, 21, (coords[3] + th + space));
-			} else if (coords.length === 6) {
-				radius = Math.abs(coords[4] - coords[0]) || Math.abs(coords[4] - coords[2]);
-				start  = Math.round(Math.acos((coords[0] - coords[4]) / radius) * 180 / Math.PI * 10000) / 10000;
-				end    = Math.round(Math.acos((coords[2] - coords[4]) / radius) * 180 / Math.PI * 10000) / 10000;
-				if (mirrored) {
-					box = start;
-					start = 180 - end;
-					end = 180 - box;
-					x3 = shift + boardWidth - coords[4];
-				} else { x3 = coords[4] + shift; }
-				result.push(0, 'ARC', 8, 'Board', 62, 1, 10, x3, 20, (coords[5] + th + space), 40, radius, space, start, 51, end);
-			}
-		});
+		draw(boardOutline.board, 'Board');
+		if (topAssy && boardOutline.topAssy) { draw(boardOutline.topAssy, 'Top_Assy'); }
+		if (botAssy && boardOutline.botAssy) { draw(boardOutline.botAssy, 'Bot_Assy'); }
 		
 		if (name) {
 			result.push(0, 'TEXT', 8, 'Grid', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 1, 73, 2,
 			            10, shift, 20, (th + space + boardHeight), 11, (shift + boardWidth / 2), 21, (th + space + boardHeight + 20),
-			            1, (headers[12] + ' ' + name + (mirrored ? ' (' + headers[13] + ')' : '')));
+			            1, (name + (mirrored ? ' (' + headers[13] + ')' : '')));
 		}
 		
 		views += 1;
-		drawBoardGrid(shift, th + space, mirrored);
+		if (grid) { drawBoardGrid(shift, th + space, mirrored); }
 	}
 	function drawSymbolsOnBoard(object) {
 		var key, i, side;
@@ -355,18 +416,20 @@ function generateDXF(lib, outline, routes, drillViews) {
 					object[key].coords[i].width = w;
 					object[key].coords[i].height = h;
 					
-					if (side === 'top') {
-						x = object[key].coords[i].x - shiftX - hw;
-					} else if (side === 'bot') {
-						x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
-					} else if (side === 'thru') {
-						x = object[key].coords[i].x - shiftX - hw;
-						if (drillViews === 2) {
-							symbol[key]();
+					if (object[key].symbol) {
+						if (side === 'top') {
+							x = object[key].coords[i].x - shiftX - hw;
+						} else if (side === 'bot') {
 							x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+						} else if (side === 'thru') {
+							x = object[key].coords[i].x - shiftX - hw;
+							if (drillViews === 2) {
+								symbol[object[key].symbol]();
+								x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+							}
 						}
+						symbol[object[key].symbol]();
 					}
-					symbol[key]();
 				}
 			}
 		}
@@ -427,6 +490,7 @@ function generateDXF(lib, outline, routes, drillViews) {
 					result.push(0, 'VERTEX', 8, layer, 10, (polyInfo['x' + i] * mirr + offsetX), 20, polyInfo['y' + i] + offsetY);
 				}
 			}
+			result.push(0, 'VERTEX', 8, layer, 10, (polyInfo.x0 * mirr + offsetX), 20, polyInfo.y0 + offsetY);
 			result.push(0, 'SEQEND', 8, layer);
 			
 			if (polyInfo.type === 'plane' && polyInfo.net) {
@@ -510,38 +574,73 @@ function generateDXF(lib, outline, routes, drillViews) {
 				
 			}
 		}
-		for (key in lib.holes) {
-			if (lib.holes.hasOwnProperty(key)) {
-				for (i = 0; i < lib.holes[key].coords.length; i += 1) {
-					if (routes.type === 'signal') {
-						result.push(0, 'LINE', 8, 'Crosses', 62, 256,
-						            10, (lib.holes[key].coords[i].x * mirr + offsetX - lib.holes[key].width / 2 - 0.5),
-						            20, (lib.holes[key].coords[i].y + offsetY),
-						            11, (lib.holes[key].coords[i].x * mirr + offsetX + lib.holes[key].width / 2 + 0.5),
-						            21, (lib.holes[key].coords[i].y + offsetY),
-						            0, 'LINE', 8, 'Crosses', 62, 256,
-						            10, (lib.holes[key].coords[i].x * mirr + offsetX),
-						            20, (lib.holes[key].coords[i].y + offsetY - lib.holes[key].height / 2 - 0.5),
-						            11, (lib.holes[key].coords[i].x * mirr + offsetX),
-						            21, (lib.holes[key].coords[i].y + offsetY + lib.holes[key].height / 2 + 0.5));
-					} else {
-						result.push(0, 'CIRCLE', 8, 'Board', 62, 256,
-						            10, (lib.holes[key].coords[i].x * mirr + offsetX),
-						            20, (lib.holes[key].coords[i].y + offsetY),
-						            40, (lib.holes[key].width / 2));
-					}
-				}
-			}
-		}
+		
+		// Отрисовка отверстий и КП. Отверстия без КП рисуются как кресты на проводящих слоях (top, bottom, ...) и как круги на слоях plane:
+		drawHoles(lib.holes, (routes.type === 'signal' ? false : true), (routes.type === 'signal' ? true : false), offsetX, offsetY, mirr);
 		for (key in lib.metallized) {
 			if (lib.metallized.hasOwnProperty(key)) {
-				drawPads(lib.metallized[key], (key.indexOf('rnd') > -1 ? 'rnd' : 'rect'));
+				drawPads(lib.metallized[key], lib.metallized[key].shape);
 			}
 		}
 		for (key in lib.nonMetallized) {
 			if (lib.nonMetallized.hasOwnProperty(key)) {
-				drawPads(lib.nonMetallized[key], (key.indexOf('rnd') > -1 ? 'rnd' : 'rect'));
+				drawPads(lib.nonMetallized[key], lib.nonMetallized[key].shape);
 			}
+		}
+	}
+	function drawComponentsOutlines(outlines) {
+		var i, key, radius, start, end, offsetX, horJustification, vertJustification, offsetY = th + space - shiftY, mirr = 1, topView = false, botView = false;
+		
+		for (key in outlines) {
+			if (outlines.hasOwnProperty(key)) {
+				for (i = 0; i < outlines[key].length; i += 1) {
+					// Запоминаем, чертежи (границы платы) для каких слоев в конце работы потребуется нарисовать:
+					if (outlines[key][i].flipped) { botView = true;	} else { topView = true; }
+					
+					// Устанавливаем смещение для координат в зависимости от местоположения вида, в котором рисуется текущий объект.
+					// Если объект должен быть на слое bottom - к переменной количества видов (views) добавляется 1, т.к. она показывает
+					// количество уже готовых видов, а в работе находится сразу два не доделанных - top и bottom:
+					offsetX = (views + (outlines[key][i].flipped ? 1 : 0)) * (boardWidth + space) - shiftX - hw;
+					
+					// Если слой bottom - координаты по X будут отсчитываться от правого края назад:
+					if (outlines[key][i].flipped) {
+						if (key === 'arcs') { offsetX += shiftX * 2; } else { offsetX += boardWidth + shiftX * 2; } // Т.к. для арок длина платы прибавляется в функции, их рисующей
+						mirr = -1;
+					} else {
+						mirr = 1;
+					}
+					
+					switch (key) {
+					case 'lines':
+						result.push(0, 'LINE', 8, 'Components', 62, 256, 10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x2 * mirr + offsetX), 21, (outlines[key][i].y2 + offsetY));
+						break;
+					case 'arcs':
+						drawArc(outlines[key][i].x1, outlines[key][i].y1, outlines[key][i].x2, outlines[key][i].y2, outlines[key][i].x3, outlines[key][i].y3, outlines[key][i].flipped, offsetX, offsetY, 'Components');
+						break;
+					case 'texts':
+						horJustification  = (outlines[key][i].justification.match(/left/i))  ? 0 : (outlines[key][i].justification.match(/right/i)) ? 2 : 1;
+						vertJustification = (outlines[key][i].justification.match(/upper/i)) ? 3 : (outlines[key][i].justification.match(/lower/i)) ? 1 : 2;
+						result.push(0, 'TEXT', 8, 'Components', 62, 7, 7, 'win_eskd', 40, 1.75, 50, outlines[key][i].rotation, 51, 15, 72, horJustification, 73, vertJustification,
+					              10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x1 * mirr + offsetX), 21, (outlines[key][i].y1 + offsetY), 1, (outlines[key][i].content[0] || ' '));
+						break;
+					}
+				}
+			}
+		}
+		
+		if (topView) {
+			offsetX = views * (boardWidth + space) - shiftX - hw;
+			drawHoles(lib.holes, true, true, offsetX, offsetY, 1);
+			drawHoles(lib.metallized, false, true, offsetX, offsetY, 1);
+			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, 1);
+			drawBoardOutline(false, false, headers[15] + ' - TOP', true, false);
+		}
+		if (botView) {
+			offsetX = (views + (topView ? 0 : 1)) * (boardWidth + space) + boardWidth + shiftX - hw;
+			drawHoles(lib.holes, true, true, offsetX, offsetY, -1);
+			drawHoles(lib.metallized, false, true, offsetX, offsetY, -1);
+			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, -1);
+			drawBoardOutline(true, false, headers[15] + ' - BOTTOM', false, true);
 		}
 	}
 	
@@ -1305,6 +1404,11 @@ function generateDXF(lib, outline, routes, drillViews) {
 			result.push(0, 'LAYER', 2, routes[layerNum].name, 70, 64, 62, 6, 6, 'CONTINUOUS');
 		}
 	}
+	if (componentsOutlines.lines.length || componentsOutlines.arcs.length) {
+		result.push(0, 'LAYER', 2, 'Components', 70, 64, 62, 2, 6, 'CONTINUOUS');
+		if (boardOutline.topAssy) { result.push(0, 'LAYER', 2, 'Top_Assy', 70, 64, 62, 2, 6, 'CONTINUOUS'); }
+		if (boardOutline.botAssy) { result.push(0, 'LAYER', 2, 'Bot_Assy', 70, 64, 62, 2, 6, 'CONTINUOUS'); }
+	}
 	result.push(0, 'ENDTAB', 0, 'ENDSEC');
 	/* -=-=-=- */
 	
@@ -1361,15 +1465,15 @@ function generateDXF(lib, outline, routes, drillViews) {
 	
 	radius = (colHeight / 2 - cellPadding);
 	
-	fillTheTable(lib.metallized);
-	fillTheTable(lib.nonMetallized);
-	fillTheTable(lib.holes);
+	fillTable(lib.metallized);
+	fillTable(lib.nonMetallized);
+	fillTable(lib.holes);
 	/* -=-=-=- */
 	
-	/* Построение сборочного чертежа */
-	if (outline.length) {
-		// Контуры платы
-		outline.forEach(function (coords, index) {
+	/* Построение сборочных чертежей */
+	if (boardOutline.board) {
+		// Определение размеров платы
+		boardOutline.board.forEach(function (coords, index) {
 			var i;
 			
 			for (i = 0; i < coords.length; i += 1) {
@@ -1380,10 +1484,10 @@ function generateDXF(lib, outline, routes, drillViews) {
 				}
 			}
 		});
-		drawBoardOutline(false, true, 'DRILLTOP');
-		if (drillViews === 2) { drawBoardOutline(true, true, 'DRILLBOTTOM'); }
 		
-		// Символы на плате
+		// Построение чертежа сверловки
+		drawBoardOutline(false, true, headers[12] + ' DRILLTOP');
+		if (drillViews === 2) { drawBoardOutline(true, true, headers[12] + ' DRILLBOTTOM'); }
 		drawSymbolsOnBoard(lib.holes);
 		drawSymbolsOnBoard(lib.metallized);
 		drawSymbolsOnBoard(lib.nonMetallized);
@@ -1392,8 +1496,13 @@ function generateDXF(lib, outline, routes, drillViews) {
 		for (layerNum in routes) {
 			if (routes.hasOwnProperty(layerNum)) {
 				drawRoutes(routes[layerNum]);
-				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, routes[layerNum].realName);
+				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, headers[12] + ' ' + routes[layerNum].realName);
 			}
+		}
+		
+		// Построение чертежа с компонентами
+		if (componentsOutlines.lines.length || componentsOutlines.arcs.length) {
+			drawComponentsOutlines(componentsOutlines);
 		}
 	} else { document.getElementById('tabDXF').innerHTML = 'Таблица'; }
 	/* -=-=-=- */

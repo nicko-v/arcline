@@ -1,4 +1,4 @@
-/*global Blob, FileReader, unescape, generateSVG, generateDXF, generateLayers */
+/*global Blob, FileReader, unescape, generateSVG, generateDXF, generatePCB */
 
 (function () {
 	'use strict';
@@ -26,7 +26,7 @@
 		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 		                 'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
 		                 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
-		                 'Закончились доступные символы, необозначенные площадки не будут отрисованы на сборочных чертежах и проводящих рисунках. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
+		                 'Закончились доступные символы, необозначенные площадки не будут отрисованы. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
 		                 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
 		                 'Не удалось сформировать таблицу отверстий или сборочные чертежи. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
@@ -37,7 +37,7 @@
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
 		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, output = {},
-		padsDescriptions,	padsLib, pcbLink, pcbOutputContent, reader = new FileReader(), routes;
+		padsDescriptions,	objectsLib, pcbLink, pcbOutputContent, reader = new FileReader(), routes;
 
 	function hidePopup() {
 		cover.style.opacity = 0;
@@ -431,7 +431,7 @@
 		descr.innerHTML = '';
 		icon.innerHTML = '';
 		activeRow = null;
-		padsLib = {};
+		objectsLib = {};
 		fileContent = {};
 		padsDescriptions = {};
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] };
@@ -507,17 +507,6 @@
 		lib.appendChild(rndGroup);
 		lib.appendChild(rectGroup);
 	});
-	version.addEventListener(click, function () {
-		showPopup({
-			header: 'Список изменений',
-			content: 'Версия от 29.02.2016:' +
-			         '<ul>' +
-			         '<li>На проводящих рисунках с plane слоями отрисовываются только КП, находящиеся в границах конкретного plane.</li>' +
-			         '<li>Исправлены некоторые ошибки.</li>' +
-			         '</ul>',
-			closeable: true
-		});
-	});
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
 			setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
@@ -525,6 +514,19 @@
 			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
 			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
 		}
+	});
+	version.addEventListener(click, function () {
+		showPopup({
+			header: 'Список изменений',
+			content: 'Версия от 18.03.2016:' +
+			         '<ul>' +
+			         '<li>Добавлена генерация сборочных чертежей с элементами.</li>' +
+			         '<li>Отрисовка площадок на проводящих рисунках больше не зависит от наличия у них символа.</li>' +
+			         '<li>Переписана и дополнена справка о программе.</li>' +
+			         '<li>Исправлены некоторые ошибки.</li>' +
+			         '</ul>',
+			closeable: true
+		});
 	});
 	helpButton.addEventListener(click, function () {
 		rollBlock(document.getElementById('help-wrapper'), document.getElementById('help-borders'), true);
@@ -626,7 +628,7 @@
 		symbol.innerHTML = padsDescriptions[activeRow.id].symbolCode || 'Выберите символ из библиотеки.'; // Показываем сгенерированный символ в окошке
 	});
 	startButton.addEventListener(click, function () {
-		var key, layers, fileName, selectText, symbols = { metallized: {}, nonMetallized: {}, holes: {} };
+		var key, layers, fileName, selectText, pads = { metallized: {}, nonMetallized: {}, holes: {} };
 		
 		function dotToComma(a) {
 			if (a) { // Если 0 - не форматирует
@@ -669,26 +671,32 @@
 		function calcRatio(pad) {
 			return (pad.width > pad.height) ? pad.width / pad.height : pad.height / pad.width;
 		}
-		function prepareSymbolsInfo(lib, newLib) {
+		function prepareSymbolsInfo(lib, newLib, type) {
 			var key, path;
 			
 			for (key in lib) {
-				if (lib.hasOwnProperty(key) && lib[key].symbol) {
+				if (lib.hasOwnProperty(key)) {
 					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
+					if (!path.withSymbols) { Object.defineProperty(path, 'withSymbols', { value: 0, writable: true }); } // Добавляется скрытое свойство с количеством КП, у которых есть символ
 					
-					path[lib[key].symbol] = {};
-					Object.defineProperties(path[lib[key].symbol], {
-						amount: { value: lib[key].coords.length },
-						hole:   { value: calcHoleSize(lib[key]) },
-						pad:    { value: calcPadSize(lib[key]) },
-						ratio:  { value: calcRatio(lib[key]) },
-						coords: { value: lib[key].coords, writable: true },
-						width:  { value: lib[key].width },
-						height: { value: lib[key].height }
+					path[key] = {};
+					Object.defineProperties(path[key], {
+						amount:   { value: lib[key].coords.length },
+						hole:     { value: calcHoleSize(lib[key]) },
+						pad:      { value: calcPadSize(lib[key]) },
+						ratio:    { value: calcRatio(lib[key]) },
+						coords:   { value: lib[key].coords, writable: true },
+						width:    { value: lib[key].width },
+						height:   { value: lib[key].height },
+						holeSize: { value: lib[key].hole },
+						symbol:   { value: lib[key].symbol },
+						shape:    { value: (!lib[key].shape.match(/rect|rndrect/i) && lib[key].width / lib[key].height === 1) ? 'rnd' : 'rect' },
+						type:     { value: type }
 					});
-					Object.defineProperty(path[lib[key].symbol], 'mount', {
-						value: calcMountSize(lib[key], path[lib[key].symbol].pad)
+					Object.defineProperty(path[key], 'mount', {
+						value: calcMountSize(lib[key], path[key].pad)
 					});
+					if (path[key].symbol) { path.withSymbols += 1; }
 				}
 			}
 		}
@@ -697,10 +705,10 @@
 		
 		for (key in padsDescriptions) { // Записываем выбранные символы в объект с информацией о КП
 			if (padsDescriptions.hasOwnProperty(key)) {
-				padsLib[padsDescriptions[key].type][padsDescriptions[key].name].symbol = padsDescriptions[key].symbol;
+				objectsLib[padsDescriptions[key].type][padsDescriptions[key].name].symbol = padsDescriptions[key].symbol;
 			}
 		}
-		layers = generateLayers(padsLib);
+		layers = generatePCB(objectsLib);
 		if (layers.skipped) {
 			showPopup({
 				header: 'Предупреждение',
@@ -732,10 +740,10 @@
 		}
 		
 		try {
-			prepareSymbolsInfo(padsLib.vias, symbols);
-			prepareSymbolsInfo(padsLib.pads, symbols);
+			prepareSymbolsInfo(objectsLib.vias, pads, 'via');
+			prepareSymbolsInfo(objectsLib.pads, pads, 'pad');
 			dxfOutputContent = document.createElement('pre');
-			dxfOutputContent.innerHTML = generateDXF(symbols, boardOutline, routes, drillViews).join(String.fromCharCode(10));
+			dxfOutputContent.innerHTML = generateDXF(pads, boardOutline, objectsLib.componentsOutlines, routes, drillViews).join(String.fromCharCode(10));
 		} catch (err) {
 			showPopup({
 				header: 'Ошибка',
@@ -875,6 +883,91 @@
 		}
 	});
 	reader.addEventListener('load', function () {
+		function Route(string) {
+			var type, width, first, second, third;
+			
+			width = parseFloat(string.slice(string.indexOf('width ') + 6));
+			type = string.slice(1, string.indexOf(' '));
+			
+			first = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			string = string.slice(string.indexOf(')') + 1);
+			second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			if (type === 'triplePointArc') {
+				type = 'arc';
+				third = first; // Меняем местами для удобства, т.к. у арок первая пара координат - центр, а у линий - начало
+				first = second;
+				string = string.slice(string.indexOf(')') + 1);
+				second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			}
+			
+			this.type = type;
+			this.width = width;
+			this.x1 = +first[0];
+			this.y1 = +first[1];
+			this.x2 = +second[0];
+			this.y2 = +second[1];
+			
+			if (third) {
+				this.x3 = +third[0];
+				this.y3 = +third[1];
+			}
+		}
+		function Text(string, split) {
+			var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text, justification, rotation, sliced;
+			
+			text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" ('));
+			if (split) { text = text.split('\\r\\n'); }
+			
+			if (string.indexOf('justify ') > -1) {
+				sliced = string.slice(string.indexOf('justify ') + 8);
+				justification = sliced.slice(0, sliced.indexOf(')')).toLowerCase();
+			} else { justification = 'lowerleft'; }
+			if (string.indexOf('rotation') > -1) {
+				sliced = string.slice(string.indexOf('rotation ') + 9);
+				rotation = +sliced.slice(0, sliced.indexOf(')'));
+			} else { rotation = 0; }
+			
+			// При изменении структуры объекта, изменить так же в методе getPadsAndOutlines в месте, где создается текстовый объект для обозначения элемента:
+			this.type = 'text';
+			this.content = text;
+			this.justification = justification;
+			this.rotation = rotation;
+			this.flipped = (string.indexOf('isFlipped True') > -1) ? true : false;
+			this.x1 = +coords[0];
+			this.y1 = +coords[1];
+		}
+		function Thermal(string) {
+			var begin, end;
+			
+			begin = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			string = string.slice(string.indexOf(')') + 2);
+			end = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			
+			this.type = 'thermal';
+			this.x0 = +begin[0];
+			this.y0 = +begin[1];
+			this.x1 = +end[0];
+			this.y1 = +end[1];
+		}
+		function Polygon(object, type, net) {
+			var i, coords;
+			
+			this.type = type;
+			this.net = net || null;
+			
+			for (i = 0; i < Object.keys(object).length; i += 1) {
+				if (typeof object[i] === 'string') {
+					if (object[i].indexOf('pt') > -1) {
+						coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
+						this['x' + i] = +coords[0];
+						this['y' + i] = +coords[1];
+					} else if (!net && object[i].indexOf('netNameRef') > -1) {
+						this.net = object[i].slice(object[i].indexOf('\"') + 1, object[i].lastIndexOf('\"'));
+					}
+				}
+			}
+		}
+		
 		fileContent = parseInputFile(this.result);
 		if (!fileContent) { return; }
 		
@@ -979,10 +1072,11 @@
 					}
 				}
 			},
-			getPads: { // NOTE: [] Этот метод надо полностью переписать
+			getPadsAndOutlines: { // Возвращает объект, содержащий информацию обо всех КП и ПО (координаты, формы и т.д.), а так же контурах элементов.
 				value: function () {
-					var comp, comps = {}, coords, cosA, currPath, height, i, flipped, j, k, key, l, name, netName, node, pth = true, pad,
-						padName, padNum, pads = {},	pin, pinDes, pinMap, rotation, shiftX, shiftY, type, result = {}, side, sinA, vias = {}, width, x, y, zero;
+					var comp, compPin, compsOutlines = { lines: [], arcs: [], texts: [] }, comps = {}, coords, cosA, currPath, height, i, flipped, j, k,
+						key, l, name, netName, node, outline, pth = true, pad, padName, padNum, pads = {}, patternGraphics, patternName, patternOrigin,
+						patterns = {}, pin, pinDes, pinMap, rotation, shiftX, shiftY, type, refDesCenter, result = {}, side, sinA, vias = {}, width, x, y;
 					
 					function parser(type, string) {
 						var i, tmp, values = [], result = '',
@@ -1031,9 +1125,11 @@
 						case 'padStyleDef':
 						case 'viaStyleRef':
 						case 'viaStyleDef':
-						case 'patternRef':
 						case 'refDesRef':
+						case 'patternRef':
+						case 'patternDefExtended':
 						case 'patternGraphicsNameRef':
+						case 'patternGraphicsNameDef':
 						case 'defaultPinDes':
 						case 'netNameRef':
 						case 'compRef':
@@ -1173,11 +1269,33 @@
 					function isPadsSame(obj1, obj2) {
 						var rnd = new RegExp('ellipse|oval|mthole|target', 'i'), rect = new RegExp('rect|rndrect', 'i');
 						
-						return (obj1.width === obj2.width && obj1.height === obj2.height && obj1.hole === obj2.hole && obj1.pth === obj2.pth &&
-						       ((obj1.shape.match(rnd) && obj2.shape.match(rnd)) || (obj1.shape.match(rect) && obj2.shape.match(rect)))) ? true : false;
+						return (((obj1.width === obj2.width && obj1.height === obj2.height) || (obj1.width === obj2.height && obj1.height === obj2.width)) &&
+						          obj1.hole === obj2.hole && obj1.pth === obj2.pth && ((obj1.shape.match(rnd) && obj2.shape.match(rnd)) || (obj1.shape.match(rect) && obj2.shape.match(rect)))) ? true : false;
+					}
+					function getPatternCenter(pattern) {
+						var i, j, min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
+						
+						for (i = 0; i < pattern.length; i += 1) {
+							if (pattern[i].type.match(/line|arc/)) {
+								j = 1;
+								while (pattern[i]['x' + j] !== undefined) {
+									if (pattern[i]['x' + j] < min.x) { min.x = pattern[i]['x' + j]; }
+									if (pattern[i]['x' + j] > max.x) { max.x = pattern[i]['x' + j]; }
+									if (pattern[i]['y' + j] < min.y) { min.y = pattern[i]['y' + j]; }
+									if (pattern[i]['y' + j] > max.y) { max.y = pattern[i]['y' + j]; }
+									j += 1;
+								}
+							}
+						}
+						
+						return { x: min.x + Math.abs((max.x - min.x)) / 2,
+						         y: min.y + Math.abs((max.y - min.y)) / 2
+						       };
 					}
 					
 					try {
+						// Поиск по блоку pcbDesign -> multilayer.
+						// Сбор координат ПО, отдельных КП и информации о компонентах (обозначение, сеть, координаты, поворот, отражение, паттерн, графика):
 						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
 							if (typeof this['4'][i] === 'object' && this['4'][i].header === '(multiLayer') {
 								
@@ -1209,8 +1327,9 @@
 										if (this['4'][i][j].header.indexOf('(pattern') > -1) {
 											name = parser('refDesRef', this['4'][i][j].header);
 											if (!comps[name]) { comps[name] = {}; }
-											comps[name].pattern = parser('patternRef', this['4'][i][j].header);
-											comps[name].zero = parser('pt', this['4'][i][j].header);
+											patternOrigin = parser('pt', this['4'][i][j].header).split(' ');
+											comps[name].pattern  = parser('patternRef', this['4'][i][j].header);
+											comps[name].origin   = { x: +patternOrigin[0], y: +patternOrigin[1], flipped: +patternOrigin[2] ? true : false };
 											comps[name].rotation = parser('rotation', this['4'][i][j].header);
 											comps[name].graphics = (this['4'][i][j].header.indexOf('patternGraphicsNameRef') > -1) ?
 													parser('patternGraphicsNameRef', this['4'][i][j].header) :
@@ -1222,12 +1341,17 @@
 								break;
 							}
 						}
+						
+						// Поиск по блоку library -> viaStyleDef/padStyleDef.
+						// Получение информации о ПО и КП (размер, отверстие, форма, сторона, металлизация) с последующим объединением одинаковых.
+						// Объединение только внутри групп (ПО с ПО, КП с КП), т.к. на чертеже удобнее видеть разные символы:
 						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
 							if (typeof this['2'][i] === 'object') {
-								type = (this['2'][i].header.indexOf('viaStyleDef') + 1) ?
-										'via' : (this['2'][i].header.indexOf('padStyleDef') + 1) ?
+								type = (this['2'][i].header.indexOf('viaStyleDef') > -1) ?
+										'via' : (this['2'][i].header.indexOf('padStyleDef') > -1) ?
 										'pad' : null;
 							}
+							
 							if (type) {
 								name = parser(type + 'StyleDef', this['2'][i].header);
 								currPath = (type === 'via') ? vias : pads;
@@ -1277,9 +1401,71 @@
 									}
 								}
 							}
+							
 							type = null;
 							pth = true;
 						}
+						
+						// Поиск по блоку library -> patternDefExtended.
+						// Получение информации о паттернах (название, варианты графики, контуры) и их выводах (название КП, координаты, поворот, отражение, padNum, defaultPinDes):
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
+							if (this['2'][i].header.indexOf('patternDefExtended') > -1) {
+								patternName = parser('patternDefExtended', this['2'][i].header);
+								patterns[patternName] = {};
+								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+									if (typeof this['2'][i][j] === 'string' && this['2'][i][j].indexOf('originalName') > -1) {
+										patterns[patternName].originalName = parser('originalName', this['2'][i][j]);
+									} else if (typeof this['2'][i][j] === 'object' && this['2'][i][j].header.indexOf('patternGraphicsDef') > -1) {
+										
+										for (k = 0; k < Object.keys(this['2'][i][j]).length; k += 1) {
+											if (typeof this['2'][i][j][k] === 'string' && this['2'][i][j][k].indexOf('patternGraphicsNameDef') > -1) {
+												patternGraphics = parser('patternGraphicsNameDef', this['2'][i][j][k]);
+												patterns[patternName][patternGraphics] = {};
+												patterns[patternName][patternGraphics].pins = {};
+											} else if (typeof this['2'][i][j][k] === 'object') {
+												if (this['2'][i][j][k].header.indexOf('multiLayer') > -1) {
+													for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
+														name   = parser('padStyleRef', this['2'][i][j][k][l]);
+														pinDes = parser('defaultPinDes', this['2'][i][j][k][l]);
+														padNum = parser('padNum', this['2'][i][j][k][l]);
+														coords = parser('pt', this['2'][i][j][k][l]).split(' ');
+														
+														if (!patterns[patternName][patternGraphics].pins[padNum]) { patterns[patternName][patternGraphics].pins[padNum] = {}; }
+														
+														patterns[patternName][patternGraphics].pins[padNum] = { x: +coords[0],
+														                                                        y: +coords[1],
+														                                                        padName: name,
+														                                                        pinDes: pinDes,
+														                                                        flipped: (+coords[2]) ? true : false,
+														                                                        rotation: parser('rotation', this['2'][i][j][k][l])
+														                                                      };
+													}
+												} else if (this['2'][i][j][k].header.indexOf('layerContents') > -1) {
+													if (!patterns[patternName][patternGraphics].outline) { patterns[patternName][patternGraphics].outline = []; }
+													for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
+														if (typeof this['2'][i][j][k][l] === 'string') {
+															
+															if (this['2'][i][j][k][l].match(/\(line|\(triplePointArc/i)) {
+																patterns[patternName][patternGraphics].outline.push(new Route(this['2'][i][j][k][l]));
+															} else if (this['2'][i][j][k][l].indexOf('(text ') > -1) {
+																patterns[patternName][patternGraphics].outline.push(new Text(this['2'][i][j][k][l], false));
+															}
+															
+														}
+													}
+													
+													patterns[patternName][patternGraphics].center = getPatternCenter(patterns[patternName][patternGraphics].outline);
+												}
+											}
+										}
+										
+									}
+								}
+							}
+						}
+						
+						// Поиск по блоку netlist -> compInst.
+						// Получение значения compRef, связывающего конкретный компонент (его позиционное обозначение) с блоком library - compDef:
 						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
 							if (typeof this['3'][i] === 'object') {
 								if (this['3'][i].header.indexOf('(compInst') > -1) {
@@ -1293,66 +1479,61 @@
 								}
 							}
 						}
+						
+						// Объединение объектов patterns и comps.
+						// В объект comps копируется информация о выводах:
 						for (key in comps) {
-							if (comps.hasOwnProperty(key)) {
-								comps[key].pins = {};
-								currPath = finder(['(patternDefExtended \"' + comps[key].pattern + '\"',
-																	 '(patternGraphicsDef',
-																	 '(patternGraphicsNameDef "' + comps[key].graphics + '")'], this['2']);
+							if (comps.hasOwnProperty(key) && patterns[comps[key].pattern][comps[key].graphics]) {
+								comps[key].pins = patterns[comps[key].pattern][comps[key].graphics].pins;
+							}
+						}
+					
+						// Поиск по блоку library -> compDef -> attachedPattern -> padPinMap.
+						// Получение значения compPinRef и добавление его к соответствующему выводу компонента:
+						for (i = 0; i < Object.keys(this['2']).length; i += 1) {
+							if (typeof this['2'][i] === 'object' && this['2'][i].header.indexOf('(compDef') > -1) {
 								
-								for (i = 0; i < Object.keys(currPath).length; i += 1) {
-									if (typeof currPath[i] === 'object' && currPath[i].header === '(multiLayer') {
+								for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
+									if (typeof this['2'][i][j] === 'object' && this['2'][i][j].header.indexOf('attachedPattern') > -1) {
 										
-										for (j = 0; j < Object.keys(currPath[i]).length; j += 1) {
-											name = parser('padStyleRef', currPath[i][j]);
-											pinDes = parser('defaultPinDes', currPath[i][j]);
-											padNum = parser('padNum', currPath[i][j]);
-											coords = parser('pt', currPath[i][j]).split(' ');
-											
-											if (!comps[key].pins[padNum]) { comps[key].pins[padNum] = {}; }
-											
-											comps[key].pins[padNum] = { x: +coords[0],
-											                            y: +coords[1],
-											                            padName: name,
-											                            pinDes: pinDes,
-											                            flipped: (+coords[2]) ? true : false,
-											                            rotation: parser('rotation', currPath[i][j])
-											                          };
+										patternName = this['2'][i][j].header.match(/(?:patternName \")(.+?)(?:\")/)[1];
+										currPath = null;
+										for (key in patterns) {
+											if (patterns.hasOwnProperty(key) && patterns[key].originalName === patternName) {
+												currPath = patterns[key];
+												break;
+											}
 										}
 										
-										break;
-									}
-								}
-								
-								 /* Добывание значения "compPinRef" из блока Library - compDef */
-								for (i = 0; i < Object.keys(this['2']).length; i += 1) {
-									if (typeof this['2'][i] === 'object' && this['2'][i].header.indexOf('(compDef \"' + comps[key].compRef + '\"') > -1) {
-										
-										for (j = 0; j < Object.keys(this['2'][i]).length; j += 1) {
-											if (typeof this['2'][i][j] === 'object' && this['2'][i][j].header.indexOf('attachedPattern') > -1) {
+										for (k = 0; k < Object.keys(this['2'][i][j]).length; k += 1) {
+											if (typeof this['2'][i][j][k] === 'object' && this['2'][i][j][k].header.indexOf('padPinMap') > -1) {
 												
-												for (k = 0; k < Object.keys(this['2'][i][j]).length; k += 1) {
-													if (typeof this['2'][i][j][k] === 'object' && this['2'][i][j][k].header.indexOf('padPinMap') > -1) {
-														
-														for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
-															if (typeof this['2'][i][j][k][l] === 'string' && this['2'][i][j][k][l].indexOf('padNum') > -1) {
-																padNum = parser('padNum', this['2'][i][j][k][l]);
-																if (comps[key].pins[padNum]) { comps[key].pins[padNum].compPin = parser('compPinRef', this['2'][i][j][k][l]); }
+												for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
+													if (typeof this['2'][i][j][k][l] === 'string' && this['2'][i][j][k][l].indexOf('padNum') > -1) {
+														padNum = parser('padNum', this['2'][i][j][k][l]);
+														compPin = parser('compPinRef', this['2'][i][j][k][l]);
+														if (currPath) {
+															for (key in currPath) {
+																if (currPath.hasOwnProperty(key) && typeof currPath[key] === 'object' && currPath[key].pins[padNum]) {
+																	currPath[key].pins[padNum].compPin = compPin;
+																}
 															}
 														}
-														
 													}
 												}
 												
 											}
 										}
+										currPath = null;
 										
 									}
 								}
-								/* -=-=-=- */
 								
 							}
 						}
+						
+						// Поиск по блоку netlist -> net.
+						// Получение связей и добавление их в указанные выводы указанных компонентов:
 						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
 							if (this['3'][i].header.indexOf('(net') > -1) {
 								netName = parser('net', this['3'][i].header);
@@ -1383,10 +1564,11 @@
 								}
 							}
 						}
+						
+						// Перенос информации о КП, находящихся в составе компонентов, в основной объект контактных площадок, в процессе
+						// перерассчитываются координаты, поворот, сторона в зависимости от поворота и отражения самого компонента:
 						for (key in comps) {
 							if (comps.hasOwnProperty(key)) {
-								
-								zero = comps[key].zero.split(' ');
 								
 								for (pinDes in comps[key].pins) {
 									if (comps[key].pins.hasOwnProperty(pinDes)) {
@@ -1408,7 +1590,7 @@
 											x = shiftX;
 											y = shiftY;
 										}
-										if (+zero[2]) {
+										if (comps[key].origin.flipped) {
 											x = -x;
 											side = (pad.side === 'top') ? 'bot' : (pad.side === 'bot') ? 'top' : 'thru';
 										}
@@ -1418,8 +1600,8 @@
 										rotation = (comps[key].rotation) ? comps[key].rotation + comps[key].pins[pinDes].rotation : comps[key].pins[pinDes].rotation;
 										while (rotation >= 360) { rotation -= 360; }
 										
-										pad.coords.push({ x: Math.round((+zero[0] + x) * 1000) / 1000,
-										                  y: Math.round((+zero[1] + y) * 1000) / 1000,
+										pad.coords.push({ x: Math.round((comps[key].origin.x + x) * 1000) / 1000,
+										                  y: Math.round((comps[key].origin.y + y) * 1000) / 1000,
 										                  side: side,
 										                  net: netName,
 										                  rotation: +rotation
@@ -1432,8 +1614,86 @@
 								
 							}
 						}
+						
+						// Перенос информации о контурах элементов в отдельный объект с упрощенной структурой, в процессе перерасчитываются
+						// координаты контуров (изначально заданы относительно точки нуля элемента), расчитываются положения обозначений (центр элемента):
+						for (key in comps) {
+							if (comps.hasOwnProperty(key)) {
+								outline = patterns[comps[key].pattern][comps[key].graphics].outline;
+								if (outline && outline.length) {
+									for (i = 0; i < outline.length; i += 1) {
+										
+										if (comps[key].rotation) {
+											sinA = Math.sin(comps[key].rotation * Math.PI / 180);
+											cosA = Math.cos(comps[key].rotation * Math.PI / 180);
+										}
+										
+										switch (outline[i].type) {
+										case 'line':
+											compsOutlines.lines.push({ x1: Math.round(((comps[key].rotation ? outline[i].x1 * cosA - outline[i].y1 * sinA : outline[i].x1) * (comps[key].origin.flipped ? -1 : 1) + comps[key].origin.x) * 1000) / 1000,
+											                           x2: Math.round(((comps[key].rotation ? outline[i].x2 * cosA - outline[i].y2 * sinA : outline[i].x2) * (comps[key].origin.flipped ? -1 : 1) + comps[key].origin.x) * 1000) / 1000,
+											                           y1: Math.round(((comps[key].rotation ? outline[i].y1 * cosA + outline[i].x1 * sinA : outline[i].y1) + comps[key].origin.y) * 1000) / 1000,
+											                           y2: Math.round(((comps[key].rotation ? outline[i].y2 * cosA + outline[i].x2 * sinA : outline[i].y2) + comps[key].origin.y) * 1000) / 1000,
+											                           flipped: comps[key].origin.flipped
+											                         });
+											break;
+										case 'arc':
+											// В случае, если компонент отражен, сразу меняются точки начала и конца арки (x1 <-> x2, y1 <-> y2):
+											compsOutlines.arcs.push({ x1: Math.round(((comps[key].origin.flipped ?
+											                                            (comps[key].rotation ? outline[i].x2 * cosA - outline[i].y2 * sinA : outline[i].x2) * -1 :
+											                                            (comps[key].rotation ? outline[i].x1 * cosA - outline[i].y1 * sinA : outline[i].x1)) +
+																															  comps[key].origin.x) * 1000) / 1000,
+											                          x2: Math.round(((comps[key].origin.flipped ?
+											                                            (comps[key].rotation ? outline[i].x1 * cosA - outline[i].y1 * sinA : outline[i].x1) * -1 :
+											                                            (comps[key].rotation ? outline[i].x2 * cosA - outline[i].y2 * sinA : outline[i].x2)) +
+																															  comps[key].origin.x) * 1000) / 1000,
+											                          x3: Math.round(((comps[key].rotation ? outline[i].x3 * cosA - outline[i].y3 * sinA : outline[i].x3) * (comps[key].origin.flipped ? -1 : 1) + comps[key].origin.x) * 1000) / 1000,
+											                          y1: Math.round(((comps[key].origin.flipped ?
+																								                  (comps[key].rotation ? outline[i].y2 * cosA + outline[i].x2 * sinA : outline[i].y2) :
+																								                  (comps[key].rotation ? outline[i].y1 * cosA + outline[i].x1 * sinA : outline[i].y1)) +
+																								               comps[key].origin.y) * 1000) / 1000,
+											                          y2: Math.round(((comps[key].origin.flipped ?
+																								                  (comps[key].rotation ? outline[i].y1 * cosA + outline[i].x1 * sinA : outline[i].y1) :
+																								                  (comps[key].rotation ? outline[i].y2 * cosA + outline[i].x2 * sinA : outline[i].y2)) +
+																								               comps[key].origin.y) * 1000) / 1000,
+											                          y3: Math.round(((comps[key].rotation ? outline[i].y3 * cosA + outline[i].x3 * sinA : outline[i].y3) + comps[key].origin.y) * 1000) / 1000,
+											                          flipped: comps[key].origin.flipped
+											                        });
+											break;
+										case 'text':
+											// Структура объекта должна соответствовать структуре объектов, производимых конструктором Text:
+											compsOutlines.texts.push({ x1: Math.round(((comps[key].rotation ? outline[i].x1 * cosA - outline[i].y1 * sinA : outline[i].x1) * (comps[key].origin.flipped ? -1 : 1) + comps[key].origin.x) * 1000) / 1000,
+											                           y1: Math.round(((comps[key].rotation ? outline[i].y1 * cosA + outline[i].x1 * sinA : outline[i].y1) + comps[key].origin.y) * 1000) / 1000,
+											                           content: outline[i].content,
+											                           justification: outline[i].justification,
+											                           flipped: comps[key].origin.flipped,
+										                             rotation: 0
+											                         });
+											break;
+										}
+										
+									}
+									
+									refDesCenter = patterns[comps[key].pattern][comps[key].graphics].center;
+									// Структура объекта должна соответствовать структуре объектов, производимых конструктором Text:
+									compsOutlines.texts.push({ content: [key.replace(/_/g, '-')], // Т.к. это один из символов, не поддерживаемых dxf. Иногда встречается в элементах
+										                         justification: 'center',
+										                         rotation: 0,
+											                       flipped: comps[key].origin.flipped,
+									                           x1: Math.round(((comps[key].rotation ? refDesCenter.x * cosA - refDesCenter.y * sinA : refDesCenter.x) * (comps[key].origin.flipped ? -1 : 1) + comps[key].origin.x) * 1000) / 1000,
+										                         y1: Math.round(((comps[key].rotation ? refDesCenter.y * cosA + refDesCenter.x * sinA : refDesCenter.y) + comps[key].origin.y) * 1000) / 1000
+									                         });
+								}
+							}
+						}
+						
+						/* Удаление КП и ПО, которые на плате не используются */
 						for (name in pads) { if (pads.hasOwnProperty(name)) { if (!pads[name].coords.length || pads[name].mergedWith) { delete pads[name]; } else { delete pads[name].side; } } }
 						for (name in vias) { if (vias.hasOwnProperty(name)) { if (!vias[name].coords.length || vias[name].mergedWith) { delete vias[name]; } else { delete vias[name].side; } } }
+						/* -=-=-=- */
+						
+						// Сортируется по алфавиту список компонентов, к которым принадлежат КП, затем подряд идущие
+						// обозначения сжимаются в последовательность (D1, D2, D3 -> D1...D3):
 						for (name in pads) {
 							if (pads.hasOwnProperty(name) && pads[name].comps && pads[name].comps.length > 1) {
 								pads[name].comps.sort(compareNames);
@@ -1452,17 +1712,18 @@
 						return;
 					}
 					
-					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
-					result.pads = sortObject(pads);
+					result.vias  = sortObject(vias); // Сортировка в порядке увеличения площади КП
+					result.pads  = sortObject(pads);
+					result.componentsOutlines = compsOutlines;
 					
 					setStepStatus(3, true);
 					
 					return result;
 				}
 			},
-			getBoardOutline: {
+			getBoardOutline: { // Возвращает массив с координатами контуров платы
 				value: function () {
-					var i, j, result = [], layerNum, minX, minY, coords;
+					var i, j, key, currPath, result = {}, layerName, layerNum = {}, minX = Infinity, minY = Infinity, coords;
 					
 					function parser(string) {
 						var result = [];
@@ -1472,33 +1733,16 @@
 							result.push(+coords[0], +coords[1]);
 							string = string.slice(string.indexOf(')') + 2);
 							// Ищет левую нижнюю точку контура что бы узнать насколько контур смещен от нуля координат:
-							if (result[result.length - 2] < minX || minX === undefined) { minX = result[result.length - 2]; }
-							if (result[result.length - 1] < minY || minY === undefined) { minY = result[result.length - 1]; }
+							if (result[result.length - 2] < minX) { minX = result[result.length - 2]; }
+							if (result[result.length - 1] < minY) { minY = result[result.length - 1]; }
 						}
 						// Если три набора координат - значит арка, переносим координаты центра арки в конец массива что бы порядок координат был таким же, как у линий:
 						if (result.length === 6) { result.push(result[0], result[1]); result.shift(); result.shift(); }
 						
 						return result;
 					}
-					
-					try {
-						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
-							if (typeof this['4'][i] === 'object') {
-								
-								if (this['4'][i].header.match(/layerDef \"Board\"/i)) {
-									layerNum = this['4'][i][0].slice(10, -1);
-								} else if (layerNum && this['4'][i].header.indexOf('(layerContents (layerNumRef ' + layerNum + ')') + 1) {
-									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
-										if (typeof this['4'][i][j] === 'string' && this['4'][i][j].indexOf('(pt') + 1) {
-											result.push(parser(this['4'][i][j]));
-										}
-									}
-									break;
-								}
-								
-							}
-						}
-						result.forEach(function (coords) {
+					function stickToZero(array) {
+						array.forEach(function (coords) {
 							var i;
 							
 							for (i = 0; i < coords.length; i += 1) {
@@ -1509,6 +1753,58 @@
 								}
 							}
 						});
+					}
+					
+					try {
+						for (i = 0; i < Object.keys(this['4']).length; i += 1) {
+							if (typeof this['4'][i] === 'object') {
+								
+								if (this['4'][i].header.indexOf('layerDef') > -1) {
+									layerName = this['4'][i].header.slice(11, -1);
+									switch (layerName) {
+									case 'Board':
+										layerNum.board = +this['4'][i][0].slice(10, -1);
+										break;
+									case 'Top Assy':
+										layerNum.topAssy = +this['4'][i][0].slice(10, -1);
+										break;
+									case 'Bot Assy':
+										layerNum.botAssy = +this['4'][i][0].slice(10, -1);
+										break;
+									}
+								} else if (Object.keys(layerNum).length && this['4'][i].header.indexOf('(layerContents ') > -1) {
+									layerNum.current = +this['4'][i].header.slice(28, -1);
+									
+									switch (layerNum.current) {
+									case layerNum.board:
+										result.board = [];
+										currPath = result.board;
+										break;
+									case layerNum.topAssy:
+										result.topAssy = [];
+										currPath = result.topAssy;
+										break;
+									case layerNum.botAssy:
+										result.botAssy = [];
+										currPath = result.botAssy;
+										break;
+									default:
+										currPath = null;
+										break;
+									}
+									
+									for (j = 0; j < Object.keys(this['4'][i]).length; j += 1) {
+										if (currPath && typeof this['4'][i][j] === 'string' && this['4'][i][j].match(/line|triplePointArc/i)) {
+											currPath.push(parser(this['4'][i][j]));
+										}
+									}
+								}
+								
+							}
+						}
+						
+						for (key in result) { if (result.hasOwnProperty(key)) { stickToZero(result[key]); } }
+						
 					} catch (err) {
 						showPopup({
 							header: 'Ошибка',
@@ -1520,8 +1816,9 @@
 						setStepStatus(4, false, true);
 					}
 					
-					if (result.length) {
-						result.push({ shiftX: minX, shiftY: minY });
+					if (result.board) {
+						result.shiftX = minX;
+						result.shiftY = minY;
 						setStepStatus(4, true);
 					} else {
 						showPopup({
@@ -1536,91 +1833,10 @@
 					return result;
 				}
 			},
-			getRoutes: {
+			getRoutes: { // Возвращает объект, содержащий информацию о трассировке (координаты, толщины линий, сети) и полигонах (вершины, сети)
 				value: function () {
 					var i, j, k, l, currNum, currType, layerName, polygonType, netName, routes = {};
 					
-					function Route(string) {
-						var type, width, first, second, third;
-						
-						width = parseFloat(string.slice(string.indexOf('width ') + 6));
-						type = string.slice(1, string.indexOf(' '));
-						if (type === 'triplePointArc') { type = 'arc'; }
-						
-						first = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
-						string = string.slice(string.indexOf(')') + 1);
-						second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
-						if (type === 'triplePointArc') {
-							third = first; // Меняем местами для удобства, т.к. у арок первая пара координат - центр, а у линий - начало
-							first = second;
-							string = string.slice(string.indexOf(')') + 1);
-							second = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
-						}
-						
-						this.type = type;
-						this.width = width;
-						this.x1 = +first[0];
-						this.y1 = +first[1];
-						this.x2 = +second[0];
-						this.y2 = +second[1];
-						
-						if (third) {
-							this.x3 = +third[0];
-							this.y3 = +third[1];
-						}
-					}
-					function Text(string) {
-						var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text, justification, rotation, sliced;
-						
-						text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" (')).split('\\r\\n');
-						if (string.indexOf('justify ') > -1) {
-							sliced = string.slice(string.indexOf('justify ') + 8);
-							justification = sliced.slice(0, sliced.indexOf(')')).toLowerCase();
-						} else { justification = 'lowerleft'; }
-						if (string.indexOf('rotation') > -1) {
-							sliced = string.slice(string.indexOf('rotation ') + 9);
-							rotation = +sliced.slice(0, sliced.indexOf(')'));
-						} else { rotation = 0; }
-						
-						this.type = 'text';
-						this.content = text;
-						this.justification = justification;
-						this.rotation = rotation;
-						this.flipped = (string.indexOf('isFlipped True') > -1) ? true : false;
-						this.x1 = +coords[0];
-						this.y1 = +coords[1];
-					}
-					function Thermal(string) {
-						var begin, end;
-						
-						begin = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
-						string = string.slice(string.indexOf(')') + 2);
-						end = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
-						
-						this.type = 'thermal';
-						this.x0 = +begin[0];
-						this.y0 = +begin[1];
-						this.x1 = +end[0];
-						this.y1 = +end[1];
-					}
-					function Polygon(object, type, net) {
-						var i, coords;
-						
-						this.type = type;
-						this.net = net || null;
-						
-						for (i = 0; i < Object.keys(object).length; i += 1) {
-							if (typeof object[i] === 'string') {
-								if (object[i].indexOf('pt') > -1) {
-									coords = object[i].slice(object[i].indexOf('pt ') + 3, object[i].indexOf(')')).split(' ');
-									this['x' + i] = +coords[0];
-									this['y' + i] = +coords[1];
-								} else if (!net && object[i].indexOf('netNameRef') > -1) {
-									this.net = object[i].slice(object[i].indexOf('\"') + 1, object[i].lastIndexOf('\"'));
-								}
-							}
-						}
-					}
 					function handleIsland(object, net) {
 						var i, j;
 						
@@ -1691,7 +1907,7 @@
 													routes[currNum][k] = new Route(this['4'][i][j]);
 													k += 1;
 												} else if (this['4'][i][j].match(/\(text/i)) {
-													routes[currNum][k] = new Text(this['4'][i][j]);
+													routes[currNum][k] = new Text(this['4'][i][j], true);
 													k += 1;
 												}
 											} else if (typeof this['4'][i][j] === 'object') {
@@ -1750,9 +1966,9 @@
 			}
 		});
 		
-		padsLib = fileContent.getPads();
+		objectsLib = fileContent.getPadsAndOutlines();
 		boardOutline = fileContent.getBoardOutline();
-		if (boardOutline.length) { routes = fileContent.getRoutes(); }
-		createPadsList(padsLib);
+		if (boardOutline.board) { routes = fileContent.getRoutes(); }
+		createPadsList(objectsLib);
 	});
 }());
