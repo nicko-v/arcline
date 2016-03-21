@@ -677,7 +677,6 @@
 			for (key in lib) {
 				if (lib.hasOwnProperty(key)) {
 					path = (lib[key].shape.match(/mthole|target/i) || lib[key].hole === lib[key].width) ? newLib.holes : (lib[key].pth) ? newLib.metallized : newLib.nonMetallized;
-					if (!path.withSymbols) { Object.defineProperty(path, 'withSymbols', { value: 0, writable: true }); } // Добавляется скрытое свойство с количеством КП, у которых есть символ
 					
 					path[key] = {};
 					Object.defineProperties(path[key], {
@@ -702,6 +701,10 @@
 		}
 		
 		if (freeSymbolsAm.rnd === symbolsAmount[0] && freeSymbolsAm.rect === symbolsAmount[1]) { return; } // Ничего не делать если не было назначено ни одного символа
+		// Добавляется скрытое свойство с количеством КП, у которых есть символ:
+		Object.defineProperty(pads.metallized, 'withSymbols', { value: 0, writable: true });
+		Object.defineProperty(pads.nonMetallized, 'withSymbols', { value: 0, writable: true });
+		Object.defineProperty(pads.holes, 'withSymbols', { value: 0, writable: true });
 		
 		for (key in padsDescriptions) { // Записываем выбранные символы в объект с информацией о КП
 			if (padsDescriptions.hasOwnProperty(key)) {

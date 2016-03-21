@@ -621,7 +621,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 						horJustification  = (outlines[key][i].justification.match(/left/i))  ? 0 : (outlines[key][i].justification.match(/right/i)) ? 2 : 1;
 						vertJustification = (outlines[key][i].justification.match(/upper/i)) ? 3 : (outlines[key][i].justification.match(/lower/i)) ? 1 : 2;
 						result.push(0, 'TEXT', 8, 'Components', 62, 7, 7, 'win_eskd', 40, 1.75, 50, outlines[key][i].rotation, 51, 15, 72, horJustification, 73, vertJustification,
-					              10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x1 * mirr + offsetX), 21, (outlines[key][i].y1 + offsetY), 1, (outlines[key][i].content[0] || ' '));
+					              10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x1 * mirr + offsetX), 21, (outlines[key][i].y1 + offsetY), 1, (outlines[key][i].content || ' '));
 						break;
 					}
 				}
