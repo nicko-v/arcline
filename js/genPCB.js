@@ -1,4 +1,4 @@
-function generateLayers(lib) {
+function generatePCB(lib) {
 	'use strict';
 	var x, y, w, h, rotation, side, symbol, d = {}, result = { top: [], bot: [], thru: [], skipped: 0 }, lineWidth = '(width 0.05) )', line = '(line ', arc = '(triplePointArc ';
 	

@@ -122,6 +122,10 @@ p {
 	font-size: 1.4rem;
 	color: #bbb;
 }
+.help-list-li {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
 .help-wrapper {
 	max-height: 0;
 	border-top: 2px solid #262d39;
