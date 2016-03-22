@@ -1724,9 +1724,9 @@
 					return result;
 				}
 			},
-			getBoardOutline: { // Возвращает массив с координатами контуров платы
+			getBoardOutline: { // Возвращает объект с координатами объектов на слоях Board, Top(Bot) Assy
 				value: function () {
-					var i, j, key, currPath, result = {}, layerName, layerNum = {}, minX = Infinity, minY = Infinity, coords;
+					var i, j, key, currPath, result = {}, layerName, layerNum = {}, coords, offset;
 					
 					function parser(string) {
 						var result = [];
@@ -1735,9 +1735,6 @@
 							coords = string.slice(string.indexOf('(pt') + 4, string.indexOf(')')).split(' ');
 							result.push(+coords[0], +coords[1]);
 							string = string.slice(string.indexOf(')') + 2);
-							// Ищет левую нижнюю точку контура что бы узнать насколько контур смещен от нуля координат:
-							if (result[result.length - 2] < minX) { minX = result[result.length - 2]; }
-							if (result[result.length - 1] < minY) { minY = result[result.length - 1]; }
 						}
 						// Если три набора координат - значит арка, переносим координаты центра арки в конец массива что бы порядок координат был таким же, как у линий:
 						if (result.length === 6) { result.push(result[0], result[1]); result.shift(); result.shift(); }
@@ -1750,12 +1747,26 @@
 							
 							for (i = 0; i < coords.length; i += 1) {
 								if (i % 2) {
-									coords[i] = coords[i] - minY;
+									coords[i] = coords[i] - offset.y;
 								} else {
-									coords[i] = coords[i] - minX;
+									coords[i] = coords[i] - offset.x;
 								}
 							}
 						});
+					}
+					function getBoardOffset(array) {
+						var minX = Infinity, minY = Infinity;
+						
+						array.forEach(function (coords) {
+							var i;
+							
+							for (i = 0; i < coords.length; i += 1) {
+								if (i % 2 && coords[i] < minY) { minY = coords[i]; }
+								if (!i % 2 && coords[i] < minX) { minX = coords[i]; }
+							}
+						});
+						
+						return { x: minX, y: minY };
 					}
 					
 					try {
@@ -1805,9 +1816,6 @@
 								
 							}
 						}
-						
-						for (key in result) { if (result.hasOwnProperty(key)) { stickToZero(result[key]); } }
-						
 					} catch (err) {
 						showPopup({
 							header: 'Ошибка',
@@ -1820,8 +1828,10 @@
 					}
 					
 					if (result.board) {
-						result.shiftX = minX;
-						result.shiftY = minY;
+						offset = getBoardOffset(result.board);
+						for (key in result) { if (result.hasOwnProperty(key)) { stickToZero(result[key]); } }
+						result.shiftX = offset.x;
+						result.shiftY = offset.y;
 						setStepStatus(4, true);
 					} else {
 						showPopup({
@@ -1883,10 +1893,8 @@
 											
 											if (currNum && currType) {
 												routes[currNum] = {
-													// Два типа имени - в основном заменяются некоторые символы, которые нельзя использовать в dxf в названиях слоев,
-													// в дополнительном - имя слоя сохраняется как есть, его можно использовать в надписях
-													name: layerName.toUpperCase().replace(/\+/g, 'plus').replace(/\.|\:|\;|\*|\=|<|\>|\^|\“|\‘|\?|\/|\\|\|/g, '_'),
-													realName: layerName.toUpperCase(),
+													// Заменяются некоторые символы, которые нельзя использовать в dxf
+													name: layerName.toUpperCase().replace(/\+/g, 'plus').replace(/\.|\:|\;|\*|\=|<|\>|\^|\“|\_|\‘|\?|\/|\\|\|/g, '-'),
 													type: currType
 												};
 												break;
@@ -1962,6 +1970,7 @@
 					}
 					
 					setStepStatus(5, true);
+					// Если на слое ничего нет - удаляем из объекта:
 					for (i in routes) { if (routes.hasOwnProperty(i)) { if (!routes[i].hasOwnProperty(0)) { delete routes[i]; } } }
 					
 					return routes;

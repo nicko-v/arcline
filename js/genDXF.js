@@ -1496,7 +1496,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		for (layerNum in routes) {
 			if (routes.hasOwnProperty(layerNum)) {
 				drawRoutes(routes[layerNum]);
-				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, headers[12] + ' ' + routes[layerNum].realName);
+				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, headers[12] + ' ' + routes[layerNum].name);
 			}
 		}
 		
