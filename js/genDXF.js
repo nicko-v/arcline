@@ -17,11 +17,6 @@
 *   70 - флаг для полилиний, 1 - закрытая
 *   72 - горизонтальное выравнивание текста (0 - left, 1 - center, 2 - right)
 *   73 - вертикальное выравнивание текста (0 - baseline, 1 - bottom, 2 - middle, 3 - top)
-* Используемые заголовки:
-*   [0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2] - желтый текст высотой 3.5
-*   [0, 'LINE', 8, 'Drill_Table', 62, 1] - красная линия для таблицы или платы
-*   [0, 'LINE', 8, 'Drill_Table', 62, 3] - зеленая линия для символов
-*   [0, 'LINE', 8, 'Grid', 62, 4] - бирюзовая линия для сетки
 */
 function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) {
 	'use strict';
@@ -185,6 +180,12 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		d.rect.x0y1(0);
 		d.rect.x0y0(1);
 	}
+	function degrToRad(angle) {
+		return angle * Math.PI / 180;
+	}
+	function radToDegr(angle) {
+		return angle / Math.PI * 180;
+	}
 	function fillTable(object) {
 		var startPoint, lineStart, key;
 		
@@ -247,26 +248,31 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		checkLib(object.holes);
 		return result;
 	}
-	function drawArc(x1, y1, x2, y2, centerX, centerY, mirrored, offsetX, offsetY, layer) {
-		var start, end, radius, box;
+	function drawArc(A, B, centerX, centerY, mirrored, offsetX, offsetY, layer) {
+		var start, end, radius, box, cosA, cosB;
 		
 		// Ищется длина отрезка от центра до точки начала арки, т.к. арка может быть не обязательно половиной круга,
 		// значит нельзя просто взять разницу между координатой X центра и X начала:
-		radius = Math.sqrt(Math.pow(Math.abs(centerY - y1), 2) + Math.pow(Math.abs(centerX - x1), 2));
+		radius = Math.sqrt(Math.pow(Math.abs(centerY - A.y), 2) + Math.pow(Math.abs(centerX - A.x), 2));
 		
-		// Для задания арки, надо знать углы начальной и конечной точек относительно центра:
-		start = Math.acos(Math.round((x1 - centerX) / radius * 1000) / 1000) * 180 / Math.PI;
-		end   = Math.acos(Math.round((x2 - centerX) / radius * 1000) / 1000) * 180 / Math.PI;
+		// Для задания арки, надо знать углы начальной и конечной точек относительно положительной части оси Х.
+		// Проверка на больше/меньше 1/-1 нужна из-за неточности вычислений (например, косинус может получиться 1.005 и арккосинус будет NaN):
+		cosA = (A.x - centerX) / radius;
+		cosB = (B.x - centerX) / radius;
+		cosA = cosA > 1 ? 1 : cosA < -1 ? -1 : cosA;
+		cosB = cosB > 1 ? 1 : cosB < -1 ? -1 : cosB;
+		start = radToDegr(Math.acos(cosA));
+		end   = radToDegr(Math.acos(cosB));
 		
 		// Т.к. расчет углов до начала и конца арки идет только с использованием координаты X, найденные значения будут в диапазоне 0...180,
 		// т.е. в положительной части Y, поэтому проверяем, не были ли точки начала или конца арки в отрицательной части и отражаем угол при необходимости:
-		if (centerY > y1) { start = 360 - start; }
-		if (centerY > y2) { end   = 360 - end; }
+		if (centerY > A.y) { start = 360 - start; }
+		if (centerY > B.y) { end   = 360 - end; }
 		
 		if (mirrored) {
 			box = start;
 			start = 180 - end;
-			end = 180 - box;
+			end   = 180 - box;
 			centerX = offsetX + boardWidth - centerX;
 		} else {
 			centerX = centerX + offsetX;
@@ -366,7 +372,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 					x2 = (mirrored) ? shift + boardWidth - coords[2] : coords[2] + shift;
 					result.push(0, 'LINE', 8, layer, 62, 256, 10, x1, 20, (coords[1] + th + space), 11, x2, 21, (coords[3] + th + space));
 				} else if (coords.length === 6) {
-					drawArc(coords[0], coords[1], coords[2], coords[3], coords[4], coords[5], mirrored, shift, (th + space), layer);
+					drawArc({ x: coords[0], y: coords[1] }, { x: coords[2], y: coords[3] }, coords[4], coords[5], mirrored, shift, (th + space), layer);
 				}
 			});
 		}
@@ -506,6 +512,57 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				}
 			}
 		}
+		function drawPolylineArc(A, B, centerX, centerY, mirr, thickness, layer) {
+			var bulge, radius, chord, angle, start, end, cosA, cosB, cosAOB, tmp;
+			
+			radius = Math.sqrt(Math.pow(Math.abs(centerY - A.y), 2) + Math.pow(Math.abs(centerX - A.x), 2));
+			
+			// Если начальная и конечная точки совпадают, то дуга - круг, значит надо немного (на 1 градус) сместить одну из точек, что бы дуга нарисовалась верно:
+			if (A.x === B.x && A.y === B.y) {
+				tmp = A.x;
+				A.x = centerX + (A.x - centerX) * Math.cos(degrToRad(1)) - (A.y - centerY) * Math.sin(degrToRad(1));
+				A.y = centerY + (A.y - centerY) * Math.cos(degrToRad(1)) + (tmp - centerX) * Math.sin(degrToRad(1));
+			}
+			
+			chord = Math.sqrt(Math.pow(Math.abs(A.y - B.y), 2) + Math.pow(Math.abs(A.x - B.x), 2)); // Теорема Пифагора
+			cosA  = (A.x - centerX) / radius;
+			cosB  = (B.x - centerX) / radius;
+			cosA  = cosA > 1 ? 1 : cosA < -1 ? -1 : cosA;
+			cosB  = cosB > 1 ? 1 : cosB < -1 ? -1 : cosB;
+			start = radToDegr(Math.acos(cosA));
+			end   = radToDegr(Math.acos(cosB));
+			
+			// Т.к. расчет углов до начала и конца арки идет только с использованием координаты X, найденные значения будут в диапазоне 0...180,
+			// т.е. в положительной части Y, поэтому проверяем, не были ли точки начала или конца арки в отрицательной части и отражаем угол при необходимости:
+			if (centerY > A.y) { start = 360 - start; }
+			if (centerY > B.y) { end   = 360 - end; }
+			
+			// Конечная точка не может быть меньше начальной, но если это так, значит она пересекла ось X снизу:
+			if (end < start) { end += 360; }
+			
+			// Находим угол между началом, центром и концом дуги. Если разница между углом к начальной точке и углом к конечной точке больше 180,
+			// значит дуга является большим сегментом круга и искать надо внешний угол, иначе - меньшим:
+			cosAOB = (Math.pow(radius, 2) + Math.pow(radius, 2) - Math.pow(chord, 2)) / (radius * radius * 2); // Теорема косинусов. Треугольник равнобедренный, => AO и OB равны радиусу
+			cosAOB = cosAOB > 1 ? 1 : cosAOB < -1 ? -1 : cosAOB;
+			angle  = (end - start <= 180) ? Math.acos(cosAOB) : 2 * Math.PI - Math.acos(cosAOB);
+			
+			bulge = Math.tan(angle / 4) * mirr; // Формула расчета выпуклости через тангенс взята из спецификации DXF
+			
+			result.push(0, 'POLYLINE', 8, layer, 66, 1, 10, 0, 20, 0, 40, thickness, 41, thickness,
+						      0, 'VERTEX',   8, layer, 10, (A.x * mirr + offsetX), 20, (A.y + offsetY), 42, bulge,
+						      0, 'VERTEX',   8, layer, 10, (B.x * mirr + offsetX), 20, (B.y + offsetY), 42, bulge,
+						      0, 'SEQEND',   8, layer,
+			            0, 'POLYLINE', 8, layer, 66, 1, 10, 0, 20, 0, 40, thickness, 41, thickness, // Скругление на начальной точке дуги
+			            0, 'VERTEX',   8, layer, 10, (A.x * mirr + offsetX + thickness / 4), 20, (A.y + offsetY), 42, 1,
+			            0, 'VERTEX',   8, layer, 10, (A.x * mirr + offsetX - thickness / 4), 20, (A.y + offsetY), 42, 1,
+			            0, 'VERTEX',   8, layer, 10, (A.x * mirr + offsetX + thickness / 4), 20, (A.y + offsetY), 42, 1,
+			            0, 'SEQEND',   8, layer,
+			            0, 'POLYLINE', 8, layer, 66, 1, 10, 0, 20, 0, 40, thickness, 41, thickness, // Скругление на конечной точке дуги
+			            0, 'VERTEX',   8, layer, 10, (B.x * mirr + offsetX + thickness / 4), 20, (B.y + offsetY), 42, 1,
+			            0, 'VERTEX',   8, layer, 10, (B.x * mirr + offsetX - thickness / 4), 20, (B.y + offsetY), 42, 1,
+			            0, 'VERTEX',   8, layer, 10, (B.x * mirr + offsetX + thickness / 4), 20, (B.y + offsetY), 42, 1,
+			            0, 'SEQEND',   8, layer);
+		}
 		
 		offsetX = views * (boardWidth + space) - shiftX - hw;
 		offsetY = th + space - shiftY;
@@ -516,24 +573,26 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		}
 		
 		for (key in routes) {
-			if (routes.hasOwnProperty(key)) {
+			if (routes.hasOwnProperty(key) && typeof routes[key] === 'object') {
 				
-				if (typeof routes[key] === 'object' && routes[key].type === 'line') {
+				if (routes[key].type === 'line') {
 					result.push(0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width,
 					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX), 20, (routes[key].y1 + offsetY),
 					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX), 20, (routes[key].y2 + offsetY),
 					            0, 'SEQEND',   8, routes.name,
 					            0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width, // Скругление на начальной точке отрезка
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX - routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y1 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, (routes[key].y1 + offsetY), 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX - routes[key].width / 4), 20, (routes[key].y1 + offsetY), 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x1 * mirr + offsetX + routes[key].width / 4), 20, (routes[key].y1 + offsetY), 42, 1,
 					            0, 'SEQEND',   8, routes.name,
 					            0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, routes[key].width, 41, routes[key].width, // Скругление на конечной точке отрезка
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX - routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
-					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, routes[key].y2 + offsetY, 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, (routes[key].y2 + offsetY), 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX - routes[key].width / 4), 20, (routes[key].y2 + offsetY), 42, 1,
+					            0, 'VERTEX',   8, routes.name, 10, (routes[key].x2 * mirr + offsetX + routes[key].width / 4), 20, (routes[key].y2 + offsetY), 42, 1,
 					            0, 'SEQEND',   8, routes.name);
-				} else if (typeof routes[key] === 'object' && routes[key].type === 'text') {
+				} else if (routes[key].type === 'arc') {
+					drawPolylineArc({ x: routes[key].x1, y: routes[key].y1 }, { x: routes[key].x2, y: routes[key].y2 }, routes[key].x3, routes[key].y3, mirr, routes[key].width, routes.name);
+				} else if (routes[key].type === 'text') {
 					horJustification  = (routes[key].justification.match(/left/i))  ? 0 : (routes[key].justification.match(/right/i)) ? 2 : 1;
 					vertJustification = (routes[key].justification.match(/upper/i)) ? 3 : (routes[key].justification.match(/lower/i)) ? 1 : 2;
 					
@@ -544,20 +603,20 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 						// От поворота отнимается/прибавляется 90 градусов потому что при повороте на 0 строки идут сверху вниз, то есть смещаются на 270 градусов.
 						if (vertJustification === 1) { // Если привязка к нижней части - меняем ее на верхнюю для удобства
 							vertJustification = 3;
-							routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
-							routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
+							routes[key].x1 += Math.round(Math.cos(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
+							routes[key].y1 += Math.round(Math.sin(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length - 1) * 2.5 + 1.75) * 1000) / 1000;
 						} else if (vertJustification === 2) { // Если привязка к центру - меняем ее на верхнюю для удобства
 							vertJustification = 3;
 							if (routes[key].content.length % 2 === 0) { // Если четное количество строк
-								routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
-								routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
+								routes[key].x1 += Math.round(Math.cos(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
+								routes[key].y1 += Math.round(Math.sin(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length / 2) * 2.5 - 0.75 / 2) * 1000) / 1000;
 							} else {
-								routes[key].x1 += Math.round(Math.cos((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
-								routes[key].y1 += Math.round(Math.sin((routes[key].rotation + 90) * Math.PI / 180) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
+								routes[key].x1 += Math.round(Math.cos(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
+								routes[key].y1 += Math.round(Math.sin(degrToRad(routes[key].rotation + 90)) * ((routes[key].content.length - 1) / 2 * 2.5 + 1.75 / 2) * 1000) / 1000;
 							}
 						}
-						strOffsetX = Math.round(Math.cos((routes[key].rotation - 90) * Math.PI / 180) * 2.5 * 1000) / 1000;
-						strOffsetY = Math.round(Math.sin((routes[key].rotation - 90) * Math.PI / 180) * 2.5 * 1000) / 1000;
+						strOffsetX = Math.round(Math.cos(degrToRad(routes[key].rotation - 90)) * 2.5 * 1000) / 1000;
+						strOffsetY = Math.round(Math.sin(degrToRad(routes[key].rotation - 90)) * 2.5 * 1000) / 1000;
 						
 						for (i = 0; i < routes[key].content.length; i += 1) {
 							result.push(0, 'TEXT', 8, routes.name, 62, 256, 7, 'win_eskd', 40, 1.75, 50, routes[key].rotation, 51, 15, 72, horJustification, 73, vertJustification,
@@ -566,9 +625,9 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 						}
 					}
 					
-				} else if (typeof routes[key] === 'object' && routes[key].type.match(/cutout|plane|copperpour/i)) {
+				} else if (routes[key].type.match(/cutout|plane|copperpour/i)) {
 					drawPolygon(routes[key], (routes[key].type === 'cutout' ? 'Cutouts' : 'Polygons'));
-				} else if (typeof routes[key] === 'object' && routes[key].type === 'thermal') {
+				} else if (routes[key].type === 'thermal') {
 					result.push(0, 'LINE', 8, 'Polygons', 62, 256, 10, (routes[key].x0 * mirr + offsetX), 20, (routes[key].y0 + offsetY), 11, (routes[key].x1 * mirr + offsetX), 21, (routes[key].y1 + offsetY));
 				}
 				
@@ -615,7 +674,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 						result.push(0, 'LINE', 8, 'Components', 62, 256, 10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x2 * mirr + offsetX), 21, (outlines[key][i].y2 + offsetY));
 						break;
 					case 'arcs':
-						drawArc(outlines[key][i].x1, outlines[key][i].y1, outlines[key][i].x2, outlines[key][i].y2, outlines[key][i].x3, outlines[key][i].y3, outlines[key][i].flipped, offsetX, offsetY, 'Components');
+						drawArc({ x: outlines[key][i].x1, y: outlines[key][i].y1 }, { x: outlines[key][i].x2, y: outlines[key][i].y2 }, outlines[key][i].x3, outlines[key][i].y3, outlines[key][i].flipped, offsetX, offsetY, 'Components');
 						break;
 					case 'texts':
 						horJustification  = (outlines[key][i].justification.match(/left/i))  ? 0 : (outlines[key][i].justification.match(/right/i)) ? 2 : 1;

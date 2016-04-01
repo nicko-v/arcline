@@ -919,7 +919,7 @@
 			var coords = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' '), text, justification, rotation, sliced;
 			
 			text = string.slice(string.indexOf(') \"') + 3, string.indexOf('\" ('));
-			if (split) { text = text.split('\\r\\n'); }
+			text = split ? text.split('\\r\\n') : text.replace(/\\r\\n/g, '. ');
 			
 			if (string.indexOf('justify ') > -1) {
 				sliced = string.slice(string.indexOf('justify ') + 8);
@@ -1079,7 +1079,7 @@
 				value: function () {
 					var comp, compPin, compsOutlines = { lines: [], arcs: [], texts: [] }, comps = {}, coords, cosA, currPath, height, i, flipped, j, k,
 						key, l, name, netName, node, outline, pth = true, pad, padName, padNum, pads = {}, patternGraphics, patternName, patternOrigin,
-						patterns = {}, pin, pinDes, pinMap, rotation, shiftX, shiftY, type, refDesCenter, result = {}, side, sinA, vias = {}, width, x, y;
+						patterns = {}, pin, pinDes, pinMap, rotation, shiftX, shiftY, type, refDesCenter, result = {}, samePads, side, sinA, vias = {}, width, x, y;
 					
 					function parser(type, string) {
 						var i, tmp, values = [], result = '',
@@ -1270,10 +1270,33 @@
 						}
 					}
 					function isPadsSame(obj1, obj2) {
-						var rnd = new RegExp('ellipse|oval|mthole|target', 'i'), rect = new RegExp('rect|rndrect', 'i');
+						var result = {}, shape, rnd = new RegExp('ellipse|oval|mthole|target', 'i'), rect = new RegExp('rect|rndrect', 'i');
 						
-						return (((obj1.width === obj2.width && obj1.height === obj2.height) || (obj1.width === obj2.height && obj1.height === obj2.width)) &&
-						          obj1.hole === obj2.hole && obj1.pth === obj2.pth && ((obj1.shape.match(rnd) && obj2.shape.match(rnd)) || (obj1.shape.match(rect) && obj2.shape.match(rect)))) ? true : false;
+						function isSameShape(shape1, shape2) {
+							return (shape1.match(rnd) && shape2.match(rnd)) || (shape1.match(rect) && shape2.match(rect));
+						}
+						
+						if (obj1.width  === obj2.width &&
+						    obj1.height === obj2.height &&
+						    obj1.hole   === obj2.hole &&
+						    obj1.pth    === obj2.pth &&
+						    isSameShape(obj1.shape, obj2.shape)) {
+							result.same = true;
+							result.rotated = false;
+						} else if (obj1.width  === obj2.height &&
+						           obj1.height === obj2.width &&
+						           obj1.hole   === obj2.hole &&
+						           obj1.pth    === obj2.pth &&
+						           isSameShape(obj1.shape, obj2.shape)) {
+							result.same = true;
+							result.rotated = true;
+						} else {
+							result.same = false;
+							result.rotated = false;
+						}
+						
+							
+						return result;
 					}
 					function getPatternCenter(pattern) {
 						var i, j, min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
@@ -1395,10 +1418,20 @@
 								
 								for (key in currPath) {
 									if (currPath.hasOwnProperty(key) && key !== name && !currPath[key].mergedWith) {
-										if (isPadsSame(currPath[key], currPath[name])) {
+										samePads = isPadsSame(currPath[key], currPath[name]);
+										if (samePads.same) {
+											
+											if (samePads.rotated) { // Если КП одинаковые по размерам, но с разным поворотом
+												for (j = 0; j < currPath[name].coords.length; j += 1) {
+													currPath[name].coords[j].rotation += 90;
+													if (currPath[name].coords[j].rotation >= 360) { currPath[name].coords[j].rotation -= 360; }
+												}
+											}
+											
 											currPath[key].coords = currPath[key].coords.concat(currPath[name].coords);
 											currPath[key].same.push(name); // Добавляем в КП, с которой объединили, текущее название что бы выводить его на странице
 											currPath[name].mergedWith = currPath[key]; // Сохраняем ссылку на КП, с которой объединяем, что бы потом найти, куда она переехала
+											currPath[name].rotatedAtMerge = samePads.rotated;
 											break;
 										}
 									}
@@ -1538,7 +1571,7 @@
 						// Поиск по блоку netlist -> net.
 						// Получение связей и добавление их в указанные выводы указанных компонентов:
 						for (i = 0; i < Object.keys(this['3']).length; i += 1) {
-							if (this['3'][i].header.indexOf('(net') > -1) {
+							if (typeof this['3'][i] === 'object' && this['3'][i].header.indexOf('(net') > -1) {
 								netName = parser('net', this['3'][i].header);
 								if (netName) {
 									for (j = 0; j < Object.keys(this['3'][i]).length; j += 1) {
@@ -1601,13 +1634,14 @@
 										if (drillViews < 2 && side === 'bot') { drillViews = 2; }
 										// В случае, если элемент повернут - прибавляем его поворот к повороту КП. Если получилось больше 360 (полный оборот) - уменьшаем на 360
 										rotation = (comps[key].rotation) ? comps[key].rotation + comps[key].pins[pinDes].rotation : comps[key].pins[pinDes].rotation;
+										if (pads[padName].rotatedAtMerge) { rotation += 90; }
 										while (rotation >= 360) { rotation -= 360; }
 										
 										pad.coords.push({ x: Math.round((comps[key].origin.x + x) * 1000) / 1000,
 										                  y: Math.round((comps[key].origin.y + y) * 1000) / 1000,
 										                  side: side,
 										                  net: netName,
-										                  rotation: +rotation
+										                  rotation: rotation
 										                });
 										
 										// Записывает в каких компонентах использована площадка:
