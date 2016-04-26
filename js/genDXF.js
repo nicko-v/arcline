@@ -29,8 +29,8 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		columns = pth + npth,
 		hw = 42, // Длина ячейки заголовков
 		tw = colWidth * columns,
-		th = colHeight * rows, // Общая высота таблицы
-		dashSize = colWidth / 2,
+		th = colHeight * rows, // Общая высота таблицы сверловки
+		dashSize = colWidth / 2, // Длина прочерка в ячейках таблицы сверловки
 		result = [0, 'SECTION',
 		          2, 'HEADER',
 		          9, '$ACADVER',
@@ -138,25 +138,8 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		          70, 64,
 		          62, 8,
 		          6, 'CONTINUOUS'],
-		headers = ['\\U+041E\\U+0431\\U+043E\\U+0437\\U+043D\\U+0430\\U+0447\\U+0435\\U+043D\\U+0438\\U+0435', // [0] Обозначение
-							 '\\U+041A\\U+043E\\U+043B\\U+0438\\U+0447\\U+0435\\U+0441\\U+0442\\U+0432\\U+043E', // [1] Количество
-							 '\\U+0414\\U+0438\\U+0430\\U+043C\\U+0435\\U+0442\\U+0440', // [2] Диаметр
-							 '\\U+043E\\U+0442\\U+0432\\U+0435\\U+0440\\U+0441\\U+0442\\U+0438\\U+044F, \\U+043C\\U+043C', // [3] отверстия, мм
-							 '\\U+0420\\U+0430\\U+0437\\U+043C\\U+0435\\U+0440\\U+044B', // [4] Размеры
-							 '\\U+043A\\U+043E\\U+043D\\U+0442. \\U+043F\\U+043B\\U+043E\\U+0449., \\U+043C\\U+043C', // [5] конт. площ., мм
-							 '\\U+043C\\U+043E\\U+043D\\U+0442. \\U+043E\\U+043A\\U+043D\\U+0430, \\U+043C\\U+043C', // [6] монт. окна, мм
-							 '\\U+0423\\U+043A\\U+0430\\U+0437\\U+0430\\U+043D\\U+0438\\U+0435', // [7] Указание
-							 '\\U+043E \\U+043C\\U+0435\\U+0442\\U+0430\\U+043B\\U+043B\\U+0438\\U+0437\\U+0430\\U+0446\\U+0438\\U+0438', // [8] о металлизации
-							 '\\U+0415\\U+0441\\U+0442\\U+044C', // [9] Есть
-							 '\\U+041D\\U+0435\\U+0442', // [10] Нет
-							 '\\U+0422\\U+0410\\U+0411\\U+041B\\U+0418\\U+0426\\U+0410 2', // [11] ТАБЛИЦА 2
-							 '\\U+0421\\U+043B\\U+043E\\U+0439', // [12] Слой
-							 '\\U+043E\\U+0442\\U+0440\\U+0430\\U+0436\\U+0435\\U+043D', // [13] отражен
-		           '\\U+0421\\U+0431\\U+043E\\U+0440\\U+043E\\U+0447\\U+043D\\U+044B\\U+0439 \\U+0447\\U+0435\\U+0440\\U+0442\\U+0435\\U+0436', // [14] Сборочный чертеж
-		           '\\U+0421\\U+0431\\U+043E\\U+0440\\U+043A\\U+0430 \\U+0441 \\U+044D\\U+043B\\U+0435\\U+043C\\U+0435\\U+043D\\U+0442\\U+0430\\U+043C\\U+0438' // [15] Сборка с элементами
-							 ],
-		cellPadding = 3, // Расстояние от границы ячейки до символа
-		y = (th - colHeight / 2), // Центр символа в ячейке
+		cellPadding = 3, // Расстояние от границы ячейки таблицы сверловки до символа
+		y = (th - colHeight / 2), // Центр символа в ячейке таблицы сверловки
 		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
 		space = 50, // Расстояние между чертежами
 		shiftX = boardOutline.shiftX || 0, // Смещение левого нижнего края платы относительно нуля
@@ -185,6 +168,17 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	}
 	function radToDegr(angle) {
 		return angle / Math.PI * 180;
+	}
+	function toUnicode(string) {
+		var i, unicodeSeq, result = '';
+		
+		for (i = 0; i < string.length; i += 1) {
+			unicodeSeq = string.charCodeAt(i).toString(16).toUpperCase();
+			while (unicodeSeq.length < 4) { unicodeSeq = '0' + unicodeSeq; }
+			result += '\\U+' + unicodeSeq;
+		}
+		
+		return result;
 	}
 	function fillTable(object) {
 		var startPoint, lineStart, key;
@@ -385,7 +379,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		if (name) {
 			result.push(0, 'TEXT', 8, 'Grid', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 1, 73, 2,
 			            10, shift, 20, (th + space + boardHeight), 11, (shift + boardWidth / 2), 21, (th + space + boardHeight + 20),
-			            1, (name + (mirrored ? ' (' + headers[13] + ')' : '')));
+			            1, (name + (mirrored ? ' (' + toUnicode('отражен') + ')' : '')));
 		}
 		
 		views += 1;
@@ -464,19 +458,19 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			
 			return result;
 		}
-		function drawPads(pad, shape, poly) {
+		function drawPads(pad, poly) {
 			var i;
 			
 			for (i = 0; i < pad.coords.length; i += 1) {
 				if ((routes.name.toLowerCase().indexOf(pad.coords[i].side.toLowerCase()) > -1) ||
 				    (routes.type === 'signal' && pad.coords[i].side === 'thru') ||
 				    (routes.type === 'plane' && poly && poly.net === pad.coords[i].net && pad.coords[i].side === 'thru' && isInside(pad.coords[i].x, pad.coords[i].y, poly))) {
-					if (shape === 'rect') {
+					if (pad.shape === 'rect') {
 						result.push(0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, pad.coords[i].height, 41, pad.coords[i].height,
 							          0, 'VERTEX',   8, routes.name, 10, (pad.coords[i].x * mirr + offsetX - pad.coords[i].width / 2), 20, (pad.coords[i].y + offsetY),
 							          0, 'VERTEX',   8, routes.name, 10, (pad.coords[i].x * mirr + offsetX + pad.coords[i].width / 2), 20, (pad.coords[i].y + offsetY),
 							          0, 'SEQEND',   8, routes.name);
-					} else {
+					} else if (pad.shape === 'rnd') {
 						result.push(0, 'POLYLINE', 8, routes.name, 66, 1, 10, 0, 20, 0, 40, pad.coords[i].height, 41, pad.coords[i].height,
 								        0, 'VERTEX',   8, routes.name, 10, (pad.coords[i].x * mirr + offsetX + pad.coords[i].height / 4), 20, (pad.coords[i].y + offsetY), 42, 1,
 								        0, 'VERTEX',   8, routes.name, 10, (pad.coords[i].x * mirr + offsetX - pad.coords[i].height / 4), 20, (pad.coords[i].y + offsetY), 42, 1,
@@ -502,12 +496,12 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			if (polyInfo.type === 'plane' && polyInfo.net) {
 				for (key in lib.metallized) {
 					if (lib.metallized.hasOwnProperty(key)) {
-						drawPads(lib.metallized[key], (key.indexOf('rnd') > -1 ? 'rnd' : 'rect'), polyInfo);
+						drawPads(lib.metallized[key], polyInfo);
 					}
 				}
 				for (key in lib.nonMetallized) {
 					if (lib.nonMetallized.hasOwnProperty(key)) {
-						drawPads(lib.nonMetallized[key], (key.indexOf('rnd') > -1 ? 'rnd' : 'rect'), polyInfo);
+						drawPads(lib.nonMetallized[key], polyInfo);
 					}
 				}
 			}
@@ -638,12 +632,12 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		drawHoles(lib.holes, (routes.type === 'signal' ? false : true), (routes.type === 'signal' ? true : false), offsetX, offsetY, mirr);
 		for (key in lib.metallized) {
 			if (lib.metallized.hasOwnProperty(key)) {
-				drawPads(lib.metallized[key], lib.metallized[key].shape);
+				drawPads(lib.metallized[key]);
 			}
 		}
 		for (key in lib.nonMetallized) {
 			if (lib.nonMetallized.hasOwnProperty(key)) {
-				drawPads(lib.nonMetallized[key], lib.nonMetallized[key].shape);
+				drawPads(lib.nonMetallized[key]);
 			}
 		}
 	}
@@ -692,14 +686,14 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			drawHoles(lib.holes, true, true, offsetX, offsetY, 1);
 			drawHoles(lib.metallized, false, true, offsetX, offsetY, 1);
 			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, 1);
-			drawBoardOutline(false, false, headers[15] + ' - TOP', true, false);
+			drawBoardOutline(false, false, toUnicode('Сборка с элементами') + ' - TOP', true, false);
 		}
 		if (botView) {
 			offsetX = (views + (topView ? 0 : 1)) * (boardWidth + space) + boardWidth + shiftX - hw;
 			drawHoles(lib.holes, true, true, offsetX, offsetY, -1);
 			drawHoles(lib.metallized, false, true, offsetX, offsetY, -1);
 			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, -1);
-			drawBoardOutline(true, false, headers[15] + ' - BOTTOM', false, true);
+			drawBoardOutline(true, false, toUnicode('Сборка с элементами') + ' - BOTTOM', false, true);
 		}
 	}
 	
@@ -1471,18 +1465,18 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	result.push(0, 'ENDTAB', 0, 'ENDSEC');
 	/* -=-=-=- */
 	
-	/* Построение таблицы */
+	/* Построение таблицы сверловки */
 	// Ячейки заголовков
-	result.push(0, 'SECTION', 2, 'ENTITIES');
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21,  0);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21,  0);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 15, 11,   0,  21, 15);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 30, 11,   0,  21, 30);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 45, 11,   0,  21, 45);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 60, 11,   0,  21, 60);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 75, 11,   0,  21, 75);
+	result.push(0, 'SECTION', 2, 'ENTITIES',
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21,  0,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21,  0,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 15, 11,   0,  21, 15,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 30, 11,   0,  21, 30,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 45, 11,   0,  21, 45,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 60, 11,   0,  21, 60,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 75, 11,   0,  21, 75);
 	
 	// Ячейки данных
 	skippedCells = determineEmptyCells(lib); // Ячейки без значений
@@ -1502,25 +1496,25 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, tw, 20, 0, 11, tw, 21, colHeight);
 	/* -=-=-=- */
 	
-	/* Заполнение таблицы */
+	/* Заполнение таблицы сверловки */
 	// Название таблицы
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, headers[11]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, toUnicode('ТАБЛИЦА 2'));
 	
 	// Тексты заголовков
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5,  1, headers[0]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5,  1, headers[1]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1, headers[2]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1, headers[3]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1, headers[4]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1, headers[5]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1, headers[4]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1, headers[6]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1, headers[7]);
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1, headers[8]);
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5,  1, toUnicode('Обозначение'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5,  1, toUnicode('Количество'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1, toUnicode('Диаметр'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1, toUnicode('отверстия, мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1, toUnicode('Размеры'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1, toUnicode('конт. площ., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1, toUnicode('Размеры'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1, toUnicode('монт. окна, мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1, toUnicode('Указание'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1, toUnicode('о металлизации'));
 	
 	// Значения ячеек
-	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, headers[9]); } // Металлизация - "Есть"
-	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, headers[10]); } // Металлизация - "Нет"
+	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Есть')); } // Металлизация - "Есть"
+	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Нет')); } // Металлизация - "Нет"
 	
 	radius = (colHeight / 2 - cellPadding);
 	
@@ -1545,8 +1539,8 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		});
 		
 		// Построение чертежа сверловки
-		drawBoardOutline(false, true, headers[12] + ' DRILLTOP');
-		if (drillViews === 2) { drawBoardOutline(true, true, headers[12] + ' DRILLBOTTOM'); }
+		drawBoardOutline(false, true, toUnicode('Слой') + ' DRILLTOP');
+		if (drillViews === 2) { drawBoardOutline(true, true, toUnicode('Слой') + ' DRILLBOTTOM'); }
 		drawSymbolsOnBoard(lib.holes);
 		drawSymbolsOnBoard(lib.metallized);
 		drawSymbolsOnBoard(lib.nonMetallized);
@@ -1555,7 +1549,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		for (layerNum in routes) {
 			if (routes.hasOwnProperty(layerNum)) {
 				drawRoutes(routes[layerNum]);
-				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, headers[12] + ' ' + routes[layerNum].name);
+				drawBoardOutline((routes[layerNum].name === 'BOTTOM' ? true : false), true, toUnicode('Слой') + ' ' + routes[layerNum].name);
 			}
 		}
 		
