@@ -1,4 +1,4 @@
-/*global Blob, FileReader, unescape, generateSVG, generateDXF, generatePCB */
+/*global Blob, FileReader, generateSVG, generateDXF, generatePCB */
 
 (function () {
 	'use strict';
