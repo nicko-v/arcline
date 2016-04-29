@@ -62,20 +62,22 @@
 			}
 		}
 		function movePopup(e) {
-			// offsetWidth делится пополам из-за того, что окно имеет свойство translateX(-50%),
-			// то есть 0 по X у него не слева, а в центре.
-			var // Что бы не уходило за края страницы:
-				x = (e.clientX - clickOffset[0] - popup.offsetWidth / 2 > 0 &&
-			       e.clientX - clickOffset[0] + popup.offsetWidth / 2 < window.innerWidth),
-				y = (e.clientY - clickOffset[1] > 0 &&
-			       e.clientY - clickOffset[1] + popup.offsetHeight < window.innerHeight);
-			if (x && y) { // Если мышь находится в пределах страницы, то символ двигается по обеим осям:
-				popup.style.left = e.clientX - clickOffset[0] + 'px';
-				popup.style.top = e.clientY - clickOffset[1] + 'px';
-			} else if (x) { // Если мышь находится за пределами страницы по высоте, то символ может двигаться только по длине:
-				popup.style.left = e.clientX - clickOffset[0] + 'px';
-			} else if (y) { // Наоборот:
-				popup.style.top = e.clientY - clickOffset[1] + 'px';
+			var x, y;
+			
+			// Что бы не уходило за края страницы.
+			// offsetWidth делится пополам из-за того, что окно имеет свойство translateX(-50%), то есть 0 по X у него не слева, а в центре:
+			x = (e.clientX - clickOffset.x - popup.offsetWidth / 2 > 0 &&
+			     e.clientX - clickOffset.x + popup.offsetWidth / 2 < window.innerWidth);
+			y = (e.clientY - clickOffset.y > 0 &&
+			     e.clientY - clickOffset.y + popup.offsetHeight < window.innerHeight);
+			
+			if (x && y) { // Если курсор находится в пределах страницы, то окно двигается по обеим осям
+				popup.style.left = e.clientX - clickOffset.x + window.scrollX + 'px';
+				popup.style.top = e.clientY - clickOffset.y  + window.scrollY + 'px';
+			} else if (x) { // Если курсор находится за пределами страницы по высоте, то окно может двигаться только по длине
+				popup.style.left = e.clientX - clickOffset.x + window.scrollX + 'px';
+			} else if (y) { // Наоборот
+				popup.style.top = e.clientY - clickOffset.y  + window.scrollY + 'px';
 			}
 		}
 		function stopMoving() {
@@ -130,7 +132,11 @@
 		header.addEventListener('mousedown', function (e) {
 			if (e.button === 0) {
 				moving = true;
-				clickOffset = [e.clientX - popup.offsetLeft, e.clientY - popup.offsetTop];
+				
+				// Смещение точки клика относительно центра попапа по X и верхней границы по Y:
+				clickOffset = { x: e.clientX - popup.offsetLeft + window.scrollX,
+				                y: e.clientY - popup.offsetTop  + window.scrollY };
+				
 				document.addEventListener('mousemove', movePopup);
 				document.addEventListener('mouseup', stopMoving);
 			}
@@ -469,7 +475,7 @@
 			closeable: false
 		});
 	});
-	window.addEventListener('load', function () { // Добавление символов в библиотеку
+	window.addEventListener('load', function () {
 		var rndGroup, rectGroup, symbol, i, favicon;
 		
 		setTimeout(function () { document.body.scrollTop = 0; }, 200);
