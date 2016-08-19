@@ -1,5 +1,4 @@
 /*global Blob, FileReader, generateSVG, generateDXF, generatePCB */
-
 (function () {
 	'use strict';
 	var
@@ -18,6 +17,7 @@
 		icon          = document.getElementById('padsIcon'),
 		descr         = document.getElementById('padsDescr'),
 		libButton     = document.getElementById('libButton'),
+		mtlznInfo     = document.getElementById('mtlznInfo'),
 		symbol        = document.getElementById('padsSymbol'),
 		helpButton    = document.getElementById('helpButton'),
 		clearButton   = document.getElementById('clearSymbol'),
@@ -36,7 +36,7 @@
 		                 'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
 		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
 		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, output = {},
+		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, metallizationArea = {}, output = {},
 		padsDescriptions,	objectsLib, pcbLink, pcbOutputContent, reader = new FileReader(), routes;
 
 	function hidePopup() {
@@ -455,6 +455,8 @@
 		link.nextElementSibling.style.display = 'none';
 		tabDXF.classList.remove('step3-actions-headers-header-active');
 		tabPCB.classList.add('step3-actions-headers-header-active');
+		mtlznInfo.style.opacity = 0;
+		mtlznInfo.innerHTML = 'Площадь металлизации не определена';
 	}
 	
 	if (!window.FileReader || document.body.style.flex === undefined) {
@@ -516,6 +518,7 @@
 	input.addEventListener('change', function () {
 		if (input.value) { // Если был выбран файл
 			setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
+			resetChanges();
 			file = input.files[0];
 			document.getElementById('fileName').innerHTML = '<p>Название: <span style="color:#666;">' + file.name + '</span></p>' +
 			                                                '<p>Состояние: <span style="color:#666;">выбран, не подтвержден</span></p>';
@@ -530,7 +533,9 @@
 			         '<li>Отрисовка площадок на проводящих рисунках больше не зависит от наличия у них символа.</li>' +
 			         '<li>Переписана и дополнена справка о программе.</li>' +
 			         '<li>Исправлены некоторые ошибки.</li>' +
-			         '</ul>',
+			         '</ul>' +
+			         'Update от 19.08.2016:' +
+			         '<ul><li>Добавлен расчет площади металлизации.</li></ul>',
 			closeable: true
 		});
 	});
@@ -539,8 +544,6 @@
 	});
 	uploadButton.addEventListener(click, function () {
 		setStepStatus(1, true, false, true); // Сброс иконок при нажатии кнопки загрузки.
-		
-		if (padsList.innerHTML) { resetChanges(); }
 		
 		if (file) {
 			rollBlock(document.getElementById('step1Progress-wrapper'), document.getElementById('step1Progress'), false);
@@ -946,17 +949,20 @@
 			this.y1 = +coords[1];
 		}
 		function Thermal(string) {
-			var begin, end;
+			var begin, end, width;
 			
 			begin = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
 			string = string.slice(string.indexOf(')') + 2);
 			end = string.slice(string.indexOf('pt ') + 3, string.indexOf(')')).split(' ');
+			string = string.slice(string.indexOf(')') + 2);
+			width = +string.slice(string.indexOf('thermalWidth ') + 13, string.indexOf(')')) || 0;
 			
 			this.type = 'thermal';
-			this.x0 = +begin[0];
-			this.y0 = +begin[1];
-			this.x1 = +end[0];
-			this.y1 = +end[1];
+			this.width = width;
+			this.x1 = +begin[0];
+			this.y1 = +begin[1];
+			this.x2 = +end[0];
+			this.y2 = +end[1];
 		}
 		function Polygon(object, type, net) {
 			var i, coords;
@@ -975,6 +981,104 @@
 					}
 				}
 			}
+		}
+		function calcMetallizationArea(pads, vias, routes) {
+			var top = 0, bottom = 0, area, key, topTrace, botTrace, boardPerimeter = 0;
+			
+			function calcLineSegmentWidth(x1, x2, y1, y2) {
+				return Math.sqrt(Math.pow(Math.abs(y2 - y1), 2) + Math.pow(Math.abs(x2 - x1), 2));
+			}
+			function checkMtlznSideAndIncreaseValue(pad) {
+				switch (pad.side) {
+				case 'top':
+					top += area;
+					break;
+				case 'bot':
+					bottom += area;
+					break;
+				case 'thru':
+					top += area;
+					bottom += area;
+					break;
+				}
+			}
+			function calcPadsMtlznArea(pads) {
+				var key;
+				
+				for (key in pads) {
+					if (pads.hasOwnProperty(key)) {
+						
+						// Площадь формулы овала (PI * бол.полуось * мал.полуось) так же подходит для нахождения площади круга:
+						area = pads[key].shape.match(/ellipse|oval/i) ? Math.PI * (pads[key].width / 2) * (pads[key].height / 2) :
+						       pads[key].shape.match(/rect|rndrect/i) ? (pads[key].width * pads[key].height) : 0;
+						
+						area -= Math.PI * Math.pow(pads[key].hole / 2, 2); // Вычитаем площадь отверстия, если его нет - вычтется 0
+						if (area > 0) { pads[key].coords.forEach(checkMtlznSideAndIncreaseValue); }
+					}
+				}
+			}
+			function calcRoutesMtlznArea(traces) {
+				var key, polygonArea, sum1, sum2, i, area = 0;
+				
+				for (key in traces) {
+					if (traces.hasOwnProperty(key) && typeof traces[key] === 'object') {
+						
+						if (traces[key].type.match(/line|thermal/)) {
+							area += calcLineSegmentWidth(traces[key].x1, traces[key].x2, traces[key].y1, traces[key].y2) * traces[key].width;
+						} else if (traces[key].type.match(/copperpour|cutout/)) {
+							
+							// Алгоритм подсчета площади многоугольника: выстраиваем координаты вершин в порядке против часовой стрелки (уже сделано P-CAD'ом),
+							// затем перемножаем каждую x-координату на y-координату следующей вершины (последней вершиной надо повторить начальную) и складываем,
+							// затем наоборот - каждую y-координату на x-координату следующей вершины, затем вычитаем первую сумму из второй и делим результат пополам:
+							sum1 = sum2 = i = 0;
+							while (traces[key]['y' + (i + 1)] !== undefined) {
+								sum1 += traces[key]['x' + i] * traces[key]['y' + (i + 1)];
+								i += 1;
+							}
+							sum1 += traces[key]['x' + i] * traces[key].y0;
+							i = 0;
+							while (traces[key]['x' + (i + 1)] !== undefined) {
+								sum2 += traces[key]['y' + i] * traces[key]['x' + (i + 1)];
+								i += 1;
+							}
+							sum2 += traces[key]['y' + i] * traces[key].x0;
+							/*-=-=-=-*/
+							
+							polygonArea = Math.abs(sum1 - sum2) / 2;
+							area += traces[key].type === 'copperpour' ? polygonArea : -polygonArea; // Если полигон - увеличиваем площадь, если вырез - уменьшаем.
+						}
+					}
+				}
+				
+				return area;
+			}
+			
+			calcPadsMtlznArea(pads);
+			calcPadsMtlznArea(vias);
+			
+			for (key in routes) {
+				if (routes.hasOwnProperty(key)) {
+					switch (routes[key].name) {
+					case 'TOP':
+						topTrace = routes[key];
+						break;
+					case 'BOTTOM':
+						botTrace = routes[key];
+						break;
+					}
+				}
+			}
+			
+			if (boardOutline.board) { // Считается периметр платы, т.к. по нему идет заливка толщиной 0.2мм
+				boardOutline.board.forEach(function (vertex) {
+					boardPerimeter += calcLineSegmentWidth(vertex[0], vertex[2], vertex[1], vertex[3]);
+				});
+			}
+			
+			top += calcRoutesMtlznArea(topTrace) + boardPerimeter * 0.2;
+			bottom += calcRoutesMtlznArea(botTrace) + boardPerimeter * 0.2;
+			
+			return { top: top, bottom: bottom };
 		}
 		
 		fileContent = parseInputFile(this.result);
@@ -1755,8 +1859,8 @@
 						return;
 					}
 					
-					result.vias  = sortObject(vias); // Сортировка в порядке увеличения площади КП
-					result.pads  = sortObject(pads);
+					result.vias = sortObject(vias); // Сортировка в порядке увеличения площади КП
+					result.pads = sortObject(pads);
 					result.componentsOutlines = compsOutlines;
 					
 					setStepStatus(3, true);
@@ -2021,6 +2125,16 @@
 		objectsLib = fileContent.getPadsAndOutlines();
 		boardOutline = fileContent.getBoardOutline();
 		if (boardOutline.board) { routes = fileContent.getRoutes(); }
+		metallizationArea = calcMetallizationArea(objectsLib.pads, objectsLib.vias, routes || {});
+		if (metallizationArea.top > 0 || metallizationArea.bottom > 0) {
+			mtlznInfo.innerHTML = 'Площадь металлизации на лицевой стороне - ' +
+			                       Math.round(metallizationArea.top / 10) / 1000    + ' дм<sup>2</sup>, на обратной - ' +
+			                       Math.round(metallizationArea.bottom / 10) / 1000 + ' дм<sup>2</sup>.';
+			mtlznInfo.title = 'Площадь металлизации на лицевой стороне - ' +
+			                   Math.round(metallizationArea.top * 1000) / 1000 + ' кв.мм, на обратной - ' +
+			                   Math.round(metallizationArea.bottom * 1000) / 1000 + ' кв.мм.';
+			mtlznInfo.style.opacity = 1;
+		}
 		createPadsList(objectsLib);
 	});
 }());
