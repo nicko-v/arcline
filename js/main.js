@@ -733,7 +733,7 @@
 		
 		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
 		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
-		if (layers.bot.length) { fileContent.addLayer('DrillBottom', layers.bot); }
+		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
 		
 		fileName = (file.name.match(/\.pcb$/i)) ? file.name.slice(0, -4) : file.name;
 		
