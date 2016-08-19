@@ -622,7 +622,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				} else if (routes[key].type.match(/cutout|plane|copperpour/i)) {
 					drawPolygon(routes[key], (routes[key].type === 'cutout' ? 'Cutouts' : 'Polygons'));
 				} else if (routes[key].type === 'thermal') {
-					result.push(0, 'LINE', 8, 'Polygons', 62, 256, 10, (routes[key].x0 * mirr + offsetX), 20, (routes[key].y0 + offsetY), 11, (routes[key].x1 * mirr + offsetX), 21, (routes[key].y1 + offsetY));
+					result.push(0, 'LINE', 8, 'Polygons', 62, 256, 10, (routes[key].x1 * mirr + offsetX), 20, (routes[key].y1 + offsetY), 11, (routes[key].x2 * mirr + offsetX), 21, (routes[key].y2 + offsetY));
 				}
 				
 			}
