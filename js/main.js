@@ -29,7 +29,7 @@
 		                 'Закончились доступные символы, необозначенные площадки не будут отрисованы. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
 		                 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
 		                 'Не удалось сформировать таблицу отверстий или сборочные чертежи. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
-		                 'Не удалось сформировать выходной .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                 'Не удалось сформировать .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
 		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
 		                 'Не удалось распознать контур платы, будет построена только таблица отверстий - без сборочного чертежа и проводящих рисунков. <br><br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.',
@@ -740,7 +740,7 @@
 		try {
 			pcbOutputContent = document.createElement('pre');
 			pcbOutputContent.innerHTML = fileContent.asArray().join(String.fromCharCode(10));
-		} catch (error) {
+		} catch (errPCB) {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[7],
@@ -756,7 +756,7 @@
 			prepareSymbolsInfo(objectsLib.pads, pads, 'pad');
 			dxfOutputContent = document.createElement('pre');
 			dxfOutputContent.innerHTML = generateDXF(pads, boardOutline, objectsLib.componentsOutlines, routes, drillViews).join(String.fromCharCode(10));
-		} catch (err) {
+		} catch (errDXF) {
 			showPopup({
 				header: 'Ошибка',
 				content: msgs[6],
@@ -855,7 +855,7 @@
 		}
 		
 		if (padsDescriptions[activeRow.id].symbolCode) { // Если символ уже назначен
-			document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'flex';
+			document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
 			freeSymbolsAm[padsDescriptions[activeRow.id].shape] += 1; // Увеличиваем количество оставшихся символов, т.к. далее оно уменьшится
 		}
 		
