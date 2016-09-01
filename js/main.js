@@ -565,7 +565,7 @@
 		
 		status = activeRow.firstChild;
 		
-		document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'flex';
+		document.getElementById(padsDescriptions[activeRow.id].symbol).style.display = 'block';
 		clearButton.style.display = 'none';
 		autoButton.style.display = 'block';
 		symbol.innerHTML = 'Выберите символ из библиотеки.';
