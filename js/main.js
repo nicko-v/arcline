@@ -1571,20 +1571,22 @@
 											} else if (typeof this['2'][i][j][k] === 'object') {
 												if (this['2'][i][j][k].header.indexOf('multiLayer') > -1) {
 													for (l = 0; l < Object.keys(this['2'][i][j][k]).length; l += 1) {
-														name   = parser('padStyleRef', this['2'][i][j][k][l]);
-														pinDes = parser('defaultPinDes', this['2'][i][j][k][l]);
-														padNum = parser('padNum', this['2'][i][j][k][l]);
-														coords = parser('pt', this['2'][i][j][k][l]).split(' ');
-														
-														if (!patterns[patternName][patternGraphics].pins[padNum]) { patterns[patternName][patternGraphics].pins[padNum] = {}; }
-														
-														patterns[patternName][patternGraphics].pins[padNum] = { x: +coords[0],
-														                                                        y: +coords[1],
-														                                                        padName: name,
-														                                                        pinDes: pinDes,
-														                                                        flipped: (+coords[2]) ? true : false,
-														                                                        rotation: parser('rotation', this['2'][i][j][k][l])
-														                                                      };
+														if (typeof this['2'][i][j][k][l] === 'string' && this['2'][i][j][k][l].indexOf('padStyleRef') + 1) {
+															name   = parser('padStyleRef', this['2'][i][j][k][l]);
+															pinDes = parser('defaultPinDes', this['2'][i][j][k][l]);
+															padNum = parser('padNum', this['2'][i][j][k][l]);
+															coords = parser('pt', this['2'][i][j][k][l]).split(' ');
+															
+															if (!patterns[patternName][patternGraphics].pins[padNum]) { patterns[patternName][patternGraphics].pins[padNum] = {}; }
+															
+															patterns[patternName][patternGraphics].pins[padNum] = { x: +coords[0],
+															                                                        y: +coords[1],
+															                                                        padName: name,
+															                                                        pinDes: pinDes,
+															                                                        flipped: (+coords[2]) ? true : false,
+															                                                        rotation: parser('rotation', this['2'][i][j][k][l])
+															                                                      };
+														}
 													}
 												} else if (this['2'][i][j][k].header.indexOf('layerContents') > -1) {
 													if (!patterns[patternName][patternGraphics].outline) { patterns[patternName][patternGraphics].outline = []; }
