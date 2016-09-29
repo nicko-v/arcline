@@ -1409,17 +1409,29 @@
 						return result;
 					}
 					function getPatternCenter(pattern) {
-						var i, j, min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
+						var i, j, key, min = { x: Infinity, y: Infinity }, max = { x: -Infinity, y: -Infinity };
 						
-						for (i = 0; i < pattern.length; i += 1) {
-							if (pattern[i].type.match(/line|arc/)) {
-								j = 1;
-								while (pattern[i]['x' + j] !== undefined) {
-									if (pattern[i]['x' + j] < min.x) { min.x = pattern[i]['x' + j]; }
-									if (pattern[i]['x' + j] > max.x) { max.x = pattern[i]['x' + j]; }
-									if (pattern[i]['y' + j] < min.y) { min.y = pattern[i]['y' + j]; }
-									if (pattern[i]['y' + j] > max.y) { max.y = pattern[i]['y' + j]; }
-									j += 1;
+						if (pattern.outline.length) {
+							for (i = 0; i < pattern.outline.length; i += 1) {
+								if (pattern.outline[i].type.match(/line|arc/)) {
+									j = 1;
+									while (pattern.outline[i]['x' + j] !== undefined) {
+										if (pattern.outline[i]['x' + j] < min.x) { min.x = pattern.outline[i]['x' + j]; }
+										if (pattern.outline[i]['x' + j] > max.x) { max.x = pattern.outline[i]['x' + j]; }
+										if (pattern.outline[i]['y' + j] < min.y) { min.y = pattern.outline[i]['y' + j]; }
+										if (pattern.outline[i]['y' + j] > max.y) { max.y = pattern.outline[i]['y' + j]; }
+										j += 1;
+									}
+								}
+							}
+						} else if (typeof pattern.pins === 'object') {
+							for (key in pattern.pins) {
+								if (pattern.pins.hasOwnProperty(key)) {
+									// Условия без else из-за того, что может быть всего один ключ и его координаты станут одновременно и минимумом, и максимумом:
+									if (pattern.pins[key].x < min.x) { min.x = pattern.pins[key].x; }
+									if (pattern.pins[key].x > max.x) { max.x = pattern.pins[key].x; }
+									if (pattern.pins[key].y < min.y) { min.y = pattern.pins[key].y; }
+									if (pattern.pins[key].y > max.y) { max.y = pattern.pins[key].y; }
 								}
 							}
 						}
@@ -1602,7 +1614,7 @@
 														}
 													}
 													
-													patterns[patternName][patternGraphics].center = getPatternCenter(patterns[patternName][patternGraphics].outline);
+													patterns[patternName][patternGraphics].center = getPatternCenter(patterns[patternName][patternGraphics]);
 												}
 											}
 										}
@@ -1768,14 +1780,15 @@
 						// координаты контуров (изначально заданы относительно точки нуля элемента), расчитываются положения обозначений (центр элемента):
 						for (key in comps) {
 							if (comps.hasOwnProperty(key)) {
+								
+								if (comps[key].rotation) {
+									sinA = Math.sin(comps[key].rotation * Math.PI / 180);
+									cosA = Math.cos(comps[key].rotation * Math.PI / 180);
+								}
+								
 								outline = patterns[comps[key].pattern][comps[key].graphics].outline;
 								if (outline && outline.length) {
 									for (i = 0; i < outline.length; i += 1) {
-										
-										if (comps[key].rotation) {
-											sinA = Math.sin(comps[key].rotation * Math.PI / 180);
-											cosA = Math.cos(comps[key].rotation * Math.PI / 180);
-										}
 										
 										switch (outline[i].type) {
 										case 'line':
@@ -1822,8 +1835,10 @@
 										}
 										
 									}
-									
-									refDesCenter = patterns[comps[key].pattern][comps[key].graphics].center;
+								}
+								
+								refDesCenter = patterns[comps[key].pattern][comps[key].graphics].center;
+								if (isFinite(refDesCenter.x) && isFinite(refDesCenter.y)) {
 									// Структура объекта должна соответствовать структуре объектов, производимых конструктором Text:
 									compsOutlines.texts.push({ content: [key.replace(/_/g, '-')], // Т.к. это один из символов, не поддерживаемых dxf. Иногда встречается в элементах
 										                         justification: 'center',
