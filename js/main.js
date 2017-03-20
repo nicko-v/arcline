@@ -702,7 +702,7 @@
 						type:     { value: type }
 					});
 					Object.defineProperty(path[key], 'mount', {
-						value: calcMountSize(lib[key], path[key].pad)
+						value: calcMountSize(lib[key], path[key].pad, type)
 					});
 					if (path[key].symbol) { path.withSymbols += 1; }
 				}
@@ -732,8 +732,8 @@
 		}
 		
 		if (layers.thru.length) { fileContent.addLayer('Drill', layers.thru); }
-		if (layers.top.length) { fileContent.addLayer('DrillTop', layers.top); }
-		if (layers.bot.length) { fileContent.addLayer('DrillBot', layers.bot); }
+		if (layers.top.length) {  fileContent.addLayer('DrillTop', layers.top); }
+		if (layers.bot.length) {  fileContent.addLayer('DrillBot', layers.bot); }
 		
 		fileName = (file.name.match(/\.pcb$/i)) ? file.name.slice(0, -4) : file.name;
 		
