@@ -1644,7 +1644,7 @@
 						// В объект comps копируется информация о выводах:
 						for (key in comps) {
 							if (comps.hasOwnProperty(key) && patterns[comps[key].pattern][comps[key].graphics]) {
-								comps[key].pins = patterns[comps[key].pattern][comps[key].graphics].pins;
+								comps[key].pins = JSON.parse(JSON.stringify(patterns[comps[key].pattern][comps[key].graphics].pins));
 							}
 						}
 					
