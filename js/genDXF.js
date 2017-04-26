@@ -286,13 +286,13 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			if (padsLib.hasOwnProperty(key) && padsLib[key].type !== 'via') {
 				
 				for (i = 0; i < padsLib[key].coords.length; i += 1) {
-					if (circle) {
+					if (circle && padsLib[key].holeSize) {
 						result.push(0, 'CIRCLE', 8, 'Board', 62, 256,
 						            10, (padsLib[key].coords[i].x * mirr + offsetX),
 						            20, (padsLib[key].coords[i].y + offsetY),
 						            40, (padsLib[key].holeSize / 2));
 					}
-					if (cross && padsLib[key].hole) {
+					if (cross && padsLib[key].hole && padsLib[key].holeSize) {
 						result.push(0, 'LINE', 8, 'Crosses', 62, 256,
 						            10, (padsLib[key].coords[i].x * mirr + offsetX - padsLib[key].holeSize / 2 - 0.5),
 						            20, (padsLib[key].coords[i].y + offsetY),
