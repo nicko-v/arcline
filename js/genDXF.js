@@ -629,8 +629,9 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		}
 		
 		// Отрисовка отверстий и КП. Отверстия без КП рисуются как кресты на проводящих слоях (top, bottom) и как круги на слоях plane.
-		// upd. на слоях plane рисуются и круги и кресты в соостветствии с новыми требованиями:
-		drawHoles(lib.holes, (routes.type === 'signal' ? false : true), /*(routes.type === 'signal' ? true : false)*/true, offsetX, offsetY, mirr);
+		// upd. на слоях plane рисуются и круги и кресты в соостветствии с новыми требованиями.
+		// upd. на слоях plane рисуются только кресты в соответствии с еще более новыми требованиями.
+		drawHoles(lib.holes, /*(routes.type === 'signal' ? false : true)*/false, /*(routes.type === 'signal' ? true : false)*/true, offsetX, offsetY, mirr);
 		for (key in lib.metallized) {
 			if (lib.metallized.hasOwnProperty(key)) {
 				drawPads(lib.metallized[key]);
