@@ -185,9 +185,9 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		
 		for (key in object) { // Проставляет значения
 			if (object.hasOwnProperty(key) && object[key].symbol) {
-				if (object[key].mount) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount); }
-				if (object[key].pad) {   result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad); }
-				if (object[key].hole) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole); }
+				if (object[key].mount && object[key].type !== 'via') { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount); }
+				if (object[key].pad) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad); }
+				if (object[key].hole) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole); }
 				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount);
 				
 				if (object[key].ratio >= (colWidth - cellPadding * 2) / (colHeight - cellPadding * 2)) {
@@ -204,10 +204,12 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			}
 		}
 		skippedCells.row1.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (размеры КП и окна)
+			var height = colHeight * (skippedCells.row2.indexOf(position) > -1 ? 2 : 1.5);
+			
 			if (!startPoint && startPoint !== 0) { startPoint = position; }
 			if (position + 1 !== arr[i + 1]) {
 				lineStart = (position - startPoint + 1) * colWidth / 2 - dashSize / 2 + startPoint * colWidth;
-				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, (colHeight * 2), 11, (lineStart + dashSize), 21, (colHeight * 2));
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, lineStart, 20, height, 11, (lineStart + dashSize), 21, height);
 				startPoint = false;
 			}
 		});
@@ -229,9 +231,9 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			
 			for (key in obj) {
 				if (obj.hasOwnProperty(key) && obj[key].symbol) {
-					if (!obj[key].hole) {  result.row3.push(position); }
-					if (!obj[key].pad) {   result.row2.push(position); }
-					if (!obj[key].mount) { result.row1.push(position); }
+					if (!obj[key].hole) { result.row3.push(position); }
+					if (!obj[key].pad) { result.row2.push(position); }
+					if (!obj[key].mount || obj[key].type === 'via') { result.row1.push(position); }
 					position += 1;
 				}
 			}
