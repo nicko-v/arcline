@@ -2,43 +2,46 @@
 (function () {
 	'use strict';
 	var
-		lib           = document.getElementById('lib'),
-		tabs          = document.getElementById('tabs'),
-		autoButton    = document.getElementById('auto'),
-		input         = document.getElementById('file'),
-		link          = document.getElementById('link'),
-		startButton   = document.getElementById('start'),
-		cover         = document.getElementById('cover'),
-		uploadButton  = document.getElementById('upload'),
-		tabPCB        = document.getElementById('tabPCB'),
-		tabDXF        = document.getElementById('tabDXF'),
-		version       = document.getElementById('version'),
-		padsList      = document.getElementById('padsList'),
-		icon          = document.getElementById('padsIcon'),
-		descr         = document.getElementById('padsDescr'),
-		libButton     = document.getElementById('libButton'),
-		mtlznInfo     = document.getElementById('mtlznInfo'),
-		symbol        = document.getElementById('padsSymbol'),
-		helpButton    = document.getElementById('helpButton'),
-		effAreaInfo   = document.getElementById('effAreaInfo'),
-		clearButton   = document.getElementById('clearSymbol'),
-		click         = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
-		msgs          = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
-		                 'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-		                 'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
-		                 'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
-		                 'Закончились доступные символы, необозначенные площадки не будут отрисованы. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
-		                 'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать.<br><br>Количество площадок: ',
-		                 'Не удалось сформировать таблицу отверстий или сборочные чертежи. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
-		                 'Не удалось сформировать .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
-		                 'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
-		                 'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
-		                 'Не удалось распознать контур платы, будет построена только таблица отверстий - без сборочного чертежа и проводящих рисунков. <br><br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.',
-		                 'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
-		symbolsAmount = [30, 30], // Количество символов - круглые и прямоугольные
-		boardBorder   = 2.5, // Отступ от краев платы, используется для расчета полезной площади
-		freeSymbolsAm = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
-		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, metallizationArea = {}, effectiveArea = 0, output = {},
+		lib                 = document.getElementById('lib'),
+		tabs                = document.getElementById('tabs'),
+		autoButton          = document.getElementById('auto'),
+		input               = document.getElementById('file'),
+		link                = document.getElementById('link'),
+		startButton         = document.getElementById('start'),
+		cover               = document.getElementById('cover'),
+		uploadButton        = document.getElementById('upload'),
+		tabPCB              = document.getElementById('tabPCB'),
+		tabDXF              = document.getElementById('tabDXF'),
+		version             = document.getElementById('version'),
+		padsList            = document.getElementById('padsList'),
+		icon                = document.getElementById('padsIcon'),
+		descr               = document.getElementById('padsDescr'),
+		libButton           = document.getElementById('libButton'),
+		mtlznInfo           = document.getElementById('mtlznInfo'),
+		symbol              = document.getElementById('padsSymbol'),
+		helpButton          = document.getElementById('helpButton'),
+		effAreaInfo         = document.getElementById('effAreaInfo'),
+		minHoleDiameterInfo = document.getElementById('minHoleDiameterInfo'),
+		minTraceWidthInfo   = document.getElementById('minTraceWidthInfo'),
+		minAnnularRingInfo  = document.getElementById('minAnnularRingInfo'),
+		clearButton         = document.getElementById('clearSymbol'),
+		click               = navigator.userAgent.match(/iphone|ipod|ipad/i) ? 'touchend' : 'click',
+		msgs                = ['Выбран некорректный файл. <br><br>Откройте .pcb в P-CAD и выполните следующее: <br><i>File -> Save as... -> Save as type: ASCII Files</i>',
+		                       'Не удалось сформировать корректную структуру данных из файла. <br>Возможно файл содержит ошибки или непредусмотренные блоки.',
+		                       'Не удалось распознать переходные отверстия или контактные площадки. <br>Возможно файл содержит ошибки, непредусмотренные блоки или неподдерживаемые типы КП.',
+		                       'Нельзя использовать круглые символы для прямоугольных контактных площадок. Пожалуйста, выберите другой символ.',
+		                       'Закончились доступные символы, необозначенные площадки не будут отрисованы. <br>Попробуйте уменьшить количество контактных площадок на плате путем приведения площадок сходных размеров к одному типу.',
+		                       'На плате присутствуют контактные площадки, расположенные не под прямым углом. К сожалению, символы для них нельзя нарисовать в .pcb файле.<br>На чертежах в .dxf файле символы отрисованы.<br><br>Количество площадок: ',
+		                       'Не удалось сформировать таблицу отверстий или сборочные чертежи. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                       'Не удалось сформировать .pcb файл. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                       'Используемый браузер не поддерживает необходимый для работы приложения функционал. <br>Пожалуйста, установите свежую версию Chrome, Firefox или Opera.',
+		                       'Произошла непредвиденная ошибка. <br>Пожалуйста, сообщите разработчику какие действия к этому привели или передайте файл, вызвавший ошибку.',
+		                       'Не удалось распознать контур платы, будет построена только таблица отверстий - без сборочного чертежа и проводящих рисунков. <br><br>Пожалуйста, убедитесь, что контур платы существует и находится в слое Board.',
+		                       'Не удалось получить информацию о трассировке. Возможно файл содержит ошибки или непредусмотренные значения.'],
+		symbolsAmount       = [30, 30], // Количество символов - круглые и прямоугольные
+		boardBorder         = 2.5, // Отступ от краев платы, используется для расчета полезной площади
+		freeSymbolsAm       = { rnd: symbolsAmount[0], rect: symbolsAmount[1] }, // Используется для проверки необходимости отрисовки и показа кнопки автоподбора
+		activeRow, boardOutline, drillViews = 1, dxfLink, dxfOutputContent, file, fileContent, metallizationArea = {}, effectiveArea = 0, output = {}, minHoleDiameter = +Infinity, minTraceWidth = +Infinity, minAnnularRing = +Infinity,
 		padsDescriptions,	objectsLib, pcbLink, pcbOutputContent, reader = new FileReader(), routes;
 
 	function hidePopup() {
@@ -347,7 +350,7 @@
 						}
 						radius = 50;
 						
-					} else if (object[key].shape.match(/rect|rndrect/i)) {
+					} else if (object[key].shape.match(/rect|rndrect|polygon/i)) {
 						
 						if (hole > 0) {
 							result['r' + i].descr = '<p>Длина: ' + width + 'мм</p>' +
@@ -1032,7 +1035,7 @@
 				}
 			}
 			function calcPadsMtlznArea(pads) {
-				var key;
+				var key, annularRing;
 				
 				for (key in pads) {
 					if (pads.hasOwnProperty(key)) {
@@ -1043,6 +1046,11 @@
 						
 						area -= Math.PI * Math.pow(pads[key].hole / 2, 2); // Вычитаем площадь отверстия, если его нет - вычтется 0
 						if (area > 0) { pads[key].coords.forEach(checkMtlznSideAndIncreaseValue); }
+						if (area > 0 && pads[key].hole > 0) { 
+							annularRing = pads[key].width > pads[key].height ? ((pads[key].height - pads[key].hole) / 2) : ((pads[key].width - pads[key].hole) / 2);
+							if (annularRing < minAnnularRing) { minAnnularRing = annularRing; }
+						}
+						if (pads[key].hole > 0 && pads[key].hole < minHoleDiameter) { minHoleDiameter = pads[key].hole; }
 					}
 				}
 			}
@@ -1054,6 +1062,7 @@
 						
 						if (traces[key].type.match(/line|thermal/)) {
 							area += calcLineSegmentWidth(traces[key].x1, traces[key].x2, traces[key].y1, traces[key].y2) * traces[key].width;
+							if (traces[key].width > 0 && traces[key].width < minTraceWidth) { minTraceWidth = traces[key].width; }
 						} else if (traces[key].type.match(/copperpour|cutout/)) {
 							polygonArea = calcPolygonArea(traces[key]);
 							area += traces[key].type === 'copperpour' ? polygonArea : -polygonArea; // Если полигон - увеличиваем площадь, если вырез - уменьшаем.
@@ -1214,7 +1223,7 @@
 			getPadsAndOutlines: { // Возвращает объект, содержащий информацию обо всех КП и ПО (координаты, формы и т.д.), а так же контурах элементов.
 				value: function () {
 					var comp, compPin, compsOutlines = { lines: [], arcs: [], texts: [] }, comps = {}, coords, cosA, currPath, height, i, flipped, j, k,
-						key, l, name, netName, node, outline, pth = true, pad, padName, padNum, pads = {}, patternGraphics, patternName, patternOrigin,
+						key, l, polyMax, name, netName, node, outline, pth = true, pad, padName, padNum, pads = {}, patternGraphics, patternName, patternOrigin,
 						patterns = {}, pin, pinDes, pinMap, rotation, shiftX, shiftY, type, refDesCenter, result = {}, samePads, side, sinA, vias = {}, width, x, y;
 					
 					function parser(type, string) {
@@ -1373,9 +1382,9 @@
 						function compare(a, b) {
 							var sqA, sqB;
 							
-							sqA = (a[1].shape.match(/ellipse|oval|mthole|target/i) && a[1].width === a[1].height) ?
+							sqA = (a[1].shape.match(/ellipse|oval|mthole|target|polygon/i) && a[1].width === a[1].height) ?
 							       Math.PI * Math.pow(a[1].width / 2, 2) : a[1].width * a[1].height;
-							sqB = (b[1].shape.match(/ellipse|oval|mthole|target/i) && b[1].width === b[1].height) ?
+							sqB = (b[1].shape.match(/ellipse|oval|mthole|target|polygon/i) && b[1].width === b[1].height) ?
 							       Math.PI * Math.pow(b[1].width / 2, 2) : b[1].width * b[1].height;
 							
 							return sqA - sqB;
@@ -1466,6 +1475,20 @@
 						         y: min.y + Math.abs((max.y - min.y)) / 2
 						       };
 					}
+					function polyMaxSize(coords) {
+						var i, vertex, x = { min: Infinity, max: -Infinity }, y = { min: Infinity, max: -Infinity };
+						for (i = 0; i < Object.keys(coords).length; i += 1) {
+							if (typeof coords[i] === 'string' && coords[i].indexOf('(pt') > -1) {
+								vertex = parser('pt', coords[i]).split(' ');
+								(+vertex[0] < x.min) && (x.min = +vertex[0]);
+								(+vertex[0] > x.max) && (x.max = +vertex[0]);
+								(+vertex[1] < y.min) && (y.min = +vertex[1]);
+								(+vertex[1] > y.max) && (y.max = +vertex[1]);
+							}
+						}
+						
+						return { x: x.max - x.min, y: y.max - y.min };
+					}
 					
 					try {
 						// Поиск по блоку pcbDesign -> multilayer.
@@ -1550,6 +1573,29 @@
 										if (this['2'][i][j].match(/layerNumRef 2\)/i)) {
 											width = parser('shapeWidth', this['2'][i][j]);
 											height = parser('shapeHeight', this['2'][i][j]);
+											if (width && !currPath[name].width) { // Если на слое bot у КП есть размеры, но не было на top
+												currPath[name].side = 'bot'; // Значит КП на слое bot
+												currPath[name].width = width;
+												currPath[name].height = height;
+											} else if (!width) { // Если на слое bot у КП нет размеров
+												currPath[name].side = 'top'; // Значит она на top, иначе вариант по умолчанию - thru
+											}
+										}
+									} else if (typeof this['2'][i][j] === 'object' && this['2'][i][j].header.indexOf(type + 'Shape') > -1) {
+										if (this['2'][i][j].header.match(/layerNumRef 1\)/i)) {
+											currPath[name].shape = parser(type + 'ShapeType', this['2'][i][j].header).toLowerCase();
+											
+											// if (currPath[name].shape === 'polygon') { throw new Error('Контактные площадки типа "полигон" не поддерживаются.'); } // Встречается редко, реализовать не просто.
+											
+											polyMax = polyMaxSize(this['2'][i][j][0]);
+											currPath[name].width = polyMax.x;
+											currPath[name].height = polyMax.y;
+										}
+										
+										if (this['2'][i][j].header.match(/layerNumRef 2\)/i)) {
+											polyMax = polyMaxSize(this['2'][i][j][0]);
+											width = polyMax.x;
+											height = polyMax.y;
 											if (width && !currPath[name].width) { // Если на слое bot у КП есть размеры, но не было на top
 												currPath[name].side = 'bot'; // Значит КП на слое bot
 												currPath[name].width = width;
@@ -2204,6 +2250,19 @@
 			                   Math.round(metallizationArea.top * 1000) / 1000 + ' кв.мм, на обратной: ' +
 			                   Math.round(metallizationArea.bottom * 1000) / 1000 + ' кв.мм.';
 			mtlznInfo.style.visibility = 'visible';
+		}
+
+		if (isFinite(minHoleDiameter)) {
+			minHoleDiameterInfo.innerHTML = 'Минимальный диаметр отверстия: ' + +minHoleDiameter.toFixed(2) + ' мм.';
+			minHoleDiameterInfo.style.visibility = 'visible';
+		}
+		if (isFinite(minTraceWidth)) {
+			minTraceWidthInfo.innerHTML = 'Минимальная ширина проводника: ' + +minTraceWidth.toFixed(2) + ' мм.';
+			minTraceWidthInfo.style.visibility = 'visible';
+		}
+		if (isFinite(minAnnularRing)) {
+			minAnnularRingInfo.innerHTML = 'Минимальный поясок контактной площадки: ' + +minAnnularRing.toFixed(2) + ' мм.';
+			minAnnularRingInfo.style.visibility = 'visible';
 		}
 		
 		effectiveArea = calcEffectiveArea(objectsLib.pads, objectsLib.vias, boardOutline.boardArea, boardOutline.boardPerimeter);

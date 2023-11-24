@@ -44,10 +44,11 @@ function generatePCB(lib) {
 						h = object[key].height;
 					}
 					
-					if ([undefined, 0, 90, 180, 270, 360].indexOf(object[key].coords[i].rotation) >= 0) { // Если КП повернута под прямым углом или вообще не повернута (via) - создаем для нее символ
+					if ([undefined, 0, 90, 180, 270, 360].indexOf(object[key].coords[i].rotation) >= 0 || w == h) { // Если КП повернута под прямым углом или вообще не повернута (via), или КП квадратная - создаем для нее символ
 						symbol[object[key].symbol]();
 					} else { // Иначе увеличиваем число пропущенных
 						result.skipped += 1;
+						console.log("В .pcb не был создан символ для КП по координатам: X: "+ object[key].coords[i].x + ", Y: " + object[key].coords[i].y + ". Угол поворота: " + object[key].coords[i].rotation);
 					}
 				}
 			}
