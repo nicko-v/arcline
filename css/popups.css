@@ -79,6 +79,7 @@
 	padding: 3rem 1.5rem;
 	font-size: 1.6rem;
 	color: #000;
+	max-height: 400px;
 	overflow: auto;
 	text-align: left;
 }

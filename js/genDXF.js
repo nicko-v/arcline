@@ -24,7 +24,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		pth = lib.metallized.withSymbols,
 		npth = lib.nonMetallized.withSymbols + lib.holes.withSymbols,
 		colHeight = 15,
-		colWidth = 25,
+		colWidth = 20,
 		rows = 6,
 		columns = pth + npth,
 		hw = 42, // Длина ячейки заголовков
