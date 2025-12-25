@@ -23,14 +23,17 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	var
 		pth = lib.metallized.withSymbols,
 		npth = lib.nonMetallized.withSymbols + lib.holes.withSymbols,
-		colHeight = 15,
-		colWidth = 20,
+		colHeight = 10,
+		colWidth = 15,
 		rows = 6,
 		columns = pth + npth,
 		hw = 42, // Длина ячейки заголовков
 		tw = colWidth * columns,
 		th = colHeight * rows, // Общая высота таблицы сверловки
 		dashSize = colWidth / 2, // Длина прочерка в ячейках таблицы сверловки
+		textHeight = 3.0,
+		widthFactor = 0.75,
+		cellPadding = 1.3, // Расстояние от границы ячейки таблицы сверловки до символа
 		result = [0, 'SECTION',
 		          2, 'HEADER',
 		          9, '$ACADVER',
@@ -138,7 +141,6 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		          70, 64,
 		          62, 8,
 		          6, 'CONTINUOUS'],
-		cellPadding = 3, // Расстояние от границы ячейки таблицы сверловки до символа
 		y = (th - colHeight / 2), // Центр символа в ячейке таблицы сверловки
 		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
 		space = 50, // Расстояние между чертежами
@@ -185,10 +187,13 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		
 		for (key in object) { // Проставляет значения
 			if (object.hasOwnProperty(key) && object[key].symbol) {
-				if (object[key].mount && object[key].type !== 'via') { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 1, object[key].mount); }
-				if (object[key].pad) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 1, object[key].pad); }
-				if (object[key].hole) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 1, object[key].hole); }
-				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount);
+				// Сжатие текста определяется исходя из его длины. 
+				// До 7 символов влезает со сжатием 0.9, это самые распространённые записи вида 1,23х4,56.
+				// Очень редко бывают записи с тремя числами после запятой - их надо сжимать сильнее.
+				if (object[key].mount && object[key].type !== 'via') { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 41, (object[key].mount.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].mount); }
+				if (object[key].pad) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 41, (object[key].pad.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].pad); }
+				if (object[key].hole) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 41, (object[key].hole.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].hole); }
+				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount);
 				
 				if (object[key].ratio >= (colWidth - cellPadding * 2) / (colHeight - cellPadding * 2)) {
 					w = colWidth - cellPadding * 2;
@@ -203,6 +208,9 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				currCol += 1;
 			}
 		}
+		
+		if (skippedCells.filled == true) { return; }
+		
 		skippedCells.row1.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (размеры КП и окна)
 			var height = colHeight * (skippedCells.row2.indexOf(position) > -1 ? 2 : 1.5);
 			
@@ -222,6 +230,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				startPoint = false;
 			}
 		});
+		skippedCells.filled = true;
 	}
 	function determineEmptyCells(object) {
 		var position = 0, result = { row1: [], row2: [], row3: [] };
@@ -1476,11 +1485,11 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th,
 	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th,
 	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21,  0,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 15, 11,   0,  21, 15,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 30, 11,   0,  21, 30,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 45, 11,   0,  21, 45,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 60, 11,   0,  21, 60,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, 75, 11,   0,  21, 75);
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 1, 11,   0,  21, colHeight * 1,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 2, 11,   0,  21, colHeight * 2,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 3, 11,   0,  21, colHeight * 3,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 4, 11,   0,  21, colHeight * 4,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 5, 11,   0,  21, colHeight * 5);
 	
 	// Ячейки данных
 	skippedCells = determineEmptyCells(lib); // Ячейки без значений
@@ -1502,23 +1511,19 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	
 	/* Заполнение таблицы сверловки */
 	// Название таблицы
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 5), 1, toUnicode('ТАБЛИЦА 2'));
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 3), 1, toUnicode('ТАБЛИЦА 2'));
 	
 	// Тексты заголовков
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                   11, -hw / 2, 21, th - colHeight * 0.5,  1, toUnicode('Обозначение'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,       11, -hw / 2, 21, th - colHeight * 1.5,  1, toUnicode('Количество'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2,   11, -hw / 2, 21, th - colHeight * 2.33, 1, toUnicode('Диаметр'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2.5, 11, -hw / 2, 21, th - colHeight * 2.66, 1, toUnicode('отверстия, мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3,   11, -hw / 2, 21, th - colHeight * 3.33, 1, toUnicode('Размеры'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3.5, 11, -hw / 2, 21, th - colHeight * 3.66, 1, toUnicode('конт. площ., мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4,   11, -hw / 2, 21, th - colHeight * 4.33, 1, toUnicode('Размеры'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4.5, 11, -hw / 2, 21, th - colHeight * 4.66, 1, toUnicode('монт. окна, мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5,   11, -hw / 2, 21, th - colHeight * 5.33, 1, toUnicode('Указание'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5.5, 11, -hw / 2, 21, th - colHeight * 5.66, 1, toUnicode('о металлизации'));
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                 11, -hw / 2, 21, th - colHeight * 0.5, 1, toUnicode('Обозначение'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,     11, -hw / 2, 21, th - colHeight * 1.5, 1, toUnicode('Количество'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2, 11, -hw / 2, 21, th - colHeight * 2.5, 1, toUnicode('Диаметр отв., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3, 11, -hw / 2, 21, th - colHeight * 3.5, 41, widthFactor, 1, toUnicode('Размеры конт. площ., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4, 11, -hw / 2, 21, th - colHeight * 4.5, 41, widthFactor, 1, toUnicode('Размеры монт. окна, мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5, 11, -hw / 2, 21, th - colHeight * 5.5, 1, toUnicode('Металлизация'));
 	
 	// Значения ячеек
-	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Есть')); } // Металлизация - "Есть"
-	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 3.5, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Нет')); } // Металлизация - "Нет"
+	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Есть')); } // Металлизация - "Есть"
+	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Нет')); } // Металлизация - "Нет"
 	
 	radius = (colHeight / 2 - cellPadding);
 	
