@@ -21,19 +21,27 @@
 function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) {
 	'use strict';
 	var
-		pth = lib.metallized.withSymbols,
-		npth = lib.nonMetallized.withSymbols + lib.holes.withSymbols,
-		colHeight = 10,
-		colWidth = 15,
-		rows = 6,
-		columns = pth + npth,
-		hw = 42, // Длина ячейки заголовков
-		tw = colWidth * columns,
-		th = colHeight * rows, // Общая высота таблицы сверловки
-		dashSize = colWidth / 2, // Длина прочерка в ячейках таблицы сверловки
-		textHeight = 3.0,
-		widthFactor = 0.75,
-		cellPadding = 1.3, // Расстояние от границы ячейки таблицы сверловки до символа
+		pth = lib.metallized.withSymbols,                             // Количество металлизированных площадок.
+		npth = lib.nonMetallized.withSymbols + lib.holes.withSymbols, // Количество неметаллизированных площадок и отверстий.
+		colHeight = 10,          // Высота ячейки. Одинакова для горизонтальной и вертикальной таблиц.
+		colWidth = 15,           // Длина ячейки. Одинакова для горизонтальной и вертикальной таблиц.
+		dashSize = colWidth / 2, // Длина прочерка в ячейках таблицы сверловки.
+		textHeight = 3.0,        // Высота шрифта в таблице сверловки.
+		widthFactor = 0.75,      // Сжатие текста в процентах.
+		cellPadding = 1.5,       // Расстояние от границы ячейки таблицы сверловки до символа.
+
+		hTableRows = 6,                         // Количество строк горизонтальной таблицы сверловки.
+		hTableColumns = pth + npth,             // Количество столбцов горизонтальной таблицы сверловки.
+		hTableHeaderWidth = 42,                 // Длина ячейки заголовков горизонтальной таблицы сверловки.
+		hTableWidth = colWidth * hTableColumns, // Общая длина горизонтальной таблицы сверловки.
+		hTableHeight = colHeight * hTableRows,  // Общая высота горизонтальной таблицы сверловки.
+
+		vTableRows = pth + npth,                // Количество строк вертикальной таблицы сверловки.
+		vTableColumns = 6,                      // Количество столбцов вертикальной таблицы сверловки.
+		vTableHeaderHeight = 12,                // Длина ячейки заголовков вертикальной таблицы сверловки.
+		vTableWidth = colWidth * vTableColumns, // Общая длина вертикальной таблицы сверловки.
+		vTableHeight = colHeight * vTableRows,  // Общая высота вертикальной таблицы сверловки.
+
 		result = [0, 'SECTION',
 		          2, 'HEADER',
 		          9, '$ACADVER',
@@ -45,10 +53,10 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		          2, 'VPORT',
 		          0, 'VPORT',
 		          2, '*ACTIVE',
-		          12, (tw / 2 - hw / 2), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр
-		          22, (th / 2),
-		          40, (th + 15),
-		          41, ((tw + hw) / 100),
+		          12, (hTableWidth / 2 - hTableHeaderWidth / 2), // Длина таблицы без столбца заголовков (т.к. он слева от нуля по X) - половина столбца заголовков = центр.
+		          22, (hTableHeight / 2),
+		          40, (hTableHeight + 15),
+		          41, ((hTableWidth + hTableHeaderWidth) / 100),
 		          70, 0,
 		          10, 0,
 		          20, 0,
@@ -125,7 +133,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		          2, 'Bottom',
 		          70, 64,
 		          62, 3,
-		          6, 'CONTINUOUS',
+							6, 'CONTINUOUS',
 							0, 'LAYER',
 		          2, 'Crosses',
 		          70, 64,
@@ -141,12 +149,15 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		          70, 64,
 		          62, 8,
 		          6, 'CONTINUOUS'],
-		y = (th - colHeight / 2), // Центр символа в ячейке таблицы сверловки
-		views = 0, // Количество нарисованных видов, от него зависит смещение нового чертежа по X
+		views = 0,  // Количество нарисованных видов, от него зависит смещение нового чертежа по X
 		space = 50, // Расстояние между чертежами
 		shiftX = boardOutline.shiftX || 0, // Смещение левого нижнего края платы относительно нуля
 		shiftY = boardOutline.shiftY || 0,
-		boardHeight = 0, boardWidth = 0, currCol = 0, d = {}, h, i, j, layerNum, radius, rotation, skippedCells, symbol, w, x;
+		vTableTopLeftCorner = {
+			x: 0 - hTableHeaderWidth - space - vTableWidth,
+			y: 0 + vTableHeight,
+		},
+		boardHeight = 0, boardWidth = 0, currCol = 0, currRow = 0, d = {}, h, i, j, layerNum, radius, rotation, skippedCells, symbol, w, x, y;
 	
 	function baseRnd() {
 		result.push(0, 'CIRCLE', 8, 'Drill_Symbols', 62, 256, 10, x, 20, y, 40, radius);
@@ -187,13 +198,32 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		
 		for (key in object) { // Проставляет значения
 			if (object.hasOwnProperty(key) && object[key].symbol) {
-				// Сжатие текста определяется исходя из его длины. 
-				// До 7 символов влезает со сжатием 0.9, это самые распространённые записи вида 1,23х4,56.
-				// Очень редко бывают записи с тремя числами после запятой - их надо сжимать сильнее.
-				if (object[key].mount && object[key].type !== 'via') { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 41, (object[key].mount.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].mount); }
-				if (object[key].pad) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 41, (object[key].pad.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].pad); }
-				if (object[key].hole) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 41, (object[key].hole.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].hole); }
+				// Сжатие текста (код 41) определяется исходя из его длины.
+				// Замена %%C на C нужна для корректного подсчёта длины строки, т.к. это код символа диаметра.
+				// До 7 символов влезает со сжатием 0.9, это самые распространённые записи вида "1,2х3,4".
+				// Очень редко бывают записи с двумя числами после запятой - их надо сжимать сильнее.
+				if (object[key].mount && object[key].type !== 'via') {
+					// Горизонтальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 1.5), 41, (object[key].mount.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].mount);
+					// Вертикальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (vTableTopLeftCorner.x + colWidth * 4.5), 20, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 11, (vTableTopLeftCorner.x + colWidth * 4.5), 21, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 41, (object[key].mount.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].mount);
+				}
+				if (object[key].pad) {
+					// Горизонтальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 2), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 2.5), 41, (object[key].pad.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].pad);
+					// Вертикальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (vTableTopLeftCorner.x + colWidth * 3.5), 20, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 11, (vTableTopLeftCorner.x + colWidth * 3.5), 21, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 41, (object[key].pad.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].pad);
+				}
+				if (object[key].hole) {
+					// Горизонтальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 3), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 3.5), 41, (object[key].hole.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].hole);
+					// Вертикальная таблица:
+					result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (vTableTopLeftCorner.x + colWidth * 2.5), 20, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 11, (vTableTopLeftCorner.x + colWidth * 2.5), 21, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 41, (object[key].hole.replace('%%C', 'C').length > 7 ? widthFactor : 0.9), 1, object[key].hole);
+				}
+				// Горизонтальная таблица:
 				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (colWidth * currCol), 20, (colHeight * 4), 11, (colWidth * currCol + colWidth * 0.5), 21, (colHeight * 4.5), 1, object[key].amount);
+				// Вертикальная таблица:
+				result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, (vTableTopLeftCorner.x + colWidth * 1.5), 20, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 11, (vTableTopLeftCorner.x + colWidth * 1.5), 21, (vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5), 1, object[key].amount);
 				
 				if (object[key].ratio >= (colWidth - cellPadding * 2) / (colHeight - cellPadding * 2)) {
 					w = colWidth - cellPadding * 2;
@@ -202,16 +232,23 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 					h = colHeight - cellPadding * 2;
 					w = h * object[key].ratio;
 				}
-				x = currCol * colWidth + colWidth / 2;
+				// Горизонтальная таблица:
+				x = currCol * colWidth + colWidth * 0.5;
+				y = hTableHeight - colHeight * 0.5;
+				symbol[object[key].symbol]();
+				// Вертикальная таблица:
+				x = vTableTopLeftCorner.x + colWidth * 0.5;
+				y = vTableTopLeftCorner.y - colHeight * currRow - colHeight * 0.5;
 				symbol[object[key].symbol]();
 				
 				currCol += 1;
+				currRow += 1;
 			}
 		}
 		
-		if (skippedCells.filled == true) { return; }
+		if (skippedCells.isFilled) { return; }
 		
-		skippedCells.row1.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (размеры КП и окна)
+		skippedCells.row1.forEach(function (position, i, arr) { // Горизонатльная таблица: проставляет прочерки где нет значений (размеры КП и окна)
 			var height = colHeight * (skippedCells.row2.indexOf(position) > -1 ? 2 : 1.5);
 			
 			if (!startPoint && startPoint !== 0) { startPoint = position; }
@@ -222,7 +259,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			}
 		});
 		startPoint = false;
-		skippedCells.row3.forEach(function (position, i, arr) { // Проставляет прочерки где нет значений (диаметр отверстия)
+		skippedCells.row3.forEach(function (position, i, arr) { // Горизонатльная таблица: проставляет прочерки где нет значений (диаметр отверстия)
 			if (!startPoint && startPoint !== 0) { startPoint = position; }
 			if (position + 1 !== arr[i + 1]) {
 				lineStart = (position - startPoint + 1) * colWidth / 2 - colWidth / 4 + startPoint * colWidth;
@@ -230,19 +267,39 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				startPoint = false;
 			}
 		});
-		skippedCells.filled = true;
+
+		skippedCells.col2.reduce((dashPosY, currRow, index, array) => { // Вертикальная таблица: проставляет прочерки где нет значений (диаметр отверстия)
+			if (array[index - 1] != currRow - 1) { dashPosY = vTableTopLeftCorner.y - currRow * colHeight - colHeight * 0.5; }
+			if (array[index + 1] == currRow + 1) {
+				return dashPosY - colHeight * 0.5;
+			} else {
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, (vTableTopLeftCorner.x + colWidth * 2.5 - dashSize * 0.5), 20, dashPosY, 11, ((vTableTopLeftCorner.x + colWidth * 2.5 + dashSize * 0.5)), 21, dashPosY);
+			}
+		}, undefined);
+		skippedCells.col4.reduce((dashPos, currRow, index, array) => { // Вертикальная таблица: проставляет прочерки где нет значений (размеры КП и окна)
+			dashPos.x = vTableTopLeftCorner.x + colWidth * (skippedCells.col3.includes(currRow) ? 4 : 4.5) - dashSize * 0.5;
+			if (array[index - 1] != currRow - 1) { dashPos.y = vTableTopLeftCorner.y - currRow * colHeight - colHeight * 0.5; }
+			if (array[index + 1] == currRow + 1) {
+				dashPos.y -= colHeight * 0.5;
+				return dashPos;
+			} else {
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 2, 10, dashPos.x, 20, dashPos.y, 11, dashPos.x + dashSize, 21, dashPos.y);
+				return {};
+			}
+		}, {});
+		skippedCells.isFilled = true;
 	}
 	function determineEmptyCells(object) {
-		var position = 0, result = { row1: [], row2: [], row3: [] };
+		var position = 0, result = { row1: [], row2: [], row3: [], col2: [], col3: [], col4: [] };
 		
 		function checkLib(obj) {
 			var key;
 			
 			for (key in obj) {
 				if (obj.hasOwnProperty(key) && obj[key].symbol) {
-					if (!obj[key].hole) { result.row3.push(position); }
-					if (!obj[key].pad) { result.row2.push(position); }
-					if (!obj[key].mount || obj[key].type === 'via') { result.row1.push(position); }
+					if (!obj[key].hole) { result.row3.push(position); result.col2.push(position); }
+					if (!obj[key].pad) { result.row2.push(position); result.col3.push(position); }
+					if (!obj[key].mount || obj[key].type === 'via') { result.row1.push(position); result.col4.push(position); }
 					position += 1;
 				}
 			}
@@ -375,26 +432,26 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 				if (coords.length === 4) {
 					x1 = (mirrored) ? shift + boardWidth - coords[0] : coords[0] + shift;
 					x2 = (mirrored) ? shift + boardWidth - coords[2] : coords[2] + shift;
-					result.push(0, 'LINE', 8, layer, 62, 256, 10, x1, 20, (coords[1] + th + space), 11, x2, 21, (coords[3] + th + space));
+					result.push(0, 'LINE', 8, layer, 62, 256, 10, x1, 20, (coords[1] + hTableHeight + space), 11, x2, 21, (coords[3] + hTableHeight + space));
 				} else if (coords.length === 6) {
-					drawArc({ x: coords[0], y: coords[1] }, { x: coords[2], y: coords[3] }, coords[4], coords[5], mirrored, shift, (th + space), layer);
+					drawArc({ x: coords[0], y: coords[1] }, { x: coords[2], y: coords[3] }, coords[4], coords[5], mirrored, shift, (hTableHeight + space), layer);
 				}
 			});
 		}
 		
-		shift = (views) ? views * (boardWidth + space) - hw : -hw;
+		shift = (views) ? views * (boardWidth + space) - hTableHeaderWidth : -hTableHeaderWidth;
 		draw(boardOutline.board, 'Board');
 		if (topAssy && boardOutline.topAssy) { draw(boardOutline.topAssy, 'Top_Assy'); }
 		if (botAssy && boardOutline.botAssy) { draw(boardOutline.botAssy, 'Bot_Assy'); }
 		
 		if (name) {
 			result.push(0, 'TEXT', 8, 'Grid', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 1, 73, 2,
-			            10, shift, 20, (th + space + boardHeight), 11, (shift + boardWidth / 2), 21, (th + space + boardHeight + 20),
+			            10, shift, 20, (hTableHeight + space + boardHeight), 11, (shift + boardWidth / 2), 21, (hTableHeight + space + boardHeight + 20),
 			            1, (name + (mirrored ? ' (' + toUnicode('отражен') + ')' : '')));
 		}
 		
 		views += 1;
-		if (grid) { drawBoardGrid(shift, th + space, mirrored); }
+		if (grid) { drawBoardGrid(shift, hTableHeight + space, mirrored); }
 	}
 	function drawSymbolsOnBoard(object) {
 		var key, i, side;
@@ -402,7 +459,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		for (key in object) {
 			if (object.hasOwnProperty(key)) {
 				for (i = 0; i < object[key].coords.length; i += 1) {
-					y = object[key].coords[i].y - shiftY + th + space;
+					y = object[key].coords[i].y - shiftY + hTableHeight + space;
 					rotation = (object[key].coords[i].rotation / 90 % 2 > 0) ? true : false;
 					side = object[key].coords[i].side;
 					
@@ -429,14 +486,14 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 					
 					if (object[key].symbol) {
 						if (side === 'top') {
-							x = object[key].coords[i].x - shiftX - hw;
+							x = object[key].coords[i].x - shiftX - hTableHeaderWidth;
 						} else if (side === 'bot') {
-							x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+							x = boardWidth * 2 - hTableHeaderWidth + space - object[key].coords[i].x + shiftX;
 						} else if (side === 'thru') {
-							x = object[key].coords[i].x - shiftX - hw;
+							x = object[key].coords[i].x - shiftX - hTableHeaderWidth;
 							if (drillViews === 2) {
 								symbol[object[key].symbol]();
-								x = boardWidth * 2 - hw + space - object[key].coords[i].x + shiftX;
+								x = boardWidth * 2 - hTableHeaderWidth + space - object[key].coords[i].x + shiftX;
 							}
 						}
 						symbol[object[key].symbol]();
@@ -569,8 +626,8 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 			            0, 'SEQEND',   8, layer);
 		}
 		
-		offsetX = views * (boardWidth + space) - shiftX - hw;
-		offsetY = th + space - shiftY;
+		offsetX = views * (boardWidth + space) - shiftX - hTableHeaderWidth;
+		offsetY = hTableHeight + space - shiftY;
 		
 		if (routes.name === 'BOTTOM') { // Если слой отражен - координаты по X будут отсчитываться от правого края назад
 			offsetX += boardWidth + shiftX * 2;
@@ -655,7 +712,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		}
 	}
 	function drawComponentsOutlines(outlines) {
-		var i, key, radius, start, end, offsetX, horJustification, vertJustification, offsetY = th + space - shiftY, mirr = 1, topView = false, botView = false;
+		var i, key, radius, start, end, offsetX, horJustification, vertJustification, offsetY = hTableHeight + space - shiftY, mirr = 1, topView = false, botView = false;
 		
 		for (key in outlines) {
 			if (outlines.hasOwnProperty(key)) {
@@ -666,7 +723,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 					// Устанавливаем смещение для координат в зависимости от местоположения вида, в котором рисуется текущий объект.
 					// Если объект должен быть на слое bottom - к переменной количества видов (views) добавляется 1, т.к. она показывает
 					// количество уже готовых видов, а в работе находится сразу два не доделанных - top и bottom:
-					offsetX = (views + (outlines[key][i].flipped ? 1 : 0)) * (boardWidth + space) - shiftX - hw;
+					offsetX = (views + (outlines[key][i].flipped ? 1 : 0)) * (boardWidth + space) - shiftX - hTableHeaderWidth;
 					
 					// Если слой bottom - координаты по X будут отсчитываться от правого края назад:
 					if (outlines[key][i].flipped) {
@@ -687,7 +744,7 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 						horJustification  = (outlines[key][i].justification.match(/left/i))  ? 0 : (outlines[key][i].justification.match(/right/i)) ? 2 : 1;
 						vertJustification = (outlines[key][i].justification.match(/upper/i)) ? 3 : (outlines[key][i].justification.match(/lower/i)) ? 1 : 2;
 						result.push(0, 'TEXT', 8, 'Components', 62, 7, 7, 'win_eskd', 40, 1.75, 50, outlines[key][i].rotation, 51, 15, 72, horJustification, 73, vertJustification,
-					              10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x1 * mirr + offsetX), 21, (outlines[key][i].y1 + offsetY), 1, (outlines[key][i].content || ' '));
+					              10, (outlines[key][i].x1 * mirr + offsetX), 20, (outlines[key][i].y1 + offsetY), 11, (outlines[key][i].x1 * mirr + offsetX), 21, (outlines[key][i].y1 + offsetY), 41, widthFactor, 1, (outlines[key][i].content || ' '));
 						break;
 					}
 				}
@@ -695,14 +752,14 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 		}
 		
 		if (topView) {
-			offsetX = views * (boardWidth + space) - shiftX - hw;
+			offsetX = views * (boardWidth + space) - shiftX - hTableHeaderWidth;
 			drawHoles(lib.holes, true, true, offsetX, offsetY, 1);
 			drawHoles(lib.metallized, false, true, offsetX, offsetY, 1);
 			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, 1);
 			drawBoardOutline(false, false, toUnicode('Сборка с элементами') + ' - TOP', true, false);
 		}
 		if (botView) {
-			offsetX = (views + (topView ? 0 : 1)) * (boardWidth + space) + boardWidth + shiftX - hw;
+			offsetX = (views + (topView ? 0 : 1)) * (boardWidth + space) + boardWidth + shiftX - hTableHeaderWidth;
 			drawHoles(lib.holes, true, true, offsetX, offsetY, -1);
 			drawHoles(lib.metallized, false, true, offsetX, offsetY, -1);
 			drawHoles(lib.nonMetallized, false, true, offsetX, offsetY, -1);
@@ -1478,52 +1535,103 @@ function generateDXF(lib, boardOutline, componentsOutlines, routes, drillViews) 
 	result.push(0, 'ENDTAB', 0, 'ENDSEC');
 	/* -=-=-=- */
 	
-	/* Построение таблицы сверловки */
+	/* Построение горизонтальной таблицы сверловки */
 	// Ячейки заголовков
 	result.push(0, 'SECTION', 2, 'ENTITIES',
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20,  0, 11, -hw,  21,  0,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20,  0, 11, -hw,  21, th,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, th, 11,   0,  21, th,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10,   0, 20, th, 11,   0,  21,  0,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 1, 11,   0,  21, colHeight * 1,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 2, 11,   0,  21, colHeight * 2,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 3, 11,   0,  21, colHeight * 3,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 4, 11,   0,  21, colHeight * 4,
-	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hw, 20, colHeight * 5, 11,   0,  21, colHeight * 5);
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, 0,                  20, 0,             11, -hTableHeaderWidth, 21, 0,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, 0,             11, -hTableHeaderWidth, 21, hTableHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, hTableHeight,  11, 0,                  21, hTableHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, 0,                  20, hTableHeight,  11, 0,                  21, 0,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, colHeight * 1, 11, 0,                  21, colHeight * 1,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, colHeight * 2, 11, 0,                  21, colHeight * 2,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, colHeight * 3, 11, 0,                  21, colHeight * 3,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, colHeight * 4, 11, 0,                  21, colHeight * 4,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, -hTableHeaderWidth, 20, colHeight * 5, 11, 0,                  21, colHeight * 5);	
 	
 	// Ячейки данных
 	skippedCells = determineEmptyCells(lib); // Ячейки без значений
-	for (i = 0; i < columns; i += 1) {
-		for (j = 0; j <= rows; j += 1) { // Горизонатльные
+	for (i = 0; i < hTableColumns; i += 1) {
+		for (j = 0; j <= hTableRows; j += 1) { // Горизонатльные
 			if (!(j === 2 && skippedCells.row1.indexOf(i) + 1 && skippedCells.row2.indexOf(i) + 1)) { // Не рисовать линию если эта ячейка и та, что под ней, пусты
 				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * i), 20, (colHeight * j), 11, (colWidth * i) + colWidth, 21, (colHeight * j));
 			}
 		}
-		for (j = 1; j < rows; j += 1) { // Вертикальные
+		for (j = 1; j < hTableRows; j += 1) { // Вертикальные
 			if (!(j > 0 && j < 4 && skippedCells['row' + j].indexOf(i) + 1 && skippedCells['row' + j].indexOf(i + 1) + 1)) {
 				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * i + colWidth), 20, (colHeight * j), 11, (colWidth * i + colWidth), 21, (colHeight * j) + colHeight);
 			}
 		}
 	}
 	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, (colWidth * pth), 20, 0, 11, (colWidth * pth), 21, colHeight);
-	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, tw, 20, 0, 11, tw, 21, colHeight);
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, hTableWidth, 20, 0, 11, hTableWidth, 21, colHeight);
 	/* -=-=-=- */
+
+	/* Построение вертикальной таблицы сверловки */
+	// Ячейки заголовков
+	result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x,                20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + vTableWidth,  21, vTableTopLeftCorner.y,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + vTableWidth,  20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + vTableWidth,  21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + vTableWidth,  20, vTableTopLeftCorner.y + vTableHeaderHeight, 11, vTableTopLeftCorner.x,                21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x,                20, vTableTopLeftCorner.y + vTableHeaderHeight, 11, vTableTopLeftCorner.x,                21, vTableTopLeftCorner.y,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + colWidth * 1, 20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + colWidth * 1, 21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + colWidth * 2, 20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + colWidth * 2, 21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + colWidth * 3, 20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + colWidth * 3, 21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + colWidth * 4, 20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + colWidth * 4, 21, vTableTopLeftCorner.y + vTableHeaderHeight,
+	            0, 'LINE', 8, 'Drill_Table', 62, 1, 10, vTableTopLeftCorner.x + colWidth * 5, 20, vTableTopLeftCorner.y,                      11, vTableTopLeftCorner.x + colWidth * 5, 21, vTableTopLeftCorner.y + vTableHeaderHeight);	
+	
+	// Ячейки данных
+	skippedCells = determineEmptyCells(lib); // Ячейки без значений
+	
+	for (let currCol = 0; currCol <= vTableColumns; currCol += 1) {
+		for (let currRow = 0; currRow <= vTableRows; currRow += 1) {
+			let x = vTableTopLeftCorner.x + colWidth * currCol;
+			let y = vTableTopLeftCorner.y - colHeight * currRow;
+
+			if ((currRow < vTableRows) && !(currCol == 4 && skippedCells.col3?.includes(currRow))) {
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, x, 20, y, 11, x, 21, y - colHeight); // Вертикальная линия вниз.
+			}
+			if ((currCol < vTableColumns) && !(skippedCells['col' + currCol]?.includes(currRow) && skippedCells['col' + currCol]?.includes(currRow - 1)) && !(currCol == 5 && currRow != pth && currRow != vTableRows)) {
+				result.push(0, 'LINE', 8, 'Drill_Table', 62, 1, 10, x, 20, y, 11, x + colWidth, 21, y); // Горизонатльная линия вправо.
+			}
+		}
+	}
+	/* -=-=-=- */
+
 	
 	/* Заполнение таблицы сверловки */
-	// Название таблицы
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 5, 51, 15, 72, 2, 73, 1, 10, (tw - colWidth * 2), 20, (th + colHeight), 11, tw, 21, (th + 3), 1, toUnicode('ТАБЛИЦА 2'));
+	// Название горизонтальной таблицы:
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 4, 51, 15, 72, 2, 73, 1, 10, (hTableWidth - colWidth * 2), 20, (hTableHeight + colHeight), 11, hTableWidth, 21, (hTableHeight + 3), 1, toUnicode('ТАБЛИЦА 2'));
+	// Название вертикальной таблицы:
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, 4, 51, 15, 72, 2, 73, 1, 10, (vTableTopLeftCorner.x + vTableWidth - colWidth * 2), 20, (vTableTopLeftCorner.y + vTableHeaderHeight + colHeight), 11, (vTableTopLeftCorner.x + vTableWidth), 21, (vTableTopLeftCorner.y + vTableHeaderHeight + 3), 1, toUnicode('ТАБЛИЦА 2'));
 	
-	// Тексты заголовков
-	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th,                 11, -hw / 2, 21, th - colHeight * 0.5, 1, toUnicode('Обозначение'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight,     11, -hw / 2, 21, th - colHeight * 1.5, 1, toUnicode('Количество'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 2, 11, -hw / 2, 21, th - colHeight * 2.5, 1, toUnicode('Диаметр отв., мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 3, 11, -hw / 2, 21, th - colHeight * 3.5, 41, widthFactor, 1, toUnicode('Размеры конт. площ., мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 4, 11, -hw / 2, 21, th - colHeight * 4.5, 41, widthFactor, 1, toUnicode('Размеры монт. окна, мм'),
-	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hw, 20, th - colHeight * 5, 11, -hw / 2, 21, th - colHeight * 5.5, 1, toUnicode('Металлизация'));
+	// Тексты заголовков горизонтальной таблицы:
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 0, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 0.5, 41, 1,    1, toUnicode('Обозначение'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 1, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 1.5, 41, 1,    1, toUnicode('Количество'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 2, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 2.5, 41, 1,    1, toUnicode('Диаметр отв., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 3, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 3.5, 41, 0.75, 1, toUnicode('Размеры конт. площ., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 4, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 4.5, 41, 0.75, 1, toUnicode('Размеры монт. окна, мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, -hTableHeaderWidth, 20, hTableHeight - colHeight * 5, 11, -hTableHeaderWidth / 2, 21, hTableHeight - colHeight * 5.5, 41, 1,    1, toUnicode('Металлизация'));
+	// Тексты заголовков вертикальной таблицы:
+	result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 0, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 11, vTableTopLeftCorner.x + colWidth * 0.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 41, 0.75, 1, toUnicode('Обозна-'),
+							0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 0, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 11, vTableTopLeftCorner.x + colWidth * 0.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 41, 0.75, 1, toUnicode('чение'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 1, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 11, vTableTopLeftCorner.x + colWidth * 1.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 41, 0.75, 1, toUnicode('Количес-'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 1, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 11, vTableTopLeftCorner.x + colWidth * 1.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 41, 0.75, 1, toUnicode('тво'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 2, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 11, vTableTopLeftCorner.x + colWidth * 2.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 41, 0.75, 1, toUnicode('Диаметр'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 2, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 11, vTableTopLeftCorner.x + colWidth * 2.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 41, 0.75, 1, toUnicode('отв., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 3, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.75, 11, vTableTopLeftCorner.x + colWidth * 3.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.75, 41, 0.75, 1, toUnicode('Размеры'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 3, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.50, 11, vTableTopLeftCorner.x + colWidth * 3.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.50, 41, 0.7,  1, toUnicode('контактн.'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 3, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.25, 11, vTableTopLeftCorner.x + colWidth * 3.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.25, 41, 0.7,  1, toUnicode('площ., мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 4, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.75, 11, vTableTopLeftCorner.x + colWidth * 4.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.75, 41, 0.75, 1, toUnicode('Размеры'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 4, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.50, 11, vTableTopLeftCorner.x + colWidth * 4.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.50, 41, 0.75, 1, toUnicode('монтажн.'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 4, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.25, 11, vTableTopLeftCorner.x + colWidth * 4.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.25, 41, 0.75, 1, toUnicode('окна, мм'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 5, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 11, vTableTopLeftCorner.x + colWidth * 5.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.66, 41, 0.7,  1, toUnicode('Металли-'),
+	            0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + colWidth * 5, 20, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 11, vTableTopLeftCorner.x + colWidth * 5.5, 21, vTableTopLeftCorner.y + vTableHeaderHeight * 0.33, 41, 0.75, 1, toUnicode('зация'));
 	
-	// Значения ячеек
-	if (pth) {  result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Есть')); } // Металлизация - "Есть"
-	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Нет')); } // Металлизация - "Нет"
+	// Заполнение ячеек "Металлизация" горизонтальной таблицы:
+	if (pth)  { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth / 2),                   21, (colHeight / 2), 1, toUnicode('Есть')); } // Металлизация - "Есть"
+	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, 0, 20, 0, 11, (pth * colWidth + npth * colWidth / 2), 21, (colHeight / 2), 1, toUnicode('Нет')); }  // Металлизация - "Нет"
+	// Заполнение ячеек "Металлизация" вертикальной таблицы:
+	if (pth)  { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + vTableWidth - colWidth, 20, vTableTopLeftCorner.y - pth * colHeight / 2,                    11, vTableTopLeftCorner.x + vTableWidth - colWidth / 2, 21, vTableTopLeftCorner.y - pth  * colHeight / 2,                   1, toUnicode('Есть')); } // Металлизация - "Есть"
+	if (npth) { result.push(0, 'TEXT', 8, 'Drill_Table', 62, 2, 7, 'win_eskd', 40, textHeight, 51, 15, 72, 1, 73, 2, 10, vTableTopLeftCorner.x + vTableWidth - colWidth, 20, vTableTopLeftCorner.y - pth * colHeight - npth * colHeight / 2, 11, vTableTopLeftCorner.x + vTableWidth - colWidth / 2, 21, vTableTopLeftCorner.y - pth * colHeight - npth * colHeight / 2, 1, toUnicode('Нет')); }  // Металлизация - "Нет"
 	
 	radius = (colHeight / 2 - cellPadding);
 	

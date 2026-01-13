@@ -132,6 +132,10 @@ p {
 	font-size: 1.4rem;
 	color: #bbb;
 }
+.help-list a,
+.help-list a:visited {
+	color: #bbb;
+}
 .help-list-li {
 	margin-top: 5px;
 	margin-bottom: 5px;

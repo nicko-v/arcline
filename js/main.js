@@ -281,6 +281,7 @@
 				content: msgs[1],
 				closeable: true
 			});
+			console.log(err);
 			setStepStatus(2, false, true);
 			return;
 		}
@@ -561,6 +562,8 @@
 		showPopup({
 			header: 'Список изменений',
 			content: `
+								13.01.2026:
+								<ul><li>Добавлена вертикальная таблица сверловки.</li></ul>
 								25.12.2025:
 								<ul><li>Уменьшены размеры таблицы сверловки, шрифта и ширина текста.</li></ul>
 								28.08.2025:
@@ -715,6 +718,7 @@
 				return false;
 			case 'rect':
 			case 'rndrect':
+			case 'polygon':
 				return dotToComma(width) + 'x' + dotToComma(height);
 			default:
 				return false;
@@ -791,6 +795,7 @@
 				funcs: [hidePopup],
 				closeable: true
 			});
+			console.log(errPCB);
 			return;
 		}
 		
@@ -807,6 +812,7 @@
 				funcs: [hidePopup],
 				closeable: true
 			});
+			console.log(errDXF);
 			return;
 		}
 		
@@ -1952,6 +1958,7 @@
 							funcs: [hidePopup],
 							closeable: true
 						});
+						console.log(err);
 						setStepStatus(3, false, true);
 						return;
 					}
@@ -2080,6 +2087,7 @@
 							funcs: [hidePopup],
 							closeable: true
 						});
+						console.log(err);
 						setStepStatus(4, false, true);
 					}
 					
@@ -2232,6 +2240,7 @@
 							funcs: [hidePopup],
 							closeable: true
 						});
+						console.log(err);
 						setStepStatus(5, false, false);
 					}
 					
